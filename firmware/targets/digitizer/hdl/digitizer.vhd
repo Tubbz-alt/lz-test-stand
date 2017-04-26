@@ -2,7 +2,7 @@
 -- File       : digitizer.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-02-04
--- Last update: 2017-02-07
+-- Last update: 2017-04-26
 -------------------------------------------------------------------------------
 -- Description: LZ Digitizer Target's Top Level
 -- 
@@ -25,317 +25,363 @@ use work.StdRtlPkg.all;
 use work.AxiPkg.all;
 use work.AxiLitePkg.all;
 use work.AxiStreamPkg.all;
-use work.SsiPkg.all;
-use work.Pgp2bPkg.all;
 
 library unisim;
 use unisim.vcomponents.all;
 
 entity digitizer is
    generic (
-      TPD_G          : time            := 1 ns;
-      SIM_SPEEDUP_G  : boolean         := false;
-      BUILD_INFO_G   : BuildInfoType
-   );
+      TPD_G            : time            := 1 ns;
+      SIM_SPEEDUP_G    : boolean         := false;
+      BUILD_INFO_G     : BuildInfoType;
+      AXI_ERROR_RESP_G : slv(1 downto 0) := AXI_RESP_SLVERR_C);
    port (
-      -- PGP signals
-      pgpClkP           : in    sl;
-      pgpClkN           : in    sl;
-      pgpRxP            : in    sl;
-      pgpRxN            : in    sl;
-      pgpTxP            : out   sl;
-      pgpTxN            : out   sl;
-      
       -- DDR PHY Ref clk
-      c0_sys_clk_p      : in    sl;
-      c0_sys_clk_n      : in    sl;
+      c0_sys_clk_p     : in    sl;
+      c0_sys_clk_n     : in    sl;
       -- DRR Memory interface ports
-      c0_ddr4_dq        : inout slv(63 downto 0);
-      c0_ddr4_dqs_c     : inout slv(7 downto 0);
-      c0_ddr4_dqs_t     : inout slv(7 downto 0);
-      c0_ddr4_adr       : out   slv(16 downto 0);
-      c0_ddr4_ba        : out   slv(1 downto 0);
-      c0_ddr4_bg        : out   slv(0 to 0);
-      c0_ddr4_reset_n   : out   sl;
-      c0_ddr4_act_n     : out   sl;
-      c0_ddr4_ck_t      : out   slv(0 to 0);
-      c0_ddr4_ck_c      : out   slv(0 to 0);
-      c0_ddr4_cke       : out   slv(0 to 0);
-      c0_ddr4_cs_n      : out   slv(0 to 0);
-      c0_ddr4_dm_dbi_n  : inout slv(7 downto 0);
-      c0_ddr4_odt       : out   slv(0 to 0)
-   );
+      c0_ddr4_dq       : inout slv(63 downto 0);
+      c0_ddr4_dqs_c    : inout slv(7 downto 0);
+      c0_ddr4_dqs_t    : inout slv(7 downto 0);
+      c0_ddr4_adr      : out   slv(16 downto 0);
+      c0_ddr4_ba       : out   slv(1 downto 0);
+      c0_ddr4_bg       : out   slv(0 to 0);
+      c0_ddr4_reset_n  : out   sl;
+      c0_ddr4_act_n    : out   sl;
+      c0_ddr4_ck_t     : out   slv(0 to 0);
+      c0_ddr4_ck_c     : out   slv(0 to 0);
+      c0_ddr4_cke      : out   slv(0 to 0);
+      c0_ddr4_cs_n     : out   slv(0 to 0);
+      c0_ddr4_dm_dbi_n : inout slv(7 downto 0);
+      c0_ddr4_odt      : out   slv(0 to 0);
+      -- PGP signals
+      pgpClkP          : in    sl;
+      pgpClkN          : in    sl;
+      pgpRxP           : in    sl;
+      pgpRxN           : in    sl;
+      pgpTxP           : out   sl;
+      pgpTxN           : out   sl;
+      -- SYSMON Ports
+      vPIn             : in    sl;
+      vNIn             : in    sl);
 end digitizer;
 
 architecture top_level of digitizer is
-   
+
    constant DDR_AXI_CONFIG_C : AxiConfigType := axiConfig(
       ADDR_WIDTH_C => 31,
       DATA_BYTES_C => 64,
       ID_BITS_C    => 4,
       LEN_BITS_C   => 8);
-   
+
    constant START_ADDR_C : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '0');
    constant STOP_ADDR_C  : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
-   
-   -- AXI-Lite Constants
-   constant NUM_AXI_MASTER_SLOTS_C  : natural := 2;
-   constant NUM_AXI_SLAVE_SLOTS_C   : natural := 2;
-   
-   constant AXI_VERSION_INDEX_C     : natural := 0;
-   constant TESTMEM_AXI_INDEX_C     : natural := 1;
-   
-   
-   constant AXI_VERSION_BASE_ADDR_C   : slv(31 downto 0) := X"00000000";
-   constant TESTMEM_AXI_BASE_ADDR_C   : slv(31 downto 0) := X"04000000";
-   
-   constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTER_SLOTS_C-1 downto 0) := (
-      AXI_VERSION_INDEX_C     => (
-         baseAddr             => AXI_VERSION_BASE_ADDR_C,
-         addrBits             => 26,
-         connectivity         => x"FFFF"),
-      TESTMEM_AXI_INDEX_C     => (
-         baseAddr             => TESTMEM_AXI_BASE_ADDR_C,
-         addrBits             => 26,
-         connectivity         => x"FFFF")
-   );
 
-   -- AXI-Lite Signals
-   signal sAxiReadMaster   : AxiLiteReadMasterArray(NUM_AXI_SLAVE_SLOTS_C-1 downto 0);
-   signal sAxiReadSlave    : AxiLiteReadSlaveArray(NUM_AXI_SLAVE_SLOTS_C-1 downto 0);
-   signal sAxiWriteMaster  : AxiLiteWriteMasterArray(NUM_AXI_SLAVE_SLOTS_C-1 downto 0);
-   signal sAxiWriteSlave   : AxiLiteWriteSlaveArray(NUM_AXI_SLAVE_SLOTS_C-1 downto 0);
-   signal mAxiWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTER_SLOTS_C-1 downto 0); 
-   signal mAxiWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTER_SLOTS_C-1 downto 0); 
-   signal mAxiReadMasters  : AxiLiteReadMasterArray(NUM_AXI_MASTER_SLOTS_C-1 downto 0); 
-   signal mAxiReadSlaves   : AxiLiteReadSlaveArray(NUM_AXI_MASTER_SLOTS_C-1 downto 0); 
-   
-   -- AXI Signals
-   signal axiClk           : sl;
-   signal axiRst           : sl;
-   signal axiReadMaster    : AxiReadMasterType;
-   signal axiReadSlave     : AxiReadSlaveType;
-   signal axiWriteMaster   : AxiWriteMasterType;
-   signal axiWriteSlave    : AxiWriteSlaveType;
-   
-   signal calibComplete    : sl;
-   
-   constant AXIS_SIZE_C : positive := 4;
+   constant NUM_AXI_MASTERS_C : natural := 5;
 
-   signal txMasters  : AxiStreamMasterArray(AXIS_SIZE_C-1 downto 0);
-   signal txSlaves   : AxiStreamSlaveArray(AXIS_SIZE_C-1 downto 0);
-   signal rxMasters  : AxiStreamMasterArray(AXIS_SIZE_C-1 downto 0);
-   signal rxCtrl     : AxiStreamCtrlArray(AXIS_SIZE_C-1 downto 0);
+   constant VERSION_INDEX_C  : natural := 0;
+   constant SYSMON_INDEX_C   : natural := 1;
+   constant BOOT_MEM_INDEX_C : natural := 2;
+   constant DDR_MEM_INDEX_C  : natural := 3;
+   constant COMM_INDEX_C     : natural := 4;
 
-   signal pgpTxOut   : Pgp2bTxOutType;
-   signal pgpRxOut   : Pgp2bRxOutType;
+   constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := (
+      VERSION_INDEX_C  => (
+         baseAddr      => x"00000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF"),
+      SYSMON_INDEX_C   => (
+         baseAddr      => x"01000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF"),
+      BOOT_MEM_INDEX_C => (
+         baseAddr      => x"02000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF"),
+      DDR_MEM_INDEX_C  => (
+         baseAddr      => x"03000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF"),
+      COMM_INDEX_C     => (
+         baseAddr      => x"04000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF"));
 
-   signal pgpRefClk     : sl;
-   signal pgpRefClkDiv2 : sl;
-   signal clk           : sl;
-   signal rst           : sl;
+   signal axilClk         : sl;
+   signal axilRst         : sl;
+   signal axilRstL        : sl;
+   signal axilWriteMaster : AxiLiteWriteMasterType;
+   signal axilWriteSlave  : AxiLiteWriteSlaveType;
+   signal axilReadSlave   : AxiLiteReadSlaveType;
+   signal axilReadMaster  : AxiLiteReadMasterType;
+
+   signal mbWriteMaster : AxiLiteWriteMasterType;
+   signal mbWriteSlave  : AxiLiteWriteSlaveType;
+   signal mbReadSlave   : AxiLiteReadSlaveType;
+   signal mbReadMaster  : AxiLiteReadMasterType;
+
+   signal axilWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
+   signal axilWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
+   signal axilReadMasters  : AxiLiteReadMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
+   signal axilReadSlaves   : AxiLiteReadSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
+
+   signal axiClk         : sl;
+   signal axiRst         : sl;
+   signal axiReadMaster  : AxiReadMasterType;
+   signal axiReadSlave   : AxiReadSlaveType;
+   signal axiWriteMaster : AxiWriteMasterType;
+   signal axiWriteSlave  : AxiWriteSlaveType;
+   signal calibComplete  : sl;
+
+   signal mbTxMaster : AxiStreamMasterType;
+   signal mbTxSlave  : AxiStreamSlaveType;
+   signal mbIrq      : slv(7 downto 0) := (others => '0');
+
+   signal bootCsL  : sl;
+   signal bootSck  : sl;
+   signal bootMosi : sl;
+   signal bootMiso : sl;
+   signal di       : slv(3 downto 0);
+   signal do       : slv(3 downto 0);
+
+   signal dataTxMaster : AxiStreamMasterType;
+   signal dataTxSlave  : AxiStreamSlaveType;
 
 begin
-   
-   ---------------------------------------------
-   -- PGP 
-   ---------------------------------------------
-   U_IBUFDS_GTE3 : IBUFDS_GTE3
-   generic map (
-      REFCLK_EN_TX_PATH  => '0',
-      REFCLK_HROW_CK_SEL => "00",  -- 2'b00: ODIV2 = O
-      REFCLK_ICNTL_RX    => "00"
-   )
-   port map (
-      I     => pgpClkP,
-      IB    => pgpClkN,
-      CEB   => '0',
-      ODIV2 => pgpRefClkDiv2,      -- Divide by 1
-      O     => pgpRefClk
-   );
 
-   U_BUFG_GT : BUFG_GT
-   port map (
-      I       => pgpRefClkDiv2,
-      CE      => '1',
-      CLR     => '0',
-      CEMASK  => '1',
-      CLRMASK => '1',
-      DIV     => "000",           -- Divide by 1
-      O       => clk
-   );
-   
-   U_PwrUpRst : entity work.PwrUpRst
-   generic map (
-      TPD_G          => TPD_G,
-      SIM_SPEEDUP_G  => SIM_SPEEDUP_G,
-      IN_POLARITY_G  => '1',
-      OUT_POLARITY_G => '1'
-   )
-   port map (
-      clk    => clk,
-      rstOut => rst
-   );
+   -----------------------
+   -- Communication Module
+   -----------------------
+   U_PGP : entity work.LzDigitizerPgpCore
+      generic map (
+         TPD_G            => TPD_G,
+         SIM_SPEEDUP_G    => SIM_SPEEDUP_G,
+         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+      port map (
+         -- Clock and Reset
+         axilClk          => axilClk,
+         axilRst          => axilRst,
+         -- Data Streaming Interface
+         dataTxMaster     => dataTxMaster,
+         dataTxSlave      => dataTxSlave,
+         -- Microblaze Streaming Interface
+         mbTxMaster       => mbTxMaster,
+         mbTxSlave        => mbTxSlave,
+         -- AXI-Lite Register Interface
+         mAxilReadMaster  => axilReadMaster,
+         mAxilReadSlave   => axilReadSlave,
+         mAxilWriteMaster => axilWriteMaster,
+         mAxilWriteSlave  => axilWriteSlave,
+         -- Debug AXI-Lite Interface         
+         sAxilReadMaster  => axilReadMasters(COMM_INDEX_C),
+         sAxilReadSlave   => axilReadSlaves(COMM_INDEX_C),
+         sAxilWriteMaster => axilWriteMasters(COMM_INDEX_C),
+         sAxilWriteSlave  => axilWriteSlaves(COMM_INDEX_C),
+         -- PGP Ports
+         pgpClkP          => pgpClkP,
+         pgpClkN          => pgpClkN,
+         pgpRxP           => pgpRxP,
+         pgpRxN           => pgpRxN,
+         pgpTxP           => pgpTxP,
+         pgpTxN           => pgpTxN);
 
-   U_PGP : entity work.Pgp2bGthUltra
-   generic map (
-      TPD_G             => TPD_G,
-      PAYLOAD_CNT_TOP_G => 7,
-      VC_INTERLEAVE_G   => 1,
-      NUM_VC_EN_G       => 4
-   )
-   port map (
-      stableClk       => clk,
-      stableRst       => rst,
-      gtRefClk        => pgpRefClk,
-      pgpGtTxP        => pgpTxP,
-      pgpGtTxN        => pgpTxN,
-      pgpGtRxP        => pgpRxP,
-      pgpGtRxN        => pgpRxN,
-      pgpTxReset      => rst,
-      pgpTxRecClk     => open,
-      pgpTxClk        => clk,
-      pgpTxMmcmLocked => '1',
-      pgpRxReset      => rst,
-      pgpRxRecClk     => open,
-      pgpRxClk        => clk,
-      pgpRxMmcmLocked => '1',
-      pgpTxIn         => PGP2B_TX_IN_INIT_C,
-      pgpTxOut        => pgpTxOut,
-      pgpRxIn         => PGP2B_RX_IN_INIT_C,
-      pgpRxOut        => pgpRxOut,
-      pgpTxMasters    => txMasters,
-      pgpTxSlaves     => txSlaves,
-      pgpRxMasters    => rxMasters,
-      pgpRxCtrl       => rxCtrl
-   );
-   
-   U_PgpVcMapping: entity work.PgpVcMapping
-   port map (
-      -- PGP Clock and Reset
-      clk             => clk,
-      rst             => rst,
-      -- AXIS interface
-      txMasters       => txMasters,
-      txSlaves        => txSlaves,
-      rxMasters       => rxMasters,
-      rxCtrl          => rxCtrl,
-      -- Data Interface
-      dataClk         => clk,
-      dataRst         => rst,
-      dataTxMaster    => AXI_STREAM_MASTER_INIT_C,
-      dataTxSlave     => open,
-      -- AXI-Lite Interface
-      axilClk         => clk,
-      axilRst         => rst,
-      axilWriteMaster => sAxiWriteMaster(0),
-      axilWriteSlave  => sAxiWriteSlave(0),
-      axilReadMaster  => sAxiReadMaster(0),
-      axilReadSlave   => sAxiReadSlave(0)
-   );
-   
-   ---------------------------------------------
-   -- Microblaze 
-   ---------------------------------------------
+   --------------------------------
+   -- Microblaze Embedded Processor
+   --------------------------------
    U_CPU : entity work.MicroblazeBasicCoreWrapper
-   generic map (
-      TPD_G            => TPD_G)
-   port map (
-      -- Master AXI-Lite Interface: [0x00000000:0x7FFFFFFF]
-      mAxilWriteMaster => sAxiWriteMaster(1),
-      mAxilWriteSlave  => sAxiWriteSlave(1),
-      mAxilReadMaster  => sAxiReadMaster(1),
-      mAxilReadSlave   => sAxiReadSlave(1),
-      -- Interrupt Interface
-      interrupt(7 downto 0)   => "00000000",
-      -- Clock and Reset
-      clk              => clk,
-      rst              => rst
-   );
-   
+      generic map (
+         TPD_G           => TPD_G,
+         AXIL_ADDR_MSB_C => false)      -- false = [0x00000000:0xFFFFFFFF]
+      port map (
+         -- Master AXI-Lite Interface: [0x00000000:0xFFFFFFFF]
+         mAxilWriteMaster => mbWriteMaster,
+         mAxilWriteSlave  => mbWriteSlave,
+         mAxilReadMaster  => mbReadMaster,
+         mAxilReadSlave   => mbReadSlave,
+         -- Streaming
+         mAxisMaster      => mbTxMaster,
+         mAxisSlave       => mbTxSlave,
+         -- IRQ
+         interrupt        => mbIrq,
+         -- Clock and Reset
+         clk              => axilClk,
+         rst              => axilRst);
+
+   ---------------------
+   -- AXI-Lite: Crossbar
+   ---------------------
+   U_XBAR : entity work.AxiLiteCrossbar
+      generic map (
+         TPD_G              => TPD_G,
+         DEC_ERROR_RESP_G   => AXI_ERROR_RESP_G,
+         NUM_SLAVE_SLOTS_G  => 2,
+         NUM_MASTER_SLOTS_G => NUM_AXI_MASTERS_C,
+         MASTERS_CONFIG_G   => AXI_CROSSBAR_MASTERS_CONFIG_C)
+      port map (
+         axiClk              => axilClk,
+         axiClkRst           => axilRst,
+         sAxiWriteMasters(0) => axilWriteMaster,
+         sAxiWriteMasters(1) => mbWriteMaster,
+         sAxiWriteSlaves(0)  => axilWriteSlave,
+         sAxiWriteSlaves(1)  => mbWriteSlave,
+         sAxiReadMasters(0)  => axilReadMaster,
+         sAxiReadMasters(1)  => mbReadMaster,
+         sAxiReadSlaves(0)   => axilReadSlave,
+         sAxiReadSlaves(1)   => mbReadSlave,
+         mAxiWriteMasters    => axilWriteMasters,
+         mAxiWriteSlaves     => axilWriteSlaves,
+         mAxiReadMasters     => axilReadMasters,
+         mAxiReadSlaves      => axilReadSlaves);
+
    --------------------------
    -- AXI-Lite Version Module
    --------------------------          
    U_AxiVersion : entity work.AxiVersion
-   generic map (
-      TPD_G           => TPD_G,
-      BUILD_INFO_G    => BUILD_INFO_G,
-      EN_DEVICE_DNA_G => false)   
-   port map (
-      -- AXI-Lite Register Interface
-      axiReadMaster  => mAxiReadMasters(AXI_VERSION_INDEX_C),
-      axiReadSlave   => mAxiReadSlaves(AXI_VERSION_INDEX_C),
-      axiWriteMaster => mAxiWriteMasters(AXI_VERSION_INDEX_C),
-      axiWriteSlave  => mAxiWriteSlaves(AXI_VERSION_INDEX_C),
-      -- Clocks and Resets
-      axiClk         => clk,
-      axiRst         => rst
-   );
-   
-   ---------------------------------------------
-   -- DDR memory tester
-   ---------------------------------------------
-   U_AxiMemTester : entity work.AxiMemTester
-   generic map (
-      TPD_G            => TPD_G,
-      START_ADDR_G     => START_ADDR_C,
-      STOP_ADDR_G      => STOP_ADDR_C,
-      AXI_CONFIG_G     => DDR_AXI_CONFIG_C
-   )
-   port map (
-      -- AXI-Lite Interface
-      axilClk         => clk,
-      axilRst         => rst,
-      axilReadMaster  => mAxiReadMasters(TESTMEM_AXI_INDEX_C),
-      axilReadSlave   => mAxiReadSlaves(TESTMEM_AXI_INDEX_C),
-      axilWriteMaster => mAxiWriteMasters(TESTMEM_AXI_INDEX_C),
-      axilWriteSlave  => mAxiWriteSlaves(TESTMEM_AXI_INDEX_C),
-      memReady        => open,
-      memError        => open,
-      -- DDR Memory Interface
-      axiClk          => axiClk,
-      axiRst          => axiRst,
-      start           => calibComplete,
-      axiWriteMaster  => axiWriteMaster,
-      axiWriteSlave   => axiWriteSlave,
-      axiReadMaster   => axiReadMaster,
-      axiReadSlave    => axiReadSlave
-   );
-   
-   
-   ----------------------------------------
-   -- DDR memory controller
-   ----------------------------------------
-   U_AxiDdr4ControllerWrapper : entity work.AxiDdr4ControllerWrapper
-   port map ( 
-      -- AXI Slave
-      axiClk            => axiClk,
-      axiRst            => axiRst,
-      axiReadMaster     => axiReadMaster,
-      axiReadSlave      => axiReadSlave,
-      axiWriteMaster    => axiWriteMaster,
-      axiWriteSlave     => axiWriteSlave,
-      
-      -- DDR PHY Ref clk
-      c0_sys_clk_p      => c0_sys_clk_p,
-      c0_sys_clk_n      => c0_sys_clk_n,
+      generic map (
+         TPD_G           => TPD_G,
+         BUILD_INFO_G    => BUILD_INFO_G,
+         XIL_DEVICE_G    => "ULTRASCALE",
+         EN_DEVICE_DNA_G => true)
+      port map (
+         -- AXI-Lite Register Interface
+         axiReadMaster  => axilReadMasters(VERSION_INDEX_C),
+         axiReadSlave   => axilReadSlaves(VERSION_INDEX_C),
+         axiWriteMaster => axilWriteMasters(VERSION_INDEX_C),
+         axiWriteSlave  => axilWriteSlaves(VERSION_INDEX_C),
+         -- Clocks and Resets
+         axiClk         => axilClk,
+         axiRst         => axilRst);
 
-      -- DRR Memory interface ports
-      c0_ddr4_adr       => c0_ddr4_adr,
-      c0_ddr4_ba        => c0_ddr4_ba,
-      c0_ddr4_cke       => c0_ddr4_cke,
-      c0_ddr4_cs_n      => c0_ddr4_cs_n,
-      c0_ddr4_dm_dbi_n  => c0_ddr4_dm_dbi_n,
-      c0_ddr4_dq        => c0_ddr4_dq,
-      c0_ddr4_dqs_c     => c0_ddr4_dqs_c,
-      c0_ddr4_dqs_t     => c0_ddr4_dqs_t,
-      c0_ddr4_odt       => c0_ddr4_odt,
-      c0_ddr4_bg        => c0_ddr4_bg,
-      c0_ddr4_reset_n   => c0_ddr4_reset_n,
-      c0_ddr4_act_n     => c0_ddr4_act_n,
-      c0_ddr4_ck_c      => c0_ddr4_ck_c,
-      c0_ddr4_ck_t      => c0_ddr4_ck_t,
-      calibComplete     => calibComplete
-   );
+   --------------------------
+   -- AXI-Lite: SYSMON Module
+   --------------------------
+   U_SysMon : entity work.LzDigitizerSysMon
+      generic map (
+         TPD_G            => TPD_G,
+         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+      port map (
+         -- SYSMON Ports
+         vPIn            => vPIn,
+         vNIn            => vNIn,
+         -- AXI-Lite Register Interface
+         axilReadMaster  => axilReadMasters(SYSMON_INDEX_C),
+         axilReadSlave   => axilReadSlaves(SYSMON_INDEX_C),
+         axilWriteMaster => axilWriteMasters(SYSMON_INDEX_C),
+         axilWriteSlave  => axilWriteSlaves(SYSMON_INDEX_C),
+         -- Clocks and Resets
+         axilClk         => axilClk,
+         axilRst         => axilRst);
+
+   ------------------------------
+   -- AXI-Lite: Boot Flash Module
+   ------------------------------
+   U_BootProm : entity work.AxiMicronN25QCore
+      generic map (
+         TPD_G            => TPD_G,
+         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G,
+         MEM_ADDR_MASK_G  => x"00000000",  -- Using hardware write protection
+         AXI_CLK_FREQ_G   => 156.25E+6,        -- units of Hz
+         SPI_CLK_FREQ_G   => (156.25E+6/4.0))  -- units of Hz
+      port map (
+         -- FLASH Memory Ports
+         csL            => bootCsL,
+         sck            => bootSck,
+         mosi           => bootMosi,
+         miso           => bootMiso,
+         -- AXI-Lite Register Interface
+         axiReadMaster  => axilReadMasters(BOOT_MEM_INDEX_C),
+         axiReadSlave   => axilReadSlaves(BOOT_MEM_INDEX_C),
+         axiWriteMaster => axilWriteMasters(BOOT_MEM_INDEX_C),
+         axiWriteSlave  => axilWriteSlaves(BOOT_MEM_INDEX_C),
+         -- Clocks and Resets
+         axiClk         => axilClk,
+         axiRst         => axilRst);
+
+   U_STARTUPE3 : STARTUPE3
+      generic map (
+         PROG_USR      => "FALSE",  -- Activate program event security feature. Requires encrypted bitstreams.
+         SIM_CCLK_FREQ => 0.0)  -- Set the Configuration Clock Frequency(ns) for simulation
+      port map (
+         CFGCLK    => open,  -- 1-bit output: Configuration main clock output
+         CFGMCLK   => open,  -- 1-bit output: Configuration internal oscillator clock output
+         DI        => di,  -- 4-bit output: Allow receiving on the D[3:0] input pins
+         EOS       => open,  -- 1-bit output: Active high output signal indicating the End Of Startup.
+         PREQ      => open,  -- 1-bit output: PROGRAM request to fabric output
+         DO        => do,  -- 4-bit input: Allows control of the D[3:0] pin outputs
+         DTS       => "1110",  -- 4-bit input: Allows tristate of the D[3:0] pins
+         FCSBO     => bootCsL,  -- 1-bit input: Contols the FCS_B pin for flash access
+         FCSBTS    => '0',              -- 1-bit input: Tristate the FCS_B pin
+         GSR       => '0',  -- 1-bit input: Global Set/Reset input (GSR cannot be used for the port name)
+         GTS       => '0',  -- 1-bit input: Global 3-state input (GTS cannot be used for the port name)
+         KEYCLEARB => '0',  -- 1-bit input: Clear AES Decrypter Key input from Battery-Backed RAM (BBRAM)
+         PACK      => '0',  -- 1-bit input: PROGRAM acknowledge input
+         USRCCLKO  => bootSck,          -- 1-bit input: User CCLK input
+         USRCCLKTS => '0',  -- 1-bit input: User CCLK 3-state enable input
+         USRDONEO  => axilRst,  -- 1-bit input: User DONE pin output control
+         USRDONETS => '0');  -- 1-bit input: User DONE 3-state enable output
+
+   axilRstL <= not(axilRst);  -- IPMC uses DONE to determine if FPGA is ready
+   do       <= "111" & bootMosi;
+   bootMiso <= di(1);
+
+   --------------------
+   -- DDR memory tester
+   --------------------
+   U_AxiMemTester : entity work.AxiMemTester
+      generic map (
+         TPD_G        => TPD_G,
+         START_ADDR_G => START_ADDR_C,
+         STOP_ADDR_G  => STOP_ADDR_C,
+         AXI_CONFIG_G => DDR_AXI_CONFIG_C)
+      port map (
+         -- AXI-Lite Interface
+         axilClk         => axilClk,
+         axilRst         => axilRst,
+         axilReadMaster  => axilReadMasters(DDR_MEM_INDEX_C),
+         axilReadSlave   => axilReadSlaves(DDR_MEM_INDEX_C),
+         axilWriteMaster => axilWriteMasters(DDR_MEM_INDEX_C),
+         axilWriteSlave  => axilWriteSlaves(DDR_MEM_INDEX_C),
+         -- DDR Memory Interface
+         axiClk          => axiClk,
+         axiRst          => axiRst,
+         start           => calibComplete,
+         axiWriteMaster  => axiWriteMaster,
+         axiWriteSlave   => axiWriteSlave,
+         axiReadMaster   => axiReadMaster,
+         axiReadSlave    => axiReadSlave);
+
+   ------------------------
+   -- DDR memory controller
+   ------------------------
+   U_DDR : entity work.MigCoreWrapper
+      generic map (
+         TPD_G => TPD_G)
+      port map (
+         -- AXI Slave
+         axiClk           => axiClk,
+         axiRst           => axiRst,
+         axiReadMaster    => axiReadMaster,
+         axiReadSlave     => axiReadSlave,
+         axiWriteMaster   => axiWriteMaster,
+         axiWriteSlave    => axiWriteSlave,
+         -- DDR PHY Ref clk
+         c0_sys_clk_p     => c0_sys_clk_p,
+         c0_sys_clk_n     => c0_sys_clk_n,
+         -- DRR Memory interface ports
+         c0_ddr4_adr      => c0_ddr4_adr,
+         c0_ddr4_ba       => c0_ddr4_ba,
+         c0_ddr4_cke      => c0_ddr4_cke,
+         c0_ddr4_cs_n     => c0_ddr4_cs_n,
+         c0_ddr4_dm_dbi_n => c0_ddr4_dm_dbi_n,
+         c0_ddr4_dq       => c0_ddr4_dq,
+         c0_ddr4_dqs_c    => c0_ddr4_dqs_c,
+         c0_ddr4_dqs_t    => c0_ddr4_dqs_t,
+         c0_ddr4_odt      => c0_ddr4_odt,
+         c0_ddr4_bg       => c0_ddr4_bg,
+         c0_ddr4_reset_n  => c0_ddr4_reset_n,
+         c0_ddr4_act_n    => c0_ddr4_act_n,
+         c0_ddr4_ck_c     => c0_ddr4_ck_c,
+         c0_ddr4_ck_t     => c0_ddr4_ck_t,
+         calibComplete    => calibComplete);
 
 end top_level;

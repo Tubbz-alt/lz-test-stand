@@ -8,4 +8,4 @@
 ## the terms contained in the LICENSE.txt file.
 ##############################################################################
 
-source $::env(PROJ_DIR)/../../common/vivado/promgen.tcl
+source $::env(PROJ_DIR)/../../common/vivado/vivado_sdk.tcl

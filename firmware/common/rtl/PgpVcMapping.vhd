@@ -2,7 +2,7 @@
 -- File       : PgpVcMapping.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2015-01-30
--- Last update: 2017-03-17
+-- Last update: 2017-04-26
 -------------------------------------------------------------------------------
 -- Description: 
 -------------------------------------------------------------------------------
@@ -35,16 +35,14 @@ entity PgpVcMapping is
       txMasters       : out AxiStreamMasterArray(3 downto 0);
       txSlaves        : in  AxiStreamSlaveArray(3 downto 0);
       rxMasters       : in  AxiStreamMasterArray(3 downto 0);
-      rxSlaves        : out AxiStreamSlaveArray(3 downto 0);
       rxCtrl          : out AxiStreamCtrlArray(3 downto 0);
       -- Data Interface
-      dataClk         : in  sl;
-      dataRst         : in  sl;
       dataTxMaster    : in  AxiStreamMasterType;
       dataTxSlave     : out AxiStreamSlaveType;
+      -- MB Interface
+      mbTxMaster      : in  AxiStreamMasterType;
+      mbTxSlave       : out AxiStreamSlaveType;
       -- AXI-Lite Interface
-      axilClk         : in  sl;
-      axilRst         : in  sl;
       axilWriteMaster : out AxiLiteWriteMasterType;
       axilWriteSlave  : in  AxiLiteWriteSlaveType;
       axilReadMaster  : out AxiLiteReadMasterType;
@@ -65,73 +63,124 @@ architecture mapping of PgpVcMapping is
 begin
 
    -- VC0 RX/TX, SRPv3 Register Module    
-   U_SRPv3 : entity work.SrpV3AxiLite
-   generic map (
-      TPD_G               => TPD_G,
-      SLAVE_READY_EN_G    => false,
-      GEN_SYNC_FIFO_G     => true,
-      AXI_STREAM_CONFIG_G => SSI_PGP2B_CONFIG_C
-   )
-   port map (
-      -- Streaming Slave (Rx) Interface (sAxisClk domain) 
-      sAxisClk         => clk,
-      sAxisRst         => rst,
-      sAxisMaster      => rxMasters(0),
-      sAxisCtrl        => rxCtrl(0),
-      -- Streaming Master (Tx) Data Interface (mAxisClk domain)
-      mAxisClk         => clk,
-      mAxisRst         => rst,
-      mAxisMaster      => txMasters(0),
-      mAxisSlave       => txSlaves(0),
-      -- Master AXI-Lite Interface (axilClk domain)
-      axilClk          => axilClk,
-      axilRst          => axilRst,
-      mAxilReadMaster  => axilReadMaster,
-      mAxilReadSlave   => axilReadSlave,
-      mAxilWriteMaster => axilWriteMaster,
-      mAxilWriteSlave  => axilWriteSlave
-   );
+   U_VC0 : entity work.SrpV3AxiLite
+      generic map (
+         TPD_G               => TPD_G,
+         SLAVE_READY_EN_G    => false,
+         GEN_SYNC_FIFO_G     => true,
+         AXI_STREAM_CONFIG_G => SSI_PGP2B_CONFIG_C)
+      port map (
+         -- Streaming Slave (Rx) Interface (sAxisClk domain) 
+         sAxisClk         => clk,
+         sAxisRst         => rst,
+         sAxisMaster      => rxMasters(0),
+         sAxisCtrl        => rxCtrl(0),
+         -- Streaming Master (Tx) Data Interface (mAxisClk domain)
+         mAxisClk         => clk,
+         mAxisRst         => rst,
+         mAxisMaster      => txMasters(0),
+         mAxisSlave       => txSlaves(0),
+         -- Master AXI-Lite Interface (axilClk domain)
+         axilClk          => clk,
+         axilRst          => rst,
+         mAxilReadMaster  => axilReadMaster,
+         mAxilReadSlave   => axilReadSlave,
+         mAxilWriteMaster => axilWriteMaster,
+         mAxilWriteSlave  => axilWriteSlave);
 
    -- VC1 TX, Data
-   VCTX1 : entity work.AxiStreamFifo
-   generic map (
-      -- General Configurations
-      TPD_G               => TPD_G,
-      PIPE_STAGES_G       => 1,
-      SLAVE_READY_EN_G    => true,
-      VALID_THOLD_G       => 1,
-      -- FIFO configurations
-      BRAM_EN_G           => true,
-      USE_BUILT_IN_G      => false,
-      GEN_SYNC_FIFO_G     => true,
-      CASCADE_SIZE_G      => 1,
-      FIFO_ADDR_WIDTH_G   => 10,
-      FIFO_FIXED_THRESH_G => true,
-      FIFO_PAUSE_THRESH_G => 128,
-      -- AXI Stream Port Configurations
-      SLAVE_AXI_CONFIG_G  => ssiAxiStreamConfig(4),
-      MASTER_AXI_CONFIG_G => SSI_PGP2B_CONFIG_C
-   )
-   port map (
-      -- Slave Port
-      sAxisClk    => dataClk,
-      sAxisRst    => dataRst,
-      sAxisMaster => dataTxMaster,
-      sAxisSlave  => dataTxSlave,
-      -- Master Port
-      mAxisClk    => clk,
-      mAxisRst    => rst,
-      mAxisMaster => txMasters(1),
-      mAxisSlave  => txSlaves(1)
-   );
-   
-
-   -- Terminate Unused Streams
-   txMasters(2) <= AXI_STREAM_MASTER_INIT_C;
-   txMasters(3) <= AXI_STREAM_MASTER_INIT_C;
-   rxSlaves <= (others => AXI_STREAM_SLAVE_INIT_C);
    rxCtrl(1) <= AXI_STREAM_CTRL_UNUSED_C;
+   U_VC1 : entity work.AxiStreamFifo
+      generic map (
+         -- General Configurations
+         TPD_G               => TPD_G,
+         PIPE_STAGES_G       => 1,
+         SLAVE_READY_EN_G    => true,
+         VALID_THOLD_G       => 1,
+         -- FIFO configurations
+         BRAM_EN_G           => true,
+         USE_BUILT_IN_G      => false,
+         GEN_SYNC_FIFO_G     => true,
+         CASCADE_SIZE_G      => 1,
+         FIFO_ADDR_WIDTH_G   => 10,
+         FIFO_FIXED_THRESH_G => true,
+         FIFO_PAUSE_THRESH_G => 128,
+         -- AXI Stream Port Configurations
+         SLAVE_AXI_CONFIG_G  => ssiAxiStreamConfig(4),
+         MASTER_AXI_CONFIG_G => SSI_PGP2B_CONFIG_C)
+      port map (
+         -- Slave Port
+         sAxisClk    => clk,
+         sAxisRst    => rst,
+         sAxisMaster => dataTxMaster,
+         sAxisSlave  => dataTxSlave,
+         -- Master Port
+         mAxisClk    => clk,
+         mAxisRst    => rst,
+         mAxisMaster => txMasters(1),
+         mAxisSlave  => txSlaves(1));
+
+   -- VC1 TX, MB
    rxCtrl(2) <= AXI_STREAM_CTRL_UNUSED_C;
-   rxCtrl(3) <= AXI_STREAM_CTRL_UNUSED_C;
+   U_VC2 : entity work.AxiStreamFifo
+      generic map (
+         -- General Configurations
+         TPD_G               => TPD_G,
+         PIPE_STAGES_G       => 1,
+         SLAVE_READY_EN_G    => true,
+         VALID_THOLD_G       => 1,
+         -- FIFO configurations
+         BRAM_EN_G           => true,
+         USE_BUILT_IN_G      => false,
+         GEN_SYNC_FIFO_G     => true,
+         CASCADE_SIZE_G      => 1,
+         FIFO_ADDR_WIDTH_G   => 10,
+         FIFO_FIXED_THRESH_G => true,
+         FIFO_PAUSE_THRESH_G => 128,
+         -- AXI Stream Port Configurations
+         SLAVE_AXI_CONFIG_G  => MB_STREAM_CONFIG_C,
+         MASTER_AXI_CONFIG_G => SSI_PGP2B_CONFIG_C)
+      port map (
+         -- Slave Port
+         sAxisClk    => clk,
+         sAxisRst    => rst,
+         sAxisMaster => mbTxMaster,
+         sAxisSlave  => mbTxSlave,
+         -- Master Port
+         mAxisClk    => clk,
+         mAxisRst    => rst,
+         mAxisMaster => txMasters(2),
+         mAxisSlave  => txSlaves(2));
+
+   -- VC3 TX, Loopback
+   U_VC3 : entity work.AxiStreamFifo
+      generic map (
+         -- General Configurations
+         TPD_G               => TPD_G,
+         PIPE_STAGES_G       => 1,
+         SLAVE_READY_EN_G    => false,
+         VALID_THOLD_G       => 1,
+         -- FIFO configurations
+         BRAM_EN_G           => true,
+         USE_BUILT_IN_G      => false,
+         GEN_SYNC_FIFO_G     => true,
+         CASCADE_SIZE_G      => 1,
+         FIFO_ADDR_WIDTH_G   => 10,
+         FIFO_FIXED_THRESH_G => true,
+         FIFO_PAUSE_THRESH_G => 128,
+         -- AXI Stream Port Configurations
+         SLAVE_AXI_CONFIG_G  => SSI_PGP2B_CONFIG_C,
+         MASTER_AXI_CONFIG_G => SSI_PGP2B_CONFIG_C)
+      port map (
+         -- Slave Port
+         sAxisClk    => clk,
+         sAxisRst    => rst,
+         sAxisMaster => rxMasters(3),
+         sAxisCtrl   => rxCtrl(3),
+         -- Master Port
+         mAxisClk    => clk,
+         mAxisRst    => rst,
+         mAxisMaster => txMasters(3),
+         mAxisSlave  => txSlaves(3));
 
 end mapping;

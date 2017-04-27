@@ -16,7 +16,7 @@
 set RUCKUS_DIR $::env(RUCKUS_DIR)
 source ${RUCKUS_DIR}/vivado_env_var.tcl
 set EmptyApp "Empty Application"
-puts "Here"
+
 # Check if project already exists
 if { [file exists ${SDK_PRJ}] != 1 } {
    # Make the project for Vivado 2016.1 (or later) ....  Refer to AR#66629
@@ -24,8 +24,8 @@ if { [file exists ${SDK_PRJ}] != 1 } {
    file copy -force ${OUT_DIR}/${VIVADO_PROJECT}.runs/impl_1/${PROJECT}.sysdef ${SDK_PRJ}/${PROJECT}.hdf
    sdk setws ${SDK_PRJ}
    sdk createhw  -name hw_0  -hwspec ${SDK_PRJ}/${PROJECT}.hdf   
-   sdk createbsp -name bsp_0 -proc U_Core_U_CPU_U_Microblaze_microblaze_0 -hwproject hw_0 -os standalone
-   sdk createapp -name app_0 -app ${EmptyApp} -proc U_Core_U_CPU_U_Microblaze_microblaze_0 -hwproject hw_0 -bsp bsp_0 -os standalone -lang c++   
+   sdk createbsp -name bsp_0 -proc U_CPU_U_Microblaze_microblaze_0 -hwproject hw_0 -os standalone
+   sdk createapp -name app_0 -app ${EmptyApp} -proc U_CPU_U_Microblaze_microblaze_0 -hwproject hw_0 -bsp bsp_0 -os standalone -lang c++   
    file delete -force ${SDK_PRJ}/app_0/src/main.cc
    # Configure the debug build
    sdk configapp -app app_0 build-config debug

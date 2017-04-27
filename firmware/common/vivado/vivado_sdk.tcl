@@ -18,7 +18,7 @@ if { $::env(BUILD_MIG_CORE)  == 0 } {
    set PrjTclPath   ${RUCKUS_DIR}
 } else {
    # Use the custom SDK project TCL script
-   set PrjTclPath   ${TOP_DIR}/submodules/epix-hr-core/vivado
+   set PrjTclPath   ${TOP_DIR}/common/vivado
 }      
 
 puts "PrjTclPath: ${PrjTclPath}"

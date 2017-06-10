@@ -34,36 +34,70 @@ entity digitizer is
       TPD_G            : time            := 1 ns;
       SIM_SPEEDUP_G    : boolean         := false;
       BUILD_INFO_G     : BuildInfoType;
-      AXI_ERROR_RESP_G : slv(1 downto 0) := AXI_RESP_SLVERR_C);
+      AXI_ERROR_RESP_G : slv(1 downto 0) := AXI_RESP_SLVERR_C
+   );
    port (
+      -- LEDs
+      leds              : out slv(3 downto 0);
+      -- power enable outs
+      enDcDcAm6V        : out sl;
+      enDcDcAp5V4       : out sl;
+      enDcDcAp3V7       : out sl;
+      enDcDcAp2V3       : out sl;
+      enDcDcAp1V6       : out sl;
+      enLdoSlow         : out sl;
+      enLdoFast         : out sl;
+      enLdoAm5V         : out sl;
+      -- power OK ins
+      pokDcDcDp6V       : in  sl;
+      pokDcDcAp6V       : in  sl;
+      pokDcDcAm6V       : in  sl;
+      pokDcDcAp5V4      : in  sl;
+      pokDcDcAp3V7      : in  sl;
+      pokDcDcAp2V3      : in  sl;
+      pokDcDcAp1V6      : in  sl;
+      pokLdoA0p1V8      : in  sl;
+      pokLdoA0p3V3      : in  sl;
+      pokLdoAd1p1V2     : in  sl;
+      pokLdoAd2p1V2     : in  sl;
+      pokLdoA1p1V9      : in  sl;
+      pokLdoA2p1V9      : in  sl;
+      pokLdoAd1p1V9     : in  sl;
+      pokLdoAd2p1V9     : in  sl;
+      pokLdoA1p3V3      : in  sl;
+      pokLdoA2p3V3      : in  sl;
+      pokLdoAvclkp3V3   : in  sl;
+      pokLdoA0p5V0      : in  sl;
+      pokLdoA1p5V0      : in  sl;
       -- DDR PHY Ref clk
-      c0_sys_clk_p     : in    sl;
-      c0_sys_clk_n     : in    sl;
+      c0_sys_clk_p      : in    sl;
+      c0_sys_clk_n      : in    sl;
       -- DRR Memory interface ports
-      c0_ddr4_dq       : inout slv(63 downto 0);
-      c0_ddr4_dqs_c    : inout slv(7 downto 0);
-      c0_ddr4_dqs_t    : inout slv(7 downto 0);
-      c0_ddr4_adr      : out   slv(16 downto 0);
-      c0_ddr4_ba       : out   slv(1 downto 0);
-      c0_ddr4_bg       : out   slv(0 to 0);
-      c0_ddr4_reset_n  : out   sl;
-      c0_ddr4_act_n    : out   sl;
-      c0_ddr4_ck_t     : out   slv(0 to 0);
-      c0_ddr4_ck_c     : out   slv(0 to 0);
-      c0_ddr4_cke      : out   slv(0 to 0);
-      c0_ddr4_cs_n     : out   slv(0 to 0);
-      c0_ddr4_dm_dbi_n : inout slv(7 downto 0);
-      c0_ddr4_odt      : out   slv(0 to 0);
+      c0_ddr4_dq        : inout slv(63 downto 0);
+      c0_ddr4_dqs_c     : inout slv(7 downto 0);
+      c0_ddr4_dqs_t     : inout slv(7 downto 0);
+      c0_ddr4_adr       : out   slv(16 downto 0);
+      c0_ddr4_ba        : out   slv(1 downto 0);
+      c0_ddr4_bg        : out   slv(0 to 0);
+      c0_ddr4_reset_n   : out   sl;
+      c0_ddr4_act_n     : out   sl;
+      c0_ddr4_ck_t      : out   slv(0 to 0);
+      c0_ddr4_ck_c      : out   slv(0 to 0);
+      c0_ddr4_cke       : out   slv(0 to 0);
+      c0_ddr4_cs_n      : out   slv(0 to 0);
+      c0_ddr4_dm_dbi_n  : inout slv(7 downto 0);
+      c0_ddr4_odt       : out   slv(0 to 0);
       -- PGP signals
-      pgpClkP          : in    sl;
-      pgpClkN          : in    sl;
-      pgpRxP           : in    sl;
-      pgpRxN           : in    sl;
-      pgpTxP           : out   sl;
-      pgpTxN           : out   sl;
+      pgpClkP           : in    sl;
+      pgpClkN           : in    sl;
+      pgpRxP            : in    sl;
+      pgpRxN            : in    sl;
+      pgpTxP            : out   sl;
+      pgpTxN            : out   sl;
       -- SYSMON Ports
-      vPIn             : in    sl;
-      vNIn             : in    sl);
+      vPIn              : in    sl;
+      vNIn              : in    sl
+   );
 end digitizer;
 
 architecture top_level of digitizer is
@@ -77,13 +111,14 @@ architecture top_level of digitizer is
    constant START_ADDR_C : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '0');
    constant STOP_ADDR_C  : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
 
-   constant NUM_AXI_MASTERS_C : natural := 5;
+   constant NUM_AXI_MASTERS_C : natural := 6;
 
    constant VERSION_INDEX_C  : natural := 0;
    constant SYSMON_INDEX_C   : natural := 1;
    constant BOOT_MEM_INDEX_C : natural := 2;
    constant DDR_MEM_INDEX_C  : natural := 3;
    constant COMM_INDEX_C     : natural := 4;
+   constant POWER_INDEX_C    : natural := 5;
 
    constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := (
       VERSION_INDEX_C  => (
@@ -105,7 +140,12 @@ architecture top_level of digitizer is
       COMM_INDEX_C     => (
          baseAddr      => x"04000000",
          addrBits      => 24,
-         connectivity  => x"FFFF"));
+         connectivity  => x"FFFF"),
+      POWER_INDEX_C     => (
+         baseAddr      => x"05000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF")
+   );
 
    signal axilClk         : sl;
    signal axilRst         : sl;
@@ -232,7 +272,49 @@ begin
          mAxiWriteSlaves     => axilWriteSlaves,
          mAxiReadMasters     => axilReadMasters,
          mAxiReadSlaves      => axilReadSlaves);
-
+   
+   --------------------------
+   -- Power Supply Module
+   --------------------------    
+   U_PowerController: entity work.PowerController
+   port map ( 
+      axilClk           => axilClk,
+      axilRst           => axilRst,
+      sAxilWriteMaster  => axilWriteMasters(POWER_INDEX_C),
+      sAxilWriteSlave   => axilWriteSlaves(POWER_INDEX_C),
+      sAxilReadMaster   => axilReadMasters(POWER_INDEX_C),
+      sAxilReadSlave    => axilReadSlaves(POWER_INDEX_C),
+      leds              => leds,
+      enDcDcAm6V        => enDcDcAm6V,
+      enDcDcAp5V4       => enDcDcAp5V4,
+      enDcDcAp3V7       => enDcDcAp3V7,
+      enDcDcAp2V3       => enDcDcAp2V3,
+      enDcDcAp1V6       => enDcDcAp1V6,
+      enLdoSlow         => enLdoSlow,
+      enLdoFast         => enLdoFast,
+      enLdoAm5V         => enLdoAm5V,
+      pokDcDcDp6V       => pokDcDcDp6V,
+      pokDcDcAp6V       => pokDcDcAp6V,
+      pokDcDcAm6V       => pokDcDcAm6V,
+      pokDcDcAp5V4      => pokDcDcAp5V4,
+      pokDcDcAp3V7      => pokDcDcAp3V7,
+      pokDcDcAp2V3      => pokDcDcAp2V3,
+      pokDcDcAp1V6      => pokDcDcAp1V6,
+      pokLdoA0p1V8      => pokLdoA0p1V8,
+      pokLdoA0p3V3      => pokLdoA0p3V3,
+      pokLdoAd1p1V2     => pokLdoAd1p1V2,
+      pokLdoAd2p1V2     => pokLdoAd2p1V2,
+      pokLdoA1p1V9      => pokLdoA1p1V9,
+      pokLdoA2p1V9      => pokLdoA2p1V9,
+      pokLdoAd1p1V9     => pokLdoAd1p1V9,
+      pokLdoAd2p1V9     => pokLdoAd2p1V9,
+      pokLdoA1p3V3      => pokLdoA1p3V3,
+      pokLdoA2p3V3      => pokLdoA2p3V3,
+      pokLdoAvclkp3V3   => pokLdoAvclkp3V3,
+      pokLdoA0p5V0      => pokLdoA0p5V0,
+      pokLdoA1p5V0      => pokLdoA1p5V0
+   );
+   
    --------------------------
    -- AXI-Lite Version Module
    --------------------------          

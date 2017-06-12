@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------
 -- Title         : PowerController
--- Project       : Tixel Detector
+-- Project       : LZ Test Stand Development Firmware
 -------------------------------------------------------------------------------
 -- File          : PowerController.vhd
 -- Author        : Maciej Kwiatkowski, mkwiatko@slac.stanford.edu
@@ -26,6 +26,7 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 use work.StdRtlPkg.all;
+use work.AxiLitePkg.all;
 
 entity PowerController is 
    generic (
@@ -154,7 +155,7 @@ begin
       v := r;
       
       -- sync inputs
-      v.powerOkAll <= powerOkAll;
+      v.powerOkAll := powerOkAll;
       
       v.sAxilReadSlave.rdata := (others => '0');
       axiSlaveWaitTxn(regCon, sAxilWriteMaster, sAxilReadMaster, v.sAxilWriteSlave, v.sAxilReadSlave);

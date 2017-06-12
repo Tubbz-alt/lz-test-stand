@@ -69,6 +69,15 @@ entity digitizer is
       pokLdoAvclkp3V3   : in  sl;
       pokLdoA0p5V0      : in  sl;
       pokLdoA1p5V0      : in  sl;
+      
+      -- fast ADC pins
+      fadcPdn           : out slv(3 downto 0);
+      
+      -- slow ADC pind
+      sadcCtrl1         : out slv(3 downto 0);
+      sadcCtrl2         : out slv(3 downto 0);
+      sampEn            : out slv(3 downto 0);
+      
       -- DDR PHY Ref clk
       c0_sys_clk_p      : in    sl;
       c0_sys_clk_n      : in    sl;
@@ -188,6 +197,12 @@ architecture top_level of digitizer is
    signal dataTxSlave  : AxiStreamSlaveType;
 
 begin
+   
+   -- keep power down
+   fadcPdn <= "1111";
+   sadcCtrl1 <= "1111";
+   sadcCtrl2 <= "1111";
+   sampEn <= "0000";
 
    -----------------------
    -- Communication Module
@@ -399,7 +414,7 @@ begin
          PACK      => '0',  -- 1-bit input: PROGRAM acknowledge input
          USRCCLKO  => bootSck,          -- 1-bit input: User CCLK input
          USRCCLKTS => '0',  -- 1-bit input: User CCLK 3-state enable input
-         USRDONEO  => axilRst,  -- 1-bit input: User DONE pin output control
+         USRDONEO  => '1',  -- 1-bit input: User DONE pin output control
          USRDONETS => '0');  -- 1-bit input: User DONE 3-state enable output
 
    axilRstL <= not(axilRst);  -- IPMC uses DONE to determine if FPGA is ready

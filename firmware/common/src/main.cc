@@ -22,12 +22,12 @@
 int main() { 
    
    
-   #xil_printf("Version %x\n\r",     Xil_In32(BUS_OFFSET+0x00000000));
-   #xil_printf("PGP Bits %x\n\r",    Xil_In32(BUS_OFFSET+0x04000020));
-   #xil_printf("MemTester rdy %x\n\r",    Xil_In32(BUS_OFFSET+0x03000100));
-   #xil_printf("MemTester err %x\n\r",    Xil_In32(BUS_OFFSET+0x03000104));
-   #xil_printf("MemTester wTimer %d\n\r",    Xil_In32(BUS_OFFSET+0x03000108));
-   #xil_printf("MemTester rTimer %d\n\r",    Xil_In32(BUS_OFFSET+0x0300010C));
+   //xil_printf("Version %x\n\r",     Xil_In32(BUS_OFFSET+0x00000000));
+   //xil_printf("PGP Bits %x\n\r",    Xil_In32(BUS_OFFSET+0x04000020));
+   //xil_printf("MemTester rdy %x\n\r",    Xil_In32(BUS_OFFSET+0x03000100));
+   //xil_printf("MemTester err %x\n\r",    Xil_In32(BUS_OFFSET+0x03000104));
+   //xil_printf("MemTester wTimer %d\n\r",    Xil_In32(BUS_OFFSET+0x03000108));
+   //xil_printf("MemTester rTimer %d\n\r",    Xil_In32(BUS_OFFSET+0x0300010C));
    
    while (1) {
       

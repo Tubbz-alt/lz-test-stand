@@ -345,7 +345,7 @@ begin
    ----------------------------------------------------
    U_SADC_SPI_Conf: entity work.AxiSpiMaster
    generic map (
-      ADDRESS_SIZE_G    => 8,
+      ADDRESS_SIZE_G    => 7,
       DATA_SIZE_G       => 8,
       CLK_PERIOD_G      => 6.4E-9,
       SPI_SCLK_PERIOD_G => 1.0E-6,

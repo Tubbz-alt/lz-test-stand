@@ -73,7 +73,12 @@ entity digitizer is
       -- fast ADC pins
       fadcPdn           : out slv(3 downto 0);
       
-      -- slow ADC pind
+      -- slow ADC pins
+      sadcSclk          : out sl;
+      sadcSDin          : in  sl;
+      sadcSDout         : out sl;
+      sadcCsb           : out slv(3 downto 0);
+      sadcRst           : out slv(3 downto 0);
       sadcCtrl1         : out slv(3 downto 0);
       sadcCtrl2         : out slv(3 downto 0);
       sampEn            : out slv(3 downto 0);
@@ -120,7 +125,7 @@ architecture top_level of digitizer is
    constant START_ADDR_C : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '0');
    constant STOP_ADDR_C  : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
 
-   constant NUM_AXI_MASTERS_C : natural := 6;
+   constant NUM_AXI_MASTERS_C : natural := 7;
 
    constant VERSION_INDEX_C  : natural := 0;
    constant SYSMON_INDEX_C   : natural := 1;
@@ -128,6 +133,7 @@ architecture top_level of digitizer is
    constant DDR_MEM_INDEX_C  : natural := 3;
    constant COMM_INDEX_C     : natural := 4;
    constant POWER_INDEX_C    : natural := 5;
+   constant SADCONF_INDEX_C  : natural := 6;
 
    constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := (
       VERSION_INDEX_C  => (
@@ -152,6 +158,10 @@ architecture top_level of digitizer is
          connectivity  => x"FFFF"),
       POWER_INDEX_C     => (
          baseAddr      => x"05000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF"),
+      SADCONF_INDEX_C     => (
+         baseAddr      => x"06000000",
          addrBits      => 24,
          connectivity  => x"FFFF")
    );
@@ -197,12 +207,6 @@ architecture top_level of digitizer is
    signal dataTxSlave  : AxiStreamSlaveType;
 
 begin
-   
-   -- keep power down
-   fadcPdn <= "1111";
-   sadcCtrl1 <= "1111";
-   sadcCtrl2 <= "1111";
-   sampEn <= "0000";
 
    -----------------------
    -- Communication Module
@@ -327,7 +331,37 @@ begin
       pokLdoA2p3V3      => pokLdoA2p3V3,
       pokLdoAvclkp3V3   => pokLdoAvclkp3V3,
       pokLdoA0p5V0      => pokLdoA0p5V0,
-      pokLdoA1p5V0      => pokLdoA1p5V0
+      pokLdoA1p5V0      => pokLdoA1p5V0,
+      sadcRst           => sadcRst,
+      sadcCtrl1         => sadcCtrl1,
+      sadcCtrl2         => sadcCtrl2,
+      sampEn            => sampEn,
+      fadcPdn           => fadcPdn
+   );
+
+   
+   ----------------------------------------------------
+   -- slow ADC configuration SPI
+   ----------------------------------------------------
+   U_SADC_SPI_Conf: entity work.AxiSpiMaster
+   generic map (
+      ADDRESS_SIZE_G    => 8,
+      DATA_SIZE_G       => 8,
+      CLK_PERIOD_G      => 6.4E-9,
+      SPI_SCLK_PERIOD_G => 1.0E-6,
+      SPI_NUM_CHIPS_G   => 4
+   )
+   port map (
+      axiClk         => axilClk,
+      axiRst         => axilRst,
+      axiReadMaster  => axilReadMasters(SADCONF_INDEX_C),
+      axiReadSlave   => axilReadSlaves(SADCONF_INDEX_C),
+      axiWriteMaster => axilWriteMasters(SADCONF_INDEX_C),
+      axiWriteSlave  => axilWriteSlaves(SADCONF_INDEX_C),
+      coreSclk       => sadcSclk,
+      coreSDin       => sadcSDin,
+      coreSDout      => sadcSDout,
+      coreMCsb       => sadcCsb
    );
    
    --------------------------

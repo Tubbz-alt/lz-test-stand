@@ -75,9 +75,19 @@ entity PowerController is
       pokLdoA2p3V3      : in  sl;
       pokLdoAvclkp3V3   : in  sl;
       pokLdoA0p5V0      : in  sl;
-      pokLdoA1p5V0      : in  sl
+      pokLdoA1p5V0      : in  sl;
       
       -- add power sync
+      
+      
+      -- slow ADC signals
+      sadcRst           : out slv(3 downto 0);
+      sadcCtrl1         : out slv(3 downto 0);
+      sadcCtrl2         : out slv(3 downto 0);
+      sampEn            : out slv(3 downto 0);
+      
+      -- fast ADC signals
+      fadcPdn           : out slv(3 downto 0)
       
    );
 end PowerController;
@@ -90,6 +100,11 @@ architecture RTL of PowerController is
       powerEnAll        : slv(7 downto 0);
       powerOkAll        : slv(19 downto 0);
       leds              : slv(3 downto 0);
+      sadcRst           : slv(3 downto 0);
+      sadcCtrl1         : slv(3 downto 0);
+      sadcCtrl2         : slv(3 downto 0);
+      sampEn            : slv(3 downto 0);
+      fadcPdn           : slv(3 downto 0);
       sAxilWriteSlave   : AxiLiteWriteSlaveType;
       sAxilReadSlave    : AxiLiteReadSlaveType;
    end record RegType;
@@ -98,6 +113,11 @@ architecture RTL of PowerController is
       powerEnAll        => (others=>'0'),
       powerOkAll        => (others=>'0'),
       leds              => (others=>'0'),
+      sadcRst           => (others=>'0'),
+      sadcCtrl1         => (others=>'1'),
+      sadcCtrl2         => (others=>'1'),
+      sampEn            => (others=>'0'),
+      fadcPdn           => (others=>'1'),
       sAxilWriteSlave   => AXI_LITE_WRITE_SLAVE_INIT_C,
       sAxilReadSlave    => AXI_LITE_READ_SLAVE_INIT_C
    );
@@ -165,6 +185,14 @@ begin
       
       axiSlaveRegister (regCon, x"100", 0, v.leds);
       
+      -- add FSM to reset slow ADC after power ramp (see doc)
+      axiSlaveRegister (regCon, x"200", 0, v.sadcRst);
+      axiSlaveRegister (regCon, x"204", 0, v.sadcCtrl1);
+      axiSlaveRegister (regCon, x"208", 0, v.sadcCtrl2);
+      axiSlaveRegister (regCon, x"20C", 0, v.sampEn);
+      
+      axiSlaveRegister (regCon, x"300", 0, v.fadcPdn);
+      
       axiSlaveDefault(regCon, v.sAxilWriteSlave, v.sAxilReadSlave, AXIL_ERR_RESP_G);
       
       if (axilRst = '1') then
@@ -175,6 +203,12 @@ begin
 
       sAxilWriteSlave   <= r.sAxilWriteSlave;
       sAxilReadSlave    <= r.sAxilReadSlave;
+      
+      sadcRst           <=r.sadcRst;
+      sadcCtrl1         <=r.sadcCtrl1;
+      sadcCtrl2         <=r.sadcCtrl2;
+      sampEn            <=r.sampEn;
+      fadcPdn           <=r.fadcPdn;
 
    end process comb;
 

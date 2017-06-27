@@ -21,6 +21,7 @@ import pyrogue as pr
 import collections
 import surf.axi as axi
 import surf.protocols.pgp as pgp
+import surf.devices.ti as ti
 import surf
 
 
@@ -39,7 +40,11 @@ class Lzts(pr.Device):
       self.add((
             axi.AxiVersion(offset=0x00000000),
             LztsPowerRegisters(name="LztsPowerRegisters", offset=0x05000000),
-            pgp.Pgp2bAxi(name='Pgp2bAxi', offset=0x04000000, expand=False)))
+            pgp.Pgp2bAxi(name='Pgp2bAxi', offset=0x04000000, expand=False),
+            ti.Ads42Lbx9(name='SlowAdcConfig0', offset=0x06000000, enabled=False, expand=False),
+            ti.Ads42Lbx9(name='SlowAdcConfig1', offset=0x06000200, enabled=False, expand=False),
+            ti.Ads42Lbx9(name='SlowAdcConfig2', offset=0x06000400, enabled=False, expand=False),
+            ti.Ads42Lbx9(name='SlowAdcConfig3', offset=0x06000600, enabled=False, expand=False)))
       
 
 class LztsPowerRegisters(pr.Device):
@@ -96,6 +101,11 @@ class LztsPowerRegisters(pr.Device):
          pr.Variable(name='Led1',   description='Leds', offset=0x00000100, bitSize=1, bitOffset=1,  base='bool', mode='RW'),
          pr.Variable(name='Led2',   description='Leds', offset=0x00000100, bitSize=1, bitOffset=2,  base='bool', mode='RW'),
          pr.Variable(name='Led3',   description='Leds', offset=0x00000100, bitSize=1, bitOffset=3,  base='bool', mode='RW')))
+      
+      self.add((pr.Variable(name='SADCRst',     description='SADCRst',     offset=0x00000200, bitSize=4, bitOffset=0,  base='hex', mode='RW')))
+      self.add((pr.Variable(name='SADCCtrl1',   description='SADCCtrl1',   offset=0x00000204, bitSize=4, bitOffset=0,  base='hex', mode='RW')))
+      self.add((pr.Variable(name='SADCCtrl2',   description='SADCCtrl2',   offset=0x00000208, bitSize=4, bitOffset=0,  base='hex', mode='RW')))
+      self.add((pr.Variable(name='SAMPEn',      description='SAMPEn',      offset=0x0000020C, bitSize=4, bitOffset=0,  base='hex', mode='RW')))
       
       #####################################
       # Create commands

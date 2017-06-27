@@ -25,6 +25,7 @@ use work.StdRtlPkg.all;
 use work.AxiPkg.all;
 use work.AxiLitePkg.all;
 use work.AxiStreamPkg.all;
+use work.AxiAds42lb69Pkg.all;
 
 library unisim;
 use unisim.vcomponents.all;
@@ -83,6 +84,15 @@ entity digitizer is
       sadcCtrl2         : out slv(3 downto 0);
       sampEn            : out slv(3 downto 0);
       
+      sadcClkFbP        : in  slv(3 downto 0);
+      sadcClkFbN        : in  slv(3 downto 0);
+      sadcDataP         : in  Slv16Array(3 downto 0);
+      sadcDataN         : in  Slv16Array(3 downto 0);
+      sadcClkP          : out slv(3 downto 0);
+      sadcClkN          : out slv(3 downto 0);
+      sadcSyncP         : out slv(3 downto 0);
+      sadcSyncN         : out slv(3 downto 0);
+      
       -- DDR PHY Ref clk
       c0_sys_clk_p      : in    sl;
       c0_sys_clk_n      : in    sl;
@@ -125,7 +135,7 @@ architecture top_level of digitizer is
    constant START_ADDR_C : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '0');
    constant STOP_ADDR_C  : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
 
-   constant NUM_AXI_MASTERS_C : natural := 7;
+   constant NUM_AXI_MASTERS_C : natural := 11;
 
    constant VERSION_INDEX_C  : natural := 0;
    constant SYSMON_INDEX_C   : natural := 1;
@@ -134,6 +144,10 @@ architecture top_level of digitizer is
    constant COMM_INDEX_C     : natural := 4;
    constant POWER_INDEX_C    : natural := 5;
    constant SADCONF_INDEX_C  : natural := 6;
+   constant SADCRD0_INDEX_C  : natural := 7;
+   constant SADCRD1_INDEX_C  : natural := 8;
+   constant SADCRD2_INDEX_C  : natural := 9;
+   constant SADCRD3_INDEX_C  : natural := 10;
 
    constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := (
       VERSION_INDEX_C  => (
@@ -162,6 +176,22 @@ architecture top_level of digitizer is
          connectivity  => x"FFFF"),
       SADCONF_INDEX_C     => (
          baseAddr      => x"06000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF"),
+      SADCRD0_INDEX_C     => (
+         baseAddr      => x"07000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF"),
+      SADCRD1_INDEX_C     => (
+         baseAddr      => x"08000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF"),
+      SADCRD2_INDEX_C     => (
+         baseAddr      => x"09000000",
+         addrBits      => 24,
+         connectivity  => x"FFFF"),
+      SADCRD3_INDEX_C     => (
+         baseAddr      => x"0A000000",
          addrBits      => 24,
          connectivity  => x"FFFF")
    );
@@ -205,6 +235,9 @@ architecture top_level of digitizer is
 
    signal dataTxMaster : AxiStreamMasterType;
    signal dataTxSlave  : AxiStreamSlaveType;
+   
+   signal clk250     : sl;
+   signal rst250     : sl;
 
 begin
 
@@ -220,6 +253,8 @@ begin
          -- Clock and Reset
          axilClk          => axilClk,
          axilRst          => axilRst,
+         clk250           => clk250,
+         rst250           => rst250,
          -- Data Streaming Interface
          dataTxMaster     => dataTxMaster,
          dataTxSlave      => dataTxSlave,
@@ -341,7 +376,7 @@ begin
 
    
    ----------------------------------------------------
-   -- slow ADC configuration SPI
+   -- 250 MSPS ADCs configuration SPI
    ----------------------------------------------------
    U_SADC_SPI_Conf: entity work.AxiSpiMaster
    generic map (
@@ -363,6 +398,45 @@ begin
       coreSDout      => sadcSDout,
       coreMCsb       => sadcCsb
    );
+   
+   ------------------------------------------------
+   -- 250 MSPS ADCs readout
+   ------------------------------------------------
+   GEN_250MSPS : for i in 3 downto 0 generate
+      
+      U_250MspsAdc : entity work.AxiAds42lb69Core
+      generic map (
+         XIL_DEVICE_G   => "ULTRASCALE"
+      )
+      port map (
+         -- ADC Ports
+         adcIn.clkFbP   => sadcClkFbP(i),
+         adcIn.clkFbN   => sadcClkFbN(i),
+         adcIn.dataP(0) => sadcDataP(i)( 7 downto 0),
+         adcIn.dataP(1) => sadcDataP(i)(15 downto 8),
+         adcIn.dataN(0) => sadcDataN(i)( 7 downto 0),
+         adcIn.dataN(1) => sadcDataN(i)(15 downto 8),
+         adcOut.clkP    => sadcClkP(i),
+         adcOut.clkN    => sadcClkN(i),
+         adcOut.syncP   => sadcSyncP(i),
+         adcOut.syncN   => sadcSyncN(i),
+         -- ADC signals (adcClk domain)
+         adcSync        => '1',
+         adcData        => open,
+         -- AXI-Lite Register Interface (axiClk domain)
+         axiReadMaster  => axilReadMasters(SADCRD0_INDEX_C+i),
+         axiReadSlave   => axilReadSlaves(SADCRD0_INDEX_C+i),
+         axiWriteMaster => axilWriteMasters(SADCRD0_INDEX_C+i),
+         axiWriteSlave  => axilWriteSlaves(SADCRD0_INDEX_C+i),
+         -- Clocks and Resets
+         axiClk         => axiClk,
+         axiRst         => axiRst,
+         adcClk         => clk250,
+         adcRst         => rst250,
+         refclk200MHz   => clk250
+      );
+      
+   end generate;
    
    --------------------------
    -- AXI-Lite Version Module

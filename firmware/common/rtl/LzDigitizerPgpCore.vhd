@@ -38,6 +38,8 @@ entity LzDigitizerPgpCore is
       -- Clock and Reset
       axilClk          : out sl;
       axilRst          : out sl;
+      clk250           : out sl;
+      rst250           : out sl;
       -- Data Streaming Interface
       dataTxMaster     : in  AxiStreamMasterType;
       dataTxSlave      : out AxiStreamSlaveType;
@@ -119,29 +121,36 @@ begin
       port map (
          clk    => fabClk,
          rstOut => fabRst);
-
+   
+   -- clkOut(0) - 100 MHz
+   -- clkOut(1) - 250 MHz
    U_PLL : entity work.ClockManagerUltraScale
       generic map(
          TPD_G             => TPD_G,
-         TYPE_G            => "PLL",
+         TYPE_G            => "MMCM",
          INPUT_BUFG_G      => true,
          FB_BUFG_G         => true,
          RST_IN_POLARITY_G => '1',
-         NUM_CLOCKS_G      => 1,
+         NUM_CLOCKS_G      => 2,
          -- MMCM attributes
          BANDWIDTH_G       => "OPTIMIZED",
          CLKIN_PERIOD_G    => 6.4,
-         DIVCLK_DIVIDE_G   => 1,
-         CLKFBOUT_MULT_G   => 4,
-         CLKOUT0_DIVIDE_G  => 4)
+         DIVCLK_DIVIDE_G   => 10,
+         CLKFBOUT_MULT_G   => 64,
+         CLKOUT0_DIVIDE_G  => 10,
+         CLKOUT1_DIVIDE_G  => 4
+      )
       port map(
          -- Clock Input
          clkIn     => fabClk,
          rstIn     => fabRst,
          -- Clock Outputs
          clkOut(0) => clk,
+         clkOut(1) => clk250,
          -- Reset Outputs
-         rstOut(0) => reset(0));
+         rstOut(0) => reset(0),
+         rstOut(1) => rst250
+      );
 
    process(clk)
    begin

@@ -240,7 +240,7 @@ architecture top_level of digitizer is
    signal rst250     : sl;
 
 begin
-
+   
    -----------------------
    -- Communication Module
    -----------------------
@@ -253,8 +253,6 @@ begin
          -- Clock and Reset
          axilClk          => axilClk,
          axilRst          => axilRst,
-         clk250           => clk250,
-         rst250           => rst250,
          -- Data Streaming Interface
          dataTxMaster     => dataTxMaster,
          dataTxSlave      => dataTxSlave,
@@ -278,6 +276,33 @@ begin
          pgpRxN           => pgpRxN,
          pgpTxP           => pgpTxP,
          pgpTxN           => pgpTxN);
+   
+   -- clkIn       - 156.25 MHz
+   -- clkOut(0)   - 250.00 MHz
+   U_PLL : entity work.ClockManagerUltraScale
+      generic map(
+         TPD_G             => TPD_G,
+         TYPE_G            => "MMCM",
+         INPUT_BUFG_G      => false,
+         FB_BUFG_G         => true,
+         RST_IN_POLARITY_G => '1',
+         NUM_CLOCKS_G      => 1,
+         -- MMCM attributes
+         BANDWIDTH_G       => "OPTIMIZED",
+         CLKIN_PERIOD_G    => 6.4,
+         DIVCLK_DIVIDE_G   => 10,
+         CLKFBOUT_MULT_G   => 64,
+         CLKOUT0_DIVIDE_G  => 4
+      )
+      port map(
+         -- Clock Input
+         clkIn     => axilClk,
+         rstIn     => axilRst,
+         -- Clock Outputs
+         clkOut(0) => clk250,
+         -- Reset Outputs
+         rstOut(0) => rst250
+      );
 
    --------------------------------
    -- Microblaze Embedded Processor

@@ -122,8 +122,8 @@ begin
          clk    => fabClk,
          rstOut => fabRst);
    
-   -- clkOut(0) - 100 MHz
-   -- clkOut(1) - 250 MHz
+   -- clkOut(0) - 156.25 MHz
+   -- clkOut(1) - 250.00 MHz
    U_PLL : entity work.ClockManagerUltraScale
       generic map(
          TPD_G             => TPD_G,
@@ -133,12 +133,12 @@ begin
          RST_IN_POLARITY_G => '1',
          NUM_CLOCKS_G      => 2,
          -- MMCM attributes
-         BANDWIDTH_G       => "OPTIMIZED",
-         CLKIN_PERIOD_G    => 6.4,
-         DIVCLK_DIVIDE_G   => 10,
-         CLKFBOUT_MULT_G   => 64,
-         CLKOUT0_DIVIDE_G  => 10,
-         CLKOUT1_DIVIDE_G  => 4
+         BANDWIDTH_G          => "OPTIMIZED",
+         CLKIN_PERIOD_G       => 6.4,
+         DIVCLK_DIVIDE_G      => 10,
+         CLKFBOUT_MULT_G      => 64,
+         CLKOUT0_DIVIDE_F_G   => 6.4,
+         CLKOUT1_DIVIDE_G     => 4
       )
       port map(
          -- Clock Input

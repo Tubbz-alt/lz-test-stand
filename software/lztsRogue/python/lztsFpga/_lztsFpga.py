@@ -41,10 +41,14 @@ class Lzts(pr.Device):
             axi.AxiVersion(offset=0x00000000),
             LztsPowerRegisters(name="LztsPowerRegisters", offset=0x05000000),
             pgp.Pgp2bAxi(name='Pgp2bAxi', offset=0x04000000, expand=False),
-            ti.Ads42Lbx9(name='SlowAdcConfig0', offset=0x06000000, enabled=False, expand=False),
-            ti.Ads42Lbx9(name='SlowAdcConfig1', offset=0x06000200, enabled=False, expand=False),
-            ti.Ads42Lbx9(name='SlowAdcConfig2', offset=0x06000400, enabled=False, expand=False),
-            ti.Ads42Lbx9(name='SlowAdcConfig3', offset=0x06000600, enabled=False, expand=False)))
+            ti.Ads42Lbx9Config(name='SlowAdcConfig0', offset=0x06000000, enabled=False, expand=False),
+            ti.Ads42Lbx9Config(name='SlowAdcConfig1', offset=0x06000200, enabled=False, expand=False),
+            ti.Ads42Lbx9Config(name='SlowAdcConfig2', offset=0x06000400, enabled=False, expand=False),
+            ti.Ads42Lbx9Config(name='SlowAdcConfig3', offset=0x06000600, enabled=False, expand=False),
+            ti.Ads42Lbx9Readout(name='SlowAdcReadout0', offset=0x07000000, enabled=False, expand=False),
+            ti.Ads42Lbx9Readout(name='SlowAdcReadout1', offset=0x08000000, enabled=False, expand=False),
+            ti.Ads42Lbx9Readout(name='SlowAdcReadout2', offset=0x09000000, enabled=False, expand=False),
+            ti.Ads42Lbx9Readout(name='SlowAdcReadout3', offset=0x0A000000, enabled=False, expand=False)))
       
 
 class LztsPowerRegisters(pr.Device):

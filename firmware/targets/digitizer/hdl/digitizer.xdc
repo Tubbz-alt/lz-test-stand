@@ -20,13 +20,18 @@ create_clock -name sadc1ClkP -period  4.000 [get_ports {sadcClkFbP[1]}]
 create_clock -name sadc2ClkP -period  4.000 [get_ports {sadcClkFbP[2]}]
 create_clock -name sadc3ClkP -period  4.000 [get_ports {sadcClkFbP[3]}]
 
+create_generated_clock -name clk250      [get_pins {U_PLL/MmcmGen.U_Mmcm/CLKOUT0}]
+create_generated_clock -name axilClk     [get_pins {U_PGP/U_PLL/PllGen.U_Pll/CLKOUT0}]
+
 set_clock_groups -asynchronous \
    -group [get_clocks -include_generated_clocks {pgpClkP}] \
    -group [get_clocks -include_generated_clocks {ddrClkP}] \
    -group [get_clocks -include_generated_clocks {sadc0ClkP}] \
    -group [get_clocks -include_generated_clocks {sadc1ClkP}] \
    -group [get_clocks -include_generated_clocks {sadc2ClkP}] \
-   -group [get_clocks -include_generated_clocks {sadc3ClkP}]
+   -group [get_clocks -include_generated_clocks {sadc3ClkP}] \
+   -group [get_clocks -include_generated_clocks {clk250}] \
+   -group [get_clocks -include_generated_clocks {axilClk}]
 
 ############################
 ## Pinout Configuration   ##

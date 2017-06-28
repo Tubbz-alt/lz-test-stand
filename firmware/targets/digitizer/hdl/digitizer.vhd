@@ -238,6 +238,10 @@ architecture top_level of digitizer is
    
    signal clk250     : sl;
    signal rst250     : sl;
+   
+   attribute keep : string;
+   attribute keep of clk250 : signal is "true";
+   attribute keep of rst250 : signal is "true";
 
 begin
    
@@ -277,6 +281,9 @@ begin
          pgpTxP           => pgpTxP,
          pgpTxN           => pgpTxN);
    
+   ----------------------------------------------
+   -- Clock Manager
+   ----------------------------------------------
    -- clkIn       - 156.25 MHz
    -- clkOut(0)   - 250.00 MHz
    U_PLL : entity work.ClockManagerUltraScale
@@ -454,8 +461,8 @@ begin
          axiWriteMaster => axilWriteMasters(SADCRD0_INDEX_C+i),
          axiWriteSlave  => axilWriteSlaves(SADCRD0_INDEX_C+i),
          -- Clocks and Resets
-         axiClk         => axiClk,
-         axiRst         => axiRst,
+         axiClk         => axilClk,
+         axiRst         => axilRst,
          adcClk         => clk250,
          adcRst         => rst250,
          refclk200MHz   => clk250

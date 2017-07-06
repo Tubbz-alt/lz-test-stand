@@ -104,7 +104,7 @@ begin
       generic map (
          CLK_PERIOD_G      => CLK_PERIOD_C,
          RST_START_DELAY_G => 0 ns,  -- Wait this long into simulation before asserting reset
-         RST_HOLD_TIME_G   => 5 us)     -- Hold reset for this long)
+         RST_HOLD_TIME_G   => 1 us)     -- Hold reset for this long)
       port map (
          clkP => clk,
          clkN => open,

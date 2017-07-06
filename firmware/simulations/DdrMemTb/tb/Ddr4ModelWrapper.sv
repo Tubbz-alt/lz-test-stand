@@ -83,17 +83,17 @@ module Ddr4ModelWrapper(
    inout    [63:0] c0_ddr4_dq,
    inout    [7:0]  c0_ddr4_dqs_c,
    inout    [7:0]  c0_ddr4_dqs_t,
-   output   [16:0] c0_ddr4_adr,
-   output   [1:0]  c0_ddr4_ba,
-   output   [0:0]  c0_ddr4_bg,
-   output          c0_ddr4_reset_n,
-   output          c0_ddr4_act_n,
-   output   [0:0]  c0_ddr4_ck_t,
-   output   [0:0]  c0_ddr4_ck_c,
-   output   [0:0]  c0_ddr4_cke,
-   output   [0:0]  c0_ddr4_cs_n,
+   input    [16:0] c0_ddr4_adr,
+   input    [1:0]  c0_ddr4_ba,
+   input    [0:0]  c0_ddr4_bg,
+   input          c0_ddr4_reset_n,
+   input          c0_ddr4_act_n,
+   input    [0:0]  c0_ddr4_ck_t,
+   input    [0:0]  c0_ddr4_ck_c,
+   input    [0:0]  c0_ddr4_cke,
+   input    [0:0]  c0_ddr4_cs_n,
    inout    [7:0]  c0_ddr4_dm_dbi_n,
-   output   [0:0]  c0_ddr4_odt
+   input    [0:0]  c0_ddr4_odt
 );
 
   localparam ADDR_WIDTH                    = 17;

@@ -2,7 +2,7 @@
 -- File       : DdrMemTb.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-07-05
--- Last update: 2017-07-05
+-- Last update: 2017-07-06
 -------------------------------------------------------------------------------
 -- Description: Simulation Testbed for testing the MigCoreWrapper module
 -------------------------------------------------------------------------------
@@ -50,17 +50,17 @@ architecture testbed of DdrMemTb is
          c0_ddr4_dq       : inout slv(63 downto 0);
          c0_ddr4_dqs_c    : inout slv(7 downto 0);
          c0_ddr4_dqs_t    : inout slv(7 downto 0);
-         c0_ddr4_adr      : out   slv(16 downto 0);
-         c0_ddr4_ba       : out   slv(1 downto 0);
-         c0_ddr4_bg       : out   slv(0 to 0);
-         c0_ddr4_reset_n  : out   sl;
-         c0_ddr4_act_n    : out   sl;
-         c0_ddr4_ck_t     : out   slv(0 to 0);
-         c0_ddr4_ck_c     : out   slv(0 to 0);
-         c0_ddr4_cke      : out   slv(0 to 0);
-         c0_ddr4_cs_n     : out   slv(0 to 0);
+         c0_ddr4_adr      : in    slv(16 downto 0);
+         c0_ddr4_ba       : in    slv(1 downto 0);
+         c0_ddr4_bg       : in    slv(0 to 0);
+         c0_ddr4_reset_n  : in    sl;
+         c0_ddr4_act_n    : in    sl;
+         c0_ddr4_ck_t     : in    slv(0 to 0);
+         c0_ddr4_ck_c     : in    slv(0 to 0);
+         c0_ddr4_cke      : in    slv(0 to 0);
+         c0_ddr4_cs_n     : in    slv(0 to 0);
          c0_ddr4_dm_dbi_n : inout slv(7 downto 0);
-         c0_ddr4_odt      : out   slv(0 to 0));
+         c0_ddr4_odt      : in    slv(0 to 0));
    end component;
 
    signal clk       : sl                    := '0';

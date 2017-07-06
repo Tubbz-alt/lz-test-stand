@@ -35,8 +35,8 @@ int main() {
    //xil_printf("PGP RX remOverflow3Cnt %d\n\r",    Xil_In32(BUS_OFFSET+0x04000040));
    //xil_printf("PGP RX frameErrCount %d\n\r",    Xil_In32(BUS_OFFSET+0x04000044));
    //xil_printf("PGP RX frameCount %d\n\r",    Xil_In32(BUS_OFFSET+0x04000048));
-   //xil_printf("MemTester rdy %x\n\r",    Xil_In32(BUS_OFFSET+0x03000100));
-   //xil_printf("MemTester err %x\n\r",    Xil_In32(BUS_OFFSET+0x03000104));
+   //xil_printf("MemTester rdy %x\n\r",    Xil_In32(BUS_OFFSET+0x03000100)&0x1);
+   //xil_printf("MemTester err %x\n\r",    Xil_In32(BUS_OFFSET+0x03000104)&0x1);
    //xil_printf("MemTester wTimer %d\n\r",    Xil_In32(BUS_OFFSET+0x03000108));
    //xil_printf("MemTester rTimer %d\n\r",    Xil_In32(BUS_OFFSET+0x0300010C));
    

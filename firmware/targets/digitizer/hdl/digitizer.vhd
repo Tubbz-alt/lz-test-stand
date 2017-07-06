@@ -198,7 +198,6 @@ architecture top_level of digitizer is
 
    signal axilClk         : sl;
    signal axilRst         : sl;
-   signal axilRstL        : sl;
    signal axilWriteMaster : AxiLiteWriteMasterType;
    signal axilWriteSlave  : AxiLiteWriteSlaveType;
    signal axilReadSlave   : AxiLiteReadSlaveType;
@@ -556,8 +555,7 @@ begin
          USRCCLKTS => '0',  -- 1-bit input: User CCLK 3-state enable input
          USRDONEO  => '1',  -- 1-bit input: User DONE pin output control
          USRDONETS => '0');  -- 1-bit input: User DONE 3-state enable output
-
-   axilRstL <= not(axilRst);  -- IPMC uses DONE to determine if FPGA is ready
+   
    do       <= "111" & bootMosi;
    bootMiso <= di(1);
 

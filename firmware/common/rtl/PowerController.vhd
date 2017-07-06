@@ -88,7 +88,6 @@ entity PowerController is
       
       -- fast ADC signals
       fadcPdn           : out slv(3 downto 0)
-      
    );
 end PowerController;
 

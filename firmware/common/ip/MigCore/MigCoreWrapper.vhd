@@ -2,7 +2,7 @@
 -- File       : MigCoreWrapper.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-04-21
--- Last update: 2017-04-26
+-- Last update: 2017-07-05
 -------------------------------------------------------------------------------
 -- Description:
 -------------------------------------------------------------------------------
@@ -38,6 +38,8 @@ entity MigCoreWrapper is
       c0_sys_clk_p     : in    sl;
       c0_sys_clk_n     : in    sl;
       -- DRR Memory interface ports
+      sys_rst          : in    sl := '0';
+      c0_ddr4_aresetn  : in    sl := '1';
       c0_ddr4_dq       : inout slv(63 downto 0);
       c0_ddr4_dqs_c    : inout slv(7 downto 0);
       c0_ddr4_dqs_t    : inout slv(7 downto 0);
@@ -158,10 +160,10 @@ begin
          c0_sys_clk_p            => c0_sys_clk_p,
          c0_sys_clk_n            => c0_sys_clk_n,
          dbg_bus                 => open,
-         sys_rst                 => '0',
+         sys_rst                 => sys_rst,
          c0_ddr4_ui_clk          => ddrClk,
          c0_ddr4_ui_clk_sync_rst => coreRst(0),
-         c0_ddr4_aresetn         => '1',
+         c0_ddr4_aresetn         => c0_ddr4_aresetn,
          -- DDR4 signals
          c0_ddr4_adr             => c0_ddr4_adr,
          c0_ddr4_ba              => c0_ddr4_ba,

@@ -21,6 +21,10 @@ loadSource -sim_only -dir "$::DIR_PATH/tb/"
 loadSource -path "$::DIR_PATH/ip/SysMonCore/SysMonCore.dcp"
 # loadIpCore -path "$::DIR_PATH/ip/SysMonCore/SysMonCore.xci"
 
+loadSource -path "$::DIR_PATH/ip/AxiInterconnnect/AxiInterconnect.dcp"
+# loadIpCore -path "$::DIR_PATH/ip/AxiInterconnnect/AxiInterconnect.xci"
+loadSource -path "$::DIR_PATH/ip/AxiInterconnnect/AxiIcWrapper.vhd"
+
 # Load Constraints
 loadConstraints -path "$::DIR_PATH/ip/MigCore/MigCorePinout.xdc" 
 

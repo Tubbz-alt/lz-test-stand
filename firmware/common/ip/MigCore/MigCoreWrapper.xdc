@@ -181,6 +181,7 @@ set_property IOSTANDARD POD12_DCI [ get_ports "c0_ddr4_dq[33]" ]
 set_property IOSTANDARD POD12_DCI [ get_ports "c0_ddr4_dq[28]" ]
 set_property IOSTANDARD DIFF_SSTL12_DCI [ get_ports "c0_ddr4_ck_t[0]" ]
 set_property IOSTANDARD DIFF_SSTL12 [ get_ports "c0_sys_clk_p" ]
+set_property IOSTANDARD DIFF_SSTL12 [ get_ports "c0_sys_clk_n" ]
 set_property IOSTANDARD POD12_DCI [ get_ports "c0_ddr4_dq[12]" ]
 set_property IOSTANDARD POD12_DCI [ get_ports "c0_ddr4_dq[13]" ]
 set_property IOSTANDARD DIFF_POD12_DCI [ get_ports "c0_ddr4_dqs_c[1]" ]
@@ -190,7 +191,6 @@ set_property IOSTANDARD POD12_DCI [ get_ports "c0_ddr4_dq[31]" ]
 set_property IOSTANDARD POD12_DCI [ get_ports "c0_ddr4_dq[30]" ]
 set_property IOSTANDARD POD12_DCI [ get_ports "c0_ddr4_dq[29]" ]
 set_property IOSTANDARD DIFF_SSTL12_DCI [ get_ports "c0_ddr4_ck_c[0]" ]
-set_property IOSTANDARD DIFF_SSTL12 [ get_ports "c0_sys_clk_n" ]
 set_property IOSTANDARD SSTL12_DCI [ get_ports "c0_ddr4_adr[0]" ]
 set_property IOSTANDARD SSTL12_DCI [ get_ports "c0_ddr4_adr[1]" ]
 set_property IOSTANDARD SSTL12_DCI [ get_ports "c0_ddr4_adr[8]" ]
@@ -254,6 +254,9 @@ set_property IOSTANDARD DIFF_POD12_DCI [ get_ports "c0_ddr4_dqs_c[7]" ]
 
 ## The multi cycle path constraint is added to improve the timing.
 
+set_multicycle_path -setup 8 -from [get_pins U_DDR/U_MigCore/inst/u_ddr4_mem_intfc/u_ddr_cal_top/calDone*/C]
+set_multicycle_path -end -hold 7 -from [get_pins U_DDR/U_MigCore/inst/u_ddr4_mem_intfc/u_ddr_cal_top/calDone*/C]
+
 #set_multicycle_path -setup 8 -from [get_pins */u_ddr_cal_top/calDone*/C]
 #set_multicycle_path -end -hold 7 -from [get_pins */u_ddr_cal_top/calDone*/C]
 
@@ -262,6 +265,8 @@ set_property IOSTANDARD DIFF_POD12_DCI [ get_ports "c0_ddr4_dqs_c[7]" ]
 
 ## False path constraint is added to improve the HOLD timing.
 
+set_false_path -hold -to [get_pins U_DDR/U_MigCore/inst/u_ddr4_mem_intfc/u_mig_ddr4_phy/inst/generate_block1.u_ddr_xiphy/byte_num[*].xiphy_byte_wrapper.u_xiphy_byte_wrapper/I_CONTROL[*].GEN_I_CONTROL.u_xiphy_control/xiphy_control/RIU_ADDR*]
+set_false_path -hold -to [get_pins U_DDR/U_MigCore/inst/u_ddr4_mem_intfc/u_mig_ddr4_phy/inst/generate_block1.u_ddr_xiphy/byte_num[*].xiphy_byte_wrapper.u_xiphy_byte_wrapper/I_CONTROL[*].GEN_I_CONTROL.u_xiphy_control/xiphy_control/RIU_WR_DATA*]
 #set_false_path -hold -to [get_pins */*/*/*/*/*.u_xiphy_control/xiphy_control/RIU_ADDR*]
 #set_false_path -hold -to [get_pins */*/*/*/*/*.u_xiphy_control/xiphy_control/RIU_WR_DATA*]
 

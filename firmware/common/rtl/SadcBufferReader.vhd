@@ -90,7 +90,7 @@ architecture rtl of SadcBufferReader is
       hdrRd          : slv(7 downto 0);
       trigSize       : slv(31 downto 0);
       hdrDout        : slv(15 downto 0);
-      rdSize         : slv(7 downto 0);
+      rdSize         : slv(8 downto 0);
       memFull        : slv(7 downto 0);
       buffState      : BuffStateType;
       rMaster        : AxiReadMasterType;
@@ -102,8 +102,9 @@ architecture rtl of SadcBufferReader is
       rdPtrRst       : slv(7 downto 0);
       txMaster       : AxiStreamMasterType;
       hdrCnt         : integer;
-      first          : sl;
       rdHigh         : sl;
+      first          : sl;
+      last           : sl;
    end record TrigType;
    
    constant TRIG_INIT_C : TrigType := (
@@ -123,8 +124,9 @@ architecture rtl of SadcBufferReader is
       rdPtrRst       => (others => '0'),
       txMaster       => AXI_STREAM_MASTER_INIT_C,
       hdrCnt         => 0,
+      rdHigh         => '0',
       first          => '0',
-      rdHigh         => '0'
+      last           => '0'
    );
    
    type RegType is record
@@ -148,7 +150,11 @@ architecture rtl of SadcBufferReader is
    
    signal txSlave : AxiStreamSlaveType;
    
+   signal rData : slv( 31 downto 0);      -- only for simulation visibility
+   
 begin
+   
+   rData <= axiReadSlave.rdata(31 downto 0); -- only for simulation visibility
    
    -- register logic (axilClk domain)
    -- trigger and buffer logic (adcClk domian)
@@ -295,7 +301,9 @@ begin
                else
                   vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- gTime
                   vtrig.hdrCnt      := 0;
-                  vtrig.first       := '1';
+                  -- Set the memory address aligned to 32 bits
+                  vtrig.rMaster.araddr := resize(trig.rdPtr(trig.channelSel)(30 downto 2) & "00", vtrig.rMaster.araddr'length);
+                  -- Validate address
                   vtrig.buffState   := ADDR_S;
                end if;
                vtrig.hdrCnt := trig.hdrCnt + 1;
@@ -303,10 +311,12 @@ begin
          
          when ADDR_S =>
             if (trig.rMaster.arvalid = '0') then
-               -- Set the memory address 
-               vtrig.rMaster.araddr := resize(trig.rdPtr(trig.channelSel)(30 downto 2) & "00", vtrig.rMaster.araddr'length);
+               
+               vtrig.rdSize := (others=>'0');
+               
                -- Set the burst length
                if trig.trigSize <= conv_integer(ARLEN_C)*2+1 then
+                  -- trigger size divided by 2 as there are two samples in one read
                   vtrig.rMaster.arlen := trig.trigSize(8 downto 1);
                else
                   vtrig.rMaster.arlen := ARLEN_C;
@@ -317,53 +327,82 @@ begin
                vtrig.buffState := MOVE_S;
             end if;
             vtrig.rdHigh := '0';
-            vtrig.rdSize := (others=>'0');
+            vtrig.first := '1';
+            vtrig.last := '0';
+            
          
          when MOVE_S =>
             
             -- Check if ready to move data
             if (vtrig.txMaster.tValid = '0') and (axiReadSlave.rvalid = '1') then
                
-               vtrig.first := '0';
-               
                -- stream valid flag and counter
                vtrig.txMaster.tValid := '1';
+               vtrig.txMaster.tKeep := (others=>'1');
                vtrig.trigSize := trig.trigSize - 1;
                
-               -- if first AXI readout and read address not 32 bit aligned
-               -- or
-               -- if whole trigger already streamed
-               if (trig.first = '1' and trig.rdHigh = '0' and trig.rdPtr(trig.channelSel)(1 downto 0) /= 0) or (trig.rdHigh = '1' and trig.trigSize = 0) then
-                  -- stream not valid
-                  vtrig.txMaster.tValid := '0';
-                  -- do not count
-                  vtrig.trigSize := trig.trigSize;
+               vtrig.first := '0';
+               if trig.rdSize = conv_integer(trig.rMaster.arlen) + 1 then
+                  vtrig.last := '1';
                end if;
                
                -- switch in between lower and higher sample
                vtrig.rdHigh := not trig.rdHigh;
                if trig.rdHigh = '0' then
                   vtrig.txMaster.tData(15 downto 0) := axiReadSlave.rdata(15 downto 0);
+                  -- Accept the data 
+                  vtrig.rdSize := trig.rdSize + 1;
+                  -- move addrress and make sure that it rolls at the end of the buffer space
+                  vtrig.rMaster.araddr := trig.rMaster.araddr(63 downto ADDR_BITS_G) & (trig.rMaster.araddr(ADDR_BITS_G-1 downto 0) + 4);
+                  -- acknowledge data readout
+                  vtrig.rMaster.rready := '1';
                else
                   vtrig.txMaster.tData(15 downto 0) := axiReadSlave.rdata(31 downto 16);
-                  -- Accept the data 
-                  vtrig.rMaster.rready := '1';
-                  vtrig.rdSize := trig.rdSize + 1;
                end if;
                
-               if trig.rdSize = trig.rMaster.arlen then
-                  if trig.trigSize = 0 then
-                     vtrig.txMaster.tLast := '1';
-                     vtrig.rdPtrRst(trig.channelSel) := '1';
-                     if trig.channelSel < 7 then
-                        vtrig.channelSel := trig.channelSel + 1;
-                     else
-                        vtrig.channelSel := 0;
-                     end if;
-                     vtrig.buffState := IDLE_S;
-                  else
-                     vtrig.buffState := ADDR_S;
+               -- if address is not 32 bit aligned must skip first and last sample in a burst (single or many)
+               if (trig.rdPtr(trig.channelSel)(1 downto 0) /= 0) then
+                  if (trig.first = '1' and trig.rdHigh = '0') then
+                     -- stream not valid
+                     --vtrig.txMaster.tValid := '0';
+                     -- not keep instead of valid := '0'
+                     -- allows tlast
+                     vtrig.txMaster.tKeep := (others=>'0');
+                     -- do not count
+                     vtrig.trigSize := trig.trigSize;
+                  elsif (vtrig.last = '1' and trig.rdHigh = '1') then
+                     -- for unaligned triggers correct address to one cell before
+                     -- make sure that it rolls at the end of the buffer space
+                     vtrig.rMaster.araddr := trig.rMaster.araddr(63 downto ADDR_BITS_G) & (trig.rMaster.araddr(ADDR_BITS_G-1 downto 0) - 4);
+                     -- not keep instead of valid := '0'
+                     -- allows tlast
+                     vtrig.txMaster.tKeep := (others=>'0');
+                     -- do not count
+                     vtrig.trigSize := trig.trigSize;
                   end if;
+               end if;
+               
+               -- if all words in a burst are read move to next address state
+               if vtrig.last = '1' then
+                  vtrig.buffState := ADDR_S;
+               end if;
+               
+               -- unless all samples in trigger are read
+               -- then move to idle state
+               if vtrig.trigSize = 0 then
+                  -- repeat axi rready for the last in axi stream
+                  vtrig.rMaster.rready := '1';
+                  -- last in axi stream
+                  vtrig.txMaster.tLast := '1';
+                  -- reset the read pointer
+                  vtrig.rdPtrRst(trig.channelSel) := '1';
+                  -- move to the next channnel
+                  if trig.channelSel < 7 then
+                     vtrig.channelSel := trig.channelSel + 1;
+                  else
+                     vtrig.channelSel := 0;
+                  end if;
+                  vtrig.buffState := IDLE_S;
                end if;
                
             end if;

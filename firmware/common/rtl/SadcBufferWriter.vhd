@@ -28,7 +28,7 @@ use work.AxiPkg.all;
 entity SadcBufferWriter is
    generic (
       TPD_G             : time                     := 1 ns;
-      ADDR_BITS_G       : integer range 12 to 32   := 14;
+      ADDR_BITS_G       : integer range 12 to 31   := 14;
       ADDR_OFFSET_G     : slv(31 downto 0)         := x"00000000";
       AXI_ERROR_RESP_G  : slv(1 downto 0)          := AXI_RESP_DECERR_C
    );
@@ -50,11 +50,11 @@ entity SadcBufferWriter is
       axiWriteMaster    : out AxiWriteMasterType;
       axiWriteSlave     : in  AxiWriteSlaveType;
       -- Trigger information to data reader (adcClk)
-      hdrDout           : out slv(63 downto 0);
+      hdrDout           : out slv(31 downto 0);
       hdrValid          : out sl;
       hdrRd             : in  sl;
       -- Buffer handshake to/from data reader (adcClk)
-      memWrAddr         : out slv(63 downto 0);
+      memWrAddr         : out slv(31 downto 0);
       memFull           : in  sl := '0'
    );
 end SadcBufferWriter;
@@ -94,7 +94,9 @@ architecture rtl of SadcBufferWriter is
    
    type HdrStateType is (
       IDLE_S,
-      WAIT_S,
+      WAIT_TRIG_INFIFO_S,
+      WAIT_TRIG_INMEM_S,
+      WAIT_HDR_S,
       WR_HDR_S
    );
    
@@ -104,8 +106,10 @@ architecture rtl of SadcBufferWriter is
       gTime          : slv(63 downto 0);
       wrAddress      : slv(ADDR_BITS_G downto 0);  -- address and carry flag
       preAddress     : slv(ADDR_BITS_G downto 0);  -- address and carry flag
-      smplWrCnt      : slv(63 downto 0);
-      smplRdCnt      : slv(63 downto 0);
+      smplWrCnt      : slv(31 downto 0);
+      smplRdCnt      : slv(31 downto 0);
+      trigLenCnt     : slv(31 downto 0);
+      trigLenRst     : sl;
       enable         : sl;
       intPreThresh   : slv(15 downto 0);
       intPostThresh  : slv(15 downto 0);
@@ -127,12 +131,11 @@ architecture rtl of SadcBufferWriter is
       adcFifoRd      : sl;
       adcFifoWr      : sl;
       trigFifoCnt    : integer;
-      trigFifoDin    : slv(63 downto 0);
+      trigFifoDin    : slv(31 downto 0);
       trigFifoRd     : sl;
       trigFifoWr     : sl;
-      hdrOffsetError : slv(63 downto 0);
       hdrFifoCnt     : integer;
-      hdrFifoDin     : slv(63 downto 0);
+      hdrFifoDin     : slv(31 downto 0);
       hdrFifoWr      : sl;
    end record TrigType;
 
@@ -144,6 +147,8 @@ architecture rtl of SadcBufferWriter is
       preAddress     => (others => '0'),
       smplWrCnt      => (others => '0'),
       smplRdCnt      => (others => '0'),
+      trigLenCnt     => (others => '0'),
+      trigLenRst     => '0',
       enable         => '0',
       intPreThresh   => (others => '0'),
       intPostThresh  => (others => '0'),
@@ -168,7 +173,6 @@ architecture rtl of SadcBufferWriter is
       trigFifoDin    => (others => '0'),
       trigFifoRd     => '0',
       trigFifoWr     => '0',
-      hdrOffsetError => (others => '0'),
       hdrFifoCnt     => 0,
       hdrFifoDin     => (others => '0'),
       hdrFifoWr      => '0'
@@ -211,7 +215,7 @@ architecture rtl of SadcBufferWriter is
    
    signal adcFifoDout   : slv(15 downto 0);
    signal adcFifoRdCnt  : slv(9 downto 0);
-   signal trigFifoDout  : slv(63 downto 0);
+   signal trigFifoDout  : slv(31 downto 0);
    signal adcFifoValid  : sl;
    signal adcFifoFull   : sl;
    signal hdrFifoFull   : sl;
@@ -221,6 +225,10 @@ architecture rtl of SadcBufferWriter is
 begin
    
    -- configuration asserts   
+   assert ADDR_OFFSET_G(31) = '0'
+      report "ADDR_OFFSET_G(31) must be '0'"
+      severity failure;
+   
    assert ADDR_OFFSET_G(ADDR_BITS_G-1 downto 0) = 0
       report "ADDR_OFFSET_G must be aligned to the adddress space defined by ADDR_BITS_G"
       severity failure;
@@ -233,7 +241,7 @@ begin
    -- trigger and buffer logic (adcClk domian)
    comb : process (adcRst, axilRst, axiWriteSlave, axilReadMaster, axilWriteMaster, reg, trig,
       adcFifoDout, adcFifoValid, adcFifoRdCnt, trigFifoDout, adcFifoFull, hdrFifoFull, trigFifoFull, trigFifoValid,
-      gTime, extTrigger, memFull) is
+      gTime, extTrigger, memFull, adcData) is
       variable vreg     : RegType;
       variable vtrig    : TrigType;
       variable regCon   : AxiLiteEndPointType;
@@ -434,6 +442,12 @@ begin
       if trig.adcFifoRd = '1' then
          vtrig.smplRdCnt := trig.smplRdCnt + 1;
       end if;
+      -- count ADC samples readback from the FIFO
+      if trig.trigLenRst = '1' then
+         vtrig.trigLenCnt := (others => '0');
+      elsif trig.adcFifoRd = '1' then
+         vtrig.trigLenCnt := trig.trigLenCnt + 1;
+      end if;
       
       case trig.trigState is
          
@@ -483,13 +497,15 @@ begin
                if trig.trigFifoCnt = 0 then
                   vtrig.trigFifoDin := trig.trigFifoDin; -- smplWrCnt
                elsif trig.trigFifoCnt = 1 then
-                  vtrig.trigFifoDin := trig.trigSize & trig.trigOffset;
+                  vtrig.trigFifoDin := trig.trigSize;
                elsif trig.trigFifoCnt = 2 then
-                  vtrig.trigFifoDin := trig.gTime;
+                  vtrig.trigFifoDin := trig.trigOffset;
+               elsif trig.trigFifoCnt = 3 then
+                  vtrig.trigFifoDin := trig.gTime(63 downto 32);
                else
-                  vtrig.trigFifoDin := (others=>'0');
+                  vtrig.trigFifoDin := trig.gTime(31 downto 0);
                end if;
-               if trig.trigFifoCnt >= HDR_SIZE_C-1 then
+               if trig.trigFifoCnt >= HDR_SIZE_C then
                   vtrig.trigState   := IDLE_S;
                end if;
             else
@@ -511,51 +527,54 @@ begin
             vtrig.hdrFifoCnt := 0;
             vtrig.hdrFifoWr := '0';
             vtrig.trigFifoRd := '0';
-            if (trigFifoValid = '1' and trigFifoDout <= trig.smplRdCnt) then
+            vtrig.trigLenRst := '1';
+            if (trigFifoValid = '1' and trigFifoDout = trig.smplRdCnt) then
                
                -- store the sample address and carry flag (MSB)
-               vtrig.hdrFifoDin := trig.preAddress(ADDR_BITS_G) & "000" & x"0000000" & (ADDR_OFFSET_G + trig.preAddress(ADDR_BITS_G-1 downto 0));
-               
-               --lost trigger can happen if too high trigger rate for the reader
-               --report offset error
-               if (trigFifoDout /= trig.smplRdCnt) then
-                  vtrig.hdrOffsetError := trig.smplRdCnt - trigFifoDout;
-               else
-                  vtrig.hdrOffsetError := (others=>'0');
-               end if;
-               
-               if hdrFifoFull = '0' then
-                  -- copy all other information from the trig FIFO
-                  vtrig.trigFifoRd := '1';
-                  vtrig.hdrState   := WR_HDR_S;
-               else
-                  -- wait for header FIFO
-                  vtrig.hdrState   := WAIT_S;
-               end if;
+               vtrig.hdrFifoDin := trig.preAddress(ADDR_BITS_G) & (ADDR_OFFSET_G(30 downto 0) + trig.preAddress(ADDR_BITS_G-1 downto 0));
+               -- read event size from the trig FIFO
+               vtrig.trigFifoRd := '1';
+               -- start event length counter
+               vtrig.trigLenRst := '0';
+               -- move to the next state
+               vtrig.hdrState   := WAIT_TRIG_INFIFO_S;
                
             end if;
          
-         when WAIT_S =>
+         when WAIT_TRIG_INFIFO_S =>
+            vtrig.trigFifoRd := '0';
+            if trigFifoDout <= trig.trigLenCnt then
+               vtrig.hdrState   := WAIT_TRIG_INMEM_S;
+            end if;
+         
+         when WAIT_TRIG_INMEM_S =>
+            if axiWriteSlave.bvalid = '1' then
+               if hdrFifoFull = '0' then
+                  -- copy all other information from the trig FIFO
+                  vtrig.hdrState   := WR_HDR_S;
+               else
+                  -- wait for header FIFO
+                  vtrig.hdrState   := WAIT_HDR_S;
+               end if;
+            end if;
+         
+         when WAIT_HDR_S =>
             if hdrFifoFull = '0' then
                -- copy all other information from the trig FIFO
-               vtrig.trigFifoRd := '1';
                vtrig.hdrState   := WR_HDR_S;
             end if;
          
          when WR_HDR_S =>
             vtrig.hdrFifoCnt := trig.hdrFifoCnt + 1;
             vtrig.hdrFifoWr := '1';
+            vtrig.trigFifoRd := '1';
             if trig.hdrFifoCnt = 0 then
                vtrig.hdrFifoDin := trig.hdrFifoDin;
-            elsif trig.hdrFifoCnt = 1 then
-               vtrig.hdrFifoDin := trigFifoDout; 
-            elsif trig.hdrFifoCnt = 2 then
-               vtrig.hdrFifoDin := trigFifoDout;
             else
-               vtrig.hdrFifoDin := trig.hdrOffsetError;
-               vtrig.trigFifoRd := '0';
+               vtrig.hdrFifoDin := trigFifoDout;
             end if;
-            if trig.hdrFifoCnt >= HDR_SIZE_C-1 then
+            if trig.hdrFifoCnt >= HDR_SIZE_C then
+               vtrig.trigFifoRd := '0';
                vtrig.hdrState   := IDLE_S;
             end if;
          
@@ -580,7 +599,7 @@ begin
       axiWriteMaster <= trig.wMaster;
       axilWriteSlave <= reg.axilWriteSlave;
       axilReadSlave  <= reg.axilReadSlave;
-      memWrAddr      <= trig.wrAddress(ADDR_BITS_G) & "000" & x"0000000" & (ADDR_OFFSET_G + trig.wrAddress(ADDR_BITS_G-1 downto 0));
+      memWrAddr      <= trig.wrAddress(ADDR_BITS_G) & (ADDR_OFFSET_G(30 downto 0) + trig.wrAddress(ADDR_BITS_G-1 downto 0));
       
    end process comb;
 
@@ -628,7 +647,7 @@ begin
    
    U_TrigFifo : entity work.Fifo 
    generic map (
-      DATA_WIDTH_G      => 64,
+      DATA_WIDTH_G      => 32,
       ADDR_WIDTH_G      => 8,
       FWFT_EN_G         => true,
       GEN_SYNC_FIFO_G   => true
@@ -651,7 +670,7 @@ begin
    
    U_HdrFifo : entity work.Fifo 
    generic map (
-      DATA_WIDTH_G      => 64,
+      DATA_WIDTH_G      => 32,
       ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
       FWFT_EN_G         => true,
       GEN_SYNC_FIFO_G   => true,

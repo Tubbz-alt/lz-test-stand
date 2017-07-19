@@ -30,7 +30,7 @@ use work.SsiPkg.all;
 entity SadcBufferReader is
    generic (
       TPD_G             : time                     := 1 ns;
-      ADDR_BITS_G       : integer range 12 to 32   := 14;
+      ADDR_BITS_G       : integer range 12 to 31   := 14;
       AXI_ERROR_RESP_G  : slv(1 downto 0)          := AXI_RESP_DECERR_C
    );
    port (
@@ -48,11 +48,11 @@ entity SadcBufferReader is
       axiReadMaster     : out AxiReadMasterType;
       axiReadSlave      : in  AxiReadSlaveType;
       -- Trigger information from data writers (adcClk)
-      hdrDout           : in  Slv64Array(7 downto 0);
+      hdrDout           : in  Slv32Array(7 downto 0);
       hdrValid          : in  slv(7 downto 0);
       hdrRd             : out slv(7 downto 0);
       -- Buffer handshake to/from data writers (adcClk)
-      memWrAddr         : in  Slv64Array(7 downto 0);
+      memWrAddr         : in  Slv32Array(7 downto 0);
       memFull           : out slv(7 downto 0);
       -- AxiStream output
       axisClk           : in  sl;
@@ -88,8 +88,8 @@ architecture rtl of SadcBufferReader is
    type TrigType is record
       reset          : slv(15 downto 0);
       hdrRd          : slv(7 downto 0);
-      trigOffset     : slv(31 downto 0);
       trigSize       : slv(31 downto 0);
+      hdrDout        : slv(15 downto 0);
       rdSize         : slv(7 downto 0);
       memFull        : slv(7 downto 0);
       buffState      : BuffStateType;
@@ -97,8 +97,8 @@ architecture rtl of SadcBufferReader is
       channelSel     : integer;
       ackCount       : Slv32Array(7 downto 0);
       errCount       : Slv32Array(7 downto 0);
-      rdPtr          : Slv64Array(7 downto 0);
-      rdPtrValid     : slv(7 downto 0);
+      rdPtr          : Slv32Array(7 downto 0);
+      rdPtrValid     : Slv2Array(7 downto 0);
       rdPtrRst       : slv(7 downto 0);
       txMaster       : AxiStreamMasterType;
       hdrCnt         : integer;
@@ -109,8 +109,8 @@ architecture rtl of SadcBufferReader is
    constant TRIG_INIT_C : TrigType := (
       reset          => x"0001",
       hdrRd          => (others => '0'),
-      trigOffset     => (others => '0'),
       trigSize       => (others => '0'),
+      hdrDout        => (others => '0'),
       rdSize         => (others => '0'),
       memFull        => (others => '0'),
       buffState      => IDLE_S,
@@ -119,7 +119,7 @@ architecture rtl of SadcBufferReader is
       ackCount       => (others => (others => '0')),
       errCount       => (others => (others => '0')),
       rdPtr          => (others => (others => '0')),
-      rdPtrValid     => (others => '0'),
+      rdPtrValid     => (others => (others => '0')),
       rdPtrRst       => (others => '0'),
       txMaster       => AXI_STREAM_MASTER_INIT_C,
       hdrCnt         => 0,
@@ -196,19 +196,22 @@ begin
       vtrig.hdrRd    := (others=>'0');
       
       for ch in 7 downto 0 loop
-      
+         
+         -- delayed signal to start the FSM after the 1st FIFO word is read
+         vtrig.rdPtrValid(ch)(1) := trig.rdPtrValid(ch)(0);
+         
          -- store the buffer pointer until it is read out
-         if hdrValid(ch) = '1' and trig.rdPtrValid(ch) = '0' then
+         if hdrValid(ch) = '1' and trig.rdPtrValid(ch)(0) = '0' then
             vtrig.rdPtr(ch)      := hdrDout(ch);
-            vtrig.rdPtrValid(ch) := '1';
+            vtrig.rdPtrValid(ch)(0) := '1';
             vtrig.hdrRd(ch)      := '1';
          elsif trig.rdPtrRst(ch) = '1' then
             vtrig.rdPtr(ch)      := (others=>'0');
-            vtrig.rdPtrValid(ch) := '0';
+            vtrig.rdPtrValid(ch) := "00";
          end if;
          
          -- stop the writer channel when full
-         if trig.rdPtr(ch)(63) /= memWrAddr(ch)(63) and trig.rdPtrValid(ch) = '1' then
+         if trig.rdPtr(ch)(31) /= memWrAddr(ch)(31) and trig.rdPtrValid(ch) /= 0 then
             --if memWrAddr(ch)(ADDR_BITS_G-1 downto 0) + toSlv(4096, ADDR_BITS_G+1) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
             if memWrAddr(ch)(ADDR_BITS_G-1 downto 0) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
                vtrig.memFull(ch) := '1';
@@ -250,9 +253,8 @@ begin
       
          when IDLE_S =>
             if trig.reset = 0 then
-               if trig.rdPtrValid(trig.channelSel) = '1' then
-                  
-                  vtrig.hdrRd(trig.channelSel) := '1';
+               if trig.rdPtrValid(trig.channelSel)(1) = '1' then
+                  vtrig.trigSize    := hdrDout(trig.channelSel);   -- store trigSize
                   vtrig.buffState   := HDR_S;
                elsif trig.channelSel < 7 then
                   vtrig.channelSel := trig.channelSel + 1;
@@ -260,42 +262,38 @@ begin
                   vtrig.channelSel := 0;
                end if;
                vtrig.hdrCnt := 0;
-            end if;
+            end if;            
          
          when HDR_S =>
             if vtrig.txMaster.tValid = '0' then
                vtrig.txMaster.tValid := '1';
                if trig.hdrCnt = 0 then
-                  vtrig.trigOffset  := hdrDout(trig.channelSel)(31 downto 0);    -- trigOffset
-                  vtrig.trigSize    := hdrDout(trig.channelSel)(63 downto 32);   -- trigSize
                   ssiSetUserSof(SLAVE_AXI_CONFIG_C, vtrig.txMaster, '1');
                   vtrig.txMaster.tData(15 downto 0) := x"01" & toSlv(trig.channelSel, 8);    -- Slow ADC channel number
                elsif trig.hdrCnt = 1 then
-                  vtrig.txMaster.tData(15 downto 0) := trig.trigSize(15 downto 0);
+                  vtrig.hdrDout                     := hdrDout(trig.channelSel)(15 downto 0);
+                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(31 downto 16);  -- trigSize
+                  vtrig.hdrRd(trig.channelSel)      := '1';
                elsif trig.hdrCnt = 2 then
-                  vtrig.txMaster.tData(15 downto 0) := trig.trigSize(31 downto 16);
+                  vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- trigSize
                elsif trig.hdrCnt = 3 then
-                  vtrig.txMaster.tData(15 downto 0) := trig.trigOffset(15 downto 0);
+                  vtrig.hdrDout := hdrDout(trig.channelSel)(15 downto 0);
+                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(31 downto 16);  -- trigOffset
+                  vtrig.hdrRd(trig.channelSel)      := '1';
                elsif trig.hdrCnt = 4 then
-                  vtrig.txMaster.tData(15 downto 0) := trig.trigOffset(31 downto 16);
+                  vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- trigOffset
                elsif trig.hdrCnt = 5 then
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- gTime
-               elsif trig.hdrCnt = 6 then
+                  vtrig.hdrDout                     := hdrDout(trig.channelSel)(15 downto 0);
                   vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(31 downto 16);  -- gTime
+                  vtrig.hdrRd(trig.channelSel) := '1';
+               elsif trig.hdrCnt = 6 then
+                  vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- gTime
                elsif trig.hdrCnt = 7 then
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(47 downto 32);  -- gTime
-               elsif trig.hdrCnt = 8 then
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(63 downto 48);  -- gTime
+                  vtrig.hdrDout                     := hdrDout(trig.channelSel)(15 downto 0);
+                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(31 downto 16);  -- gTime
                   vtrig.hdrRd(trig.channelSel) := '1';
-               elsif trig.hdrCnt = 9 then
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- hdrOffsetError
-               elsif trig.hdrCnt = 10 then
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(31 downto 16);  -- hdrOffsetError
-               elsif trig.hdrCnt = 11 then
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(47 downto 32);  -- hdrOffsetError
                else
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(63 downto 48);  -- hdrOffsetError
-                  vtrig.hdrRd(trig.channelSel) := '1';
+                  vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- gTime
                   vtrig.hdrCnt      := 0;
                   vtrig.first       := '1';
                   vtrig.buffState   := ADDR_S;
@@ -306,7 +304,7 @@ begin
          when ADDR_S =>
             if (trig.rMaster.arvalid = '0') then
                -- Set the memory address 
-               vtrig.rMaster.araddr := resize(trig.rdPtr(trig.channelSel)(31 downto 2) & "00", vtrig.rMaster.araddr'length);
+               vtrig.rMaster.araddr := resize(trig.rdPtr(trig.channelSel)(30 downto 2) & "00", vtrig.rMaster.araddr'length);
                -- Set the burst length
                if trig.trigSize <= conv_integer(ARLEN_C)*2+1 then
                   vtrig.rMaster.arlen := trig.trigSize(8 downto 1);

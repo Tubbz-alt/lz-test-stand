@@ -338,7 +338,6 @@ begin
                
                -- stream valid flag and counter
                vtrig.txMaster.tValid := '1';
-               vtrig.txMaster.tKeep := (others=>'1');
                vtrig.trigSize := trig.trigSize - 1;
                
                vtrig.first := '0';
@@ -364,19 +363,15 @@ begin
                if (trig.rdPtr(trig.channelSel)(1 downto 0) /= 0) then
                   if (trig.first = '1' and trig.rdHigh = '0') then
                      -- stream not valid
-                     --vtrig.txMaster.tValid := '0';
-                     -- not keep instead of valid := '0'
-                     -- allows tlast
-                     vtrig.txMaster.tKeep := (others=>'0');
+                     vtrig.txMaster.tValid := '0';
                      -- do not count
                      vtrig.trigSize := trig.trigSize;
                   elsif (vtrig.last = '1' and trig.rdHigh = '1') then
                      -- for unaligned triggers correct address to one cell before
                      -- make sure that it rolls at the end of the buffer space
                      vtrig.rMaster.araddr := trig.rMaster.araddr(63 downto ADDR_BITS_G) & (trig.rMaster.araddr(ADDR_BITS_G-1 downto 0) - 4);
-                     -- not keep instead of valid := '0'
-                     -- allows tlast
-                     vtrig.txMaster.tKeep := (others=>'0');
+                     -- stream not valid
+                     vtrig.txMaster.tValid := '0';
                      -- do not count
                      vtrig.trigSize := trig.trigSize;
                   end if;
@@ -394,6 +389,7 @@ begin
                   vtrig.rMaster.rready := '1';
                   -- last in axi stream
                   vtrig.txMaster.tLast := '1';
+                  vtrig.txMaster.tValid := '1';
                   -- reset the read pointer
                   vtrig.rdPtrRst(trig.channelSel) := '1';
                   -- move to the next channnel
@@ -451,7 +447,7 @@ begin
    -- Streaming out FIFO
    ----------------------------------------------------------------------
    
-   U_AxisOut : entity work.AxiStreamFifo
+   U_AxisOut : entity work.AxiStreamFifoV2
    generic map (
       -- General Configurations
       TPD_G               => TPD_G,

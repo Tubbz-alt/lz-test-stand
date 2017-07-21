@@ -150,11 +150,11 @@ architecture rtl of SadcBufferReader is
    
    signal txSlave : AxiStreamSlaveType;
    
-   signal rData : slv( 31 downto 0);      -- only for simulation visibility
+   signal axiDataRd  : slv(31 downto 0);    -- ONLY FOR SIMULATION
    
 begin
-   
-   rData <= axiReadSlave.rdata(31 downto 0); -- only for simulation visibility
+
+   axiDataRd  <= axiReadSlave.rdata(31 downto 0);    -- ONLY FOR SIMULATION
    
    -- register logic (axilClk domain)
    -- trigger and buffer logic (adcClk domian)
@@ -275,28 +275,31 @@ begin
                vtrig.txMaster.tValid := '1';
                if trig.hdrCnt = 0 then
                   ssiSetUserSof(SLAVE_AXI_CONFIG_C, vtrig.txMaster, '1');
-                  vtrig.txMaster.tData(15 downto 0) := x"01" & toSlv(trig.channelSel, 8);    -- Slow ADC channel number
+                  vtrig.txMaster.tData(15 downto 0) := x"00" & toSlv(trig.channelSel, 8);       -- Slow ADC channel number
                elsif trig.hdrCnt = 1 then
-                  vtrig.hdrDout                     := hdrDout(trig.channelSel)(15 downto 0);
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(31 downto 16);  -- trigSize
-                  vtrig.hdrRd(trig.channelSel)      := '1';
+                  ssiSetUserSof(SLAVE_AXI_CONFIG_C, vtrig.txMaster, '1');
+                  vtrig.txMaster.tData(15 downto 0) := x"1000";                                 -- reserved
                elsif trig.hdrCnt = 2 then
-                  vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- trigSize
-               elsif trig.hdrCnt = 3 then
-                  vtrig.hdrDout := hdrDout(trig.channelSel)(15 downto 0);
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(31 downto 16);  -- trigOffset
+                  vtrig.hdrDout                     := hdrDout(trig.channelSel)(31 downto 16);
+                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- trigSize
                   vtrig.hdrRd(trig.channelSel)      := '1';
+               elsif trig.hdrCnt = 3 then
+                  vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- trigSize
                elsif trig.hdrCnt = 4 then
-                  vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- trigOffset
+                  vtrig.hdrDout                     := hdrDout(trig.channelSel)(31 downto 16);
+                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- trigOffset
+                  vtrig.hdrRd(trig.channelSel)      := '1';
                elsif trig.hdrCnt = 5 then
-                  vtrig.hdrDout                     := hdrDout(trig.channelSel)(15 downto 0);
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(31 downto 16);  -- gTime
-                  vtrig.hdrRd(trig.channelSel) := '1';
+                  vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- trigOffset
                elsif trig.hdrCnt = 6 then
-                  vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- gTime
+                  vtrig.hdrDout                     := hdrDout(trig.channelSel)(31 downto 16);
+                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- gTime
+                  vtrig.hdrRd(trig.channelSel) := '1';
                elsif trig.hdrCnt = 7 then
-                  vtrig.hdrDout                     := hdrDout(trig.channelSel)(15 downto 0);
-                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(31 downto 16);  -- gTime
+                  vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- gTime
+               elsif trig.hdrCnt = 8 then
+                  vtrig.hdrDout                     := hdrDout(trig.channelSel)(31 downto 16);
+                  vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- gTime
                   vtrig.hdrRd(trig.channelSel) := '1';
                else
                   vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- gTime

@@ -92,6 +92,11 @@ architecture rtl of SadcBufferWriter is
       WR_TRIG_S
    );
    
+   type AddrStateType is (
+      IDLE_S,
+      WR_ADDR_S
+   );
+   
    type HdrStateType is (
       IDLE_S,
       WAIT_TRIG_INFIFO_S,
@@ -122,6 +127,7 @@ architecture rtl of SadcBufferWriter is
       trigOffset     : slv(31 downto 0);
       trigSize       : slv(31 downto 0);
       trigState      : TrigStateType;
+      addrState      : AddrStateType;
       buffState      : BuffStateType;
       hdrState       : HdrStateType;
       wMaster        : AxiWriteMasterType;
@@ -137,6 +143,10 @@ architecture rtl of SadcBufferWriter is
       hdrFifoCnt     : integer;
       hdrFifoDin     : slv(31 downto 0);
       hdrFifoWr      : sl;
+      addrFifoDin    : slv(31 downto 0);
+      addrFifoWr     : sl;
+      addrFifoRd     : sl;
+      addrFifoCnt    : integer;
    end record TrigType;
 
    constant TRIG_INIT_C : TrigType := (
@@ -161,6 +171,7 @@ architecture rtl of SadcBufferWriter is
       trigOffset     => (others => '0'),
       trigSize       => (others => '0'),
       trigState      => IDLE_S,
+      addrState      => IDLE_S,
       buffState      => IDLE_S,
       hdrState       => IDLE_S,
       wMaster        => axiWriteMasterInit(AXI_CONFIG_C, '1', AXI_BURST_C, AXI_CACHE_C),
@@ -175,7 +186,11 @@ architecture rtl of SadcBufferWriter is
       trigFifoWr     => '0',
       hdrFifoCnt     => 0,
       hdrFifoDin     => (others => '0'),
-      hdrFifoWr      => '0'
+      hdrFifoWr      => '0',
+      addrFifoDin    => (others => '0'),
+      addrFifoWr     => '0',
+      addrFifoRd     => '0',
+      addrFifoCnt    => 0
    );
    
    type RegType is record
@@ -221,8 +236,15 @@ architecture rtl of SadcBufferWriter is
    signal hdrFifoFull   : sl;
    signal trigFifoFull  : sl;
    signal trigFifoValid : sl;
+   signal addrFifoFull  : sl;
+   signal addrFifoDout  : slv(31 downto 0);
+   signal addrFifoValid : sl;
+   
+   signal axiDataWr  : slv(127 downto 0);    -- ONLY FOR SIMULATION
    
 begin
+
+   axiDataWr  <= trig.wMaster.wdata(127 downto 0);    -- ONLY FOR SIMULATION
    
    -- configuration asserts   
    assert ADDR_OFFSET_G(31) = '0'
@@ -241,7 +263,7 @@ begin
    -- trigger and buffer logic (adcClk domian)
    comb : process (adcRst, axilRst, axiWriteSlave, axilReadMaster, axilWriteMaster, reg, trig,
       adcFifoDout, adcFifoValid, adcFifoRdCnt, trigFifoDout, adcFifoFull, hdrFifoFull, trigFifoFull, trigFifoValid,
-      gTime, extTrigger, memFull, adcData) is
+      gTime, extTrigger, memFull, adcData, addrFifoFull, addrFifoDout, addrFifoValid) is
       variable vreg     : RegType;
       variable vtrig    : TrigType;
       variable regCon   : AxiLiteEndPointType;
@@ -319,8 +341,12 @@ begin
          vtrig.overflow(2) := '1';
       end if;
       
-      if memFull = '1' then
+      if addrFifoFull = '1' and trig.reset = 0 then
          vtrig.overflow(3) := '1';
+      end if;
+      
+      if memFull = '1' then
+         vtrig.overflow(4) := '1';
       end if;
       
       ------------------------------------------------
@@ -348,6 +374,7 @@ begin
       
       ----------------------------------------------------------------------
       -- Buffer write state machine
+      -- continiously write samples to the DDR memory in 4kB bursts
       ----------------------------------------------------------------------
       
       case trig.buffState is
@@ -428,6 +455,8 @@ begin
       
       ----------------------------------------------------------------------
       -- Trigger state machine
+      -- find trigger condition
+      -- store the sample number with global time in the trigger FIFO
       ----------------------------------------------------------------------
       
       -- enable ADC FIFO writing after the reset period
@@ -518,7 +547,57 @@ begin
       end case;
       
       ----------------------------------------------------------------------
+      -- Address state machine
+      -- wait for the sample being written to the DDR memory
+      -- replace sample number with the DDR address corrected by the preDelay setting
+      ----------------------------------------------------------------------
+      
+      case trig.addrState is
+         
+         when IDLE_S =>
+            vtrig.addrFifoCnt := 0;
+            vtrig.addrFifoWr := '0';
+            vtrig.trigFifoRd := '0';
+            if (trigFifoValid = '1' and trigFifoDout = trig.smplRdCnt) then
+               
+               -- store the sample address and carry flag (MSB)
+               vtrig.addrFifoDin := trig.preAddress(ADDR_BITS_G) & (ADDR_OFFSET_G(30 downto 0) + trig.preAddress(ADDR_BITS_G-1 downto 0));
+               -- read event size from the trig FIFO
+               vtrig.trigFifoRd := '1';
+               -- move to the next state
+               vtrig.addrState   := WR_ADDR_S;
+               
+            end if;
+         
+         when WR_ADDR_S =>
+            if addrFifoFull = '0' then
+               vtrig.addrFifoCnt := trig.addrFifoCnt + 1;
+               vtrig.addrFifoWr := '1';
+               vtrig.trigFifoRd := '1';
+               if trig.addrFifoCnt = 0 then
+                  vtrig.addrFifoDin := trig.addrFifoDin;
+               else
+                  vtrig.addrFifoDin := trigFifoDout;
+               end if;
+               if trig.addrFifoCnt >= HDR_SIZE_C then
+                  vtrig.trigFifoRd := '0';
+                  vtrig.addrState   := IDLE_S;
+               end if;
+            else
+               vtrig.addrFifoWr := '0';
+               vtrig.trigFifoRd := '0';
+            end if;
+         
+         when others =>
+            vtrig.addrState := IDLE_S;
+         
+      end case;
+      
+      ----------------------------------------------------------------------
       -- Header state machine
+      -- read trigger size from address FIFO
+      -- wait until the whole trigger is in the DDR memory
+      -- store header information and let know the reader when the trigger is ready
       ----------------------------------------------------------------------
       
       case trig.hdrState is
@@ -526,14 +605,14 @@ begin
          when IDLE_S =>
             vtrig.hdrFifoCnt := 0;
             vtrig.hdrFifoWr := '0';
-            vtrig.trigFifoRd := '0';
+            vtrig.addrFifoRd := '0';
             vtrig.trigLenRst := '1';
-            if (trigFifoValid = '1' and trigFifoDout = trig.smplRdCnt) then
+            if (addrFifoValid = '1') then
                
                -- store the sample address and carry flag (MSB)
-               vtrig.hdrFifoDin := trig.preAddress(ADDR_BITS_G) & (ADDR_OFFSET_G(30 downto 0) + trig.preAddress(ADDR_BITS_G-1 downto 0));
+               vtrig.hdrFifoDin := addrFifoDout;
                -- read event size from the trig FIFO
-               vtrig.trigFifoRd := '1';
+               vtrig.addrFifoRd := '1';
                -- start event length counter
                vtrig.trigLenRst := '0';
                -- move to the next state
@@ -542,8 +621,9 @@ begin
             end if;
          
          when WAIT_TRIG_INFIFO_S =>
-            vtrig.trigFifoRd := '0';
-            if trigFifoDout <= trig.trigLenCnt then
+            vtrig.addrFifoRd := '0';
+            if addrFifoDout <= trig.trigLenCnt then
+               vtrig.trigLenRst := '1';
                vtrig.hdrState   := WAIT_TRIG_INMEM_S;
             end if;
          
@@ -567,14 +647,14 @@ begin
          when WR_HDR_S =>
             vtrig.hdrFifoCnt := trig.hdrFifoCnt + 1;
             vtrig.hdrFifoWr := '1';
-            vtrig.trigFifoRd := '1';
+            vtrig.addrFifoRd := '1';
             if trig.hdrFifoCnt = 0 then
                vtrig.hdrFifoDin := trig.hdrFifoDin;
             else
-               vtrig.hdrFifoDin := trigFifoDout;
+               vtrig.hdrFifoDin := addrFifoDout;
             end if;
             if trig.hdrFifoCnt >= HDR_SIZE_C then
-               vtrig.trigFifoRd := '0';
+               vtrig.addrFifoRd := '0';
                vtrig.hdrState   := IDLE_S;
             end if;
          
@@ -648,7 +728,7 @@ begin
    U_TrigFifo : entity work.Fifo 
    generic map (
       DATA_WIDTH_G      => 32,
-      ADDR_WIDTH_G      => 8,
+      ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
       FWFT_EN_G         => true,
       GEN_SYNC_FIFO_G   => true
    )
@@ -662,6 +742,29 @@ begin
       rd_en             => trig.trigFifoRd,
       dout              => trigFifoDout,
       valid             => trigFifoValid
+   );
+   
+   ----------------------------------------------------------------------
+   -- Address information FIFO
+   ----------------------------------------------------------------------
+   
+   U_AddrFifo : entity work.Fifo 
+   generic map (
+      DATA_WIDTH_G      => 32,
+      ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
+      FWFT_EN_G         => true,
+      GEN_SYNC_FIFO_G   => true
+   )
+   port map ( 
+      rst               => trig.reset(0),
+      wr_clk            => adcClk,
+      wr_en             => trig.addrFifoWr,
+      din               => trig.addrFifoDin,
+      full              => addrFifoFull,
+      rd_clk            => adcClk,
+      rd_en             => trig.addrFifoRd,
+      dout              => addrFifoDout,
+      valid             => addrFifoValid
    );
    
    ----------------------------------------------------------------------

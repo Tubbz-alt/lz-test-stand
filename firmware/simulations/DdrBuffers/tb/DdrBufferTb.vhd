@@ -327,6 +327,7 @@ begin
    -- Generate external trigger
    -----------------------------------------------------------------------
    process
+      variable trigJitter : sl := '0';
    begin
       extTrigger <= (others=>'0');
       
@@ -334,10 +335,14 @@ begin
       
       loop
          
-         wait for 10 us;
+         --wait for 10 us;    -- 10kHz will overflow with 514 samples per trigger
+         wait for 40 us;      -- 25kHz should not overflow with 514 samples per trigger
          
          wait until falling_edge(adcClk);
-         wait until falling_edge(adcClk);
+         if trigJitter = '1' then
+            wait until falling_edge(adcClk);
+         end if;
+         trigJitter := not trigJitter;
          extTrigger <= (others=>'1');
          wait until falling_edge(adcClk);
          

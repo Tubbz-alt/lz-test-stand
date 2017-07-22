@@ -231,7 +231,9 @@ begin
       ------------------------------------------------
       
       -- Reset strobing Signals
-      vtrig.rMaster.rready := '0';
+      if (axiReadSlave.rvalid = '1') then
+         vtrig.rMaster.rready := '0';
+      end if;
       if (axiReadSlave.arready = '1') then
          vtrig.rMaster.arvalid := '0';
       end if;
@@ -313,7 +315,9 @@ begin
             end if;
          
          when ADDR_S =>
-            if (trig.rMaster.arvalid = '0') then
+            -- make sure that previous address was accepted
+            -- make sure that the data from last transaction was read
+            if (trig.rMaster.arvalid = '0')  and (trig.rMaster.rready = '0') then
                
                vtrig.rdSize := (others=>'0');
                

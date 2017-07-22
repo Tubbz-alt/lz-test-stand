@@ -23,6 +23,7 @@ use work.AxiStreamPkg.all;
 use work.SsiPkg.all;
 use work.AxiLitePkg.all;
 use work.Pgp2bPkg.all;
+use work.SsiCmdMasterPkg.all;
 
 entity PgpVcMapping is
    generic (
@@ -46,7 +47,12 @@ entity PgpVcMapping is
       axilWriteMaster : out AxiLiteWriteMasterType;
       axilWriteSlave  : in  AxiLiteWriteSlaveType;
       axilReadMaster  : out AxiLiteReadMasterType;
-      axilReadSlave   : in  AxiLiteReadSlaveType);
+      axilReadSlave   : in  AxiLiteReadSlaveType;
+      -- Software trigger interface
+      swClk           : in  sl;
+      swRst           : in  sl;
+      swTrigOut       : out sl
+   );
 end PgpVcMapping;
 
 architecture mapping of PgpVcMapping is
@@ -59,7 +65,9 @@ architecture mapping of PgpVcMapping is
       TKEEP_MODE_C  => TKEEP_NORMAL_C,
       TUSER_BITS_C  => 4,
       TUSER_MODE_C  => TUSER_LAST_C);
-
+   
+   signal ssiCmd  : SsiCmdMasterType;
+   
 begin
 
    -- VC0 RX/TX, SRPv3 Register Module    
@@ -89,8 +97,7 @@ begin
          mAxilWriteSlave  => axilWriteSlave);
 
    -- VC1 TX, Data
-   rxCtrl(1) <= AXI_STREAM_CTRL_UNUSED_C;
-   U_VC1 : entity work.AxiStreamFifo
+   U_VC1_TX : entity work.AxiStreamFifo
       generic map (
          -- General Configurations
          TPD_G               => TPD_G,
@@ -119,8 +126,43 @@ begin
          mAxisRst    => rst,
          mAxisMaster => txMasters(1),
          mAxisSlave  => txSlaves(1));
-
-   -- VC1 TX, MB
+   
+   
+   -- VC1 RX, Command processor
+   U_VC1_RX : entity work.SsiCmdMaster
+      generic map (
+         AXI_STREAM_CONFIG_G => SSI_PGP2B_CONFIG_C)   
+      port map (
+         -- Streaming Data Interface
+         axisClk     => clk,
+         axisRst     => rst,
+         sAxisMaster => rxMasters(1),
+         sAxisSlave  => open,
+         sAxisCtrl   => rxCtrl(1),
+         -- Command signals
+         cmdClk      => swClk,
+         cmdRst      => swRst,
+         cmdMaster   => ssiCmd
+      );     
+   -- Command opCode x00 - SW trigger
+   U_TrigPulser : entity work.SsiCmdMasterPulser
+      generic map (
+         OUT_POLARITY_G => '1',
+         PULSE_WIDTH_G  => 1
+      )
+      port map (
+          -- Local command signal
+         cmdSlaveOut => ssiCmd,
+         --addressed cmdOpCode
+         opCode      => x"00",
+         -- output pulse to sync module
+         syncPulse   => swTrigOut,
+         -- Local clock and reset
+         locClk      => swClk,
+         locRst      => swRst              
+      );
+   
+   -- VC2 TX, MB
    rxCtrl(2) <= AXI_STREAM_CTRL_UNUSED_C;
    U_VC2 : entity work.AxiStreamFifo
       generic map (

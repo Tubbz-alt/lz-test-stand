@@ -54,13 +54,18 @@ entity LzDigitizerPgpCore is
       sAxilReadSlave   : out AxiLiteReadSlaveType;
       sAxilWriteMaster : in  AxiLiteWriteMasterType;
       sAxilWriteSlave  : out AxiLiteWriteSlaveType;
+      -- Software trigger interface
+      swClk            : in  sl;
+      swRst            : in  sl;
+      swTrigOut        : out sl;
       -- PGP Ports
       pgpClkP          : in  sl;
       pgpClkN          : in  sl;
       pgpRxP           : in  sl;
       pgpRxN           : in  sl;
       pgpTxP           : out sl;
-      pgpTxN           : out sl);
+      pgpTxN           : out sl
+   );
 end LzDigitizerPgpCore;
 
 architecture top_level of LzDigitizerPgpCore is
@@ -205,7 +210,12 @@ begin
          axilWriteMaster => mAxilWriteMaster,
          axilWriteSlave  => mAxilWriteSlave,
          axilReadMaster  => mAxilReadMaster,
-         axilReadSlave   => mAxilReadSlave);
+         axilReadSlave   => mAxilReadSlave,
+         -- Software trigger interface
+         swClk           => swClk,
+         swRst           => swRst,
+         swTrigOut       => swTrigOut
+      );
 
    U_PgpMon : entity work.Pgp2bAxi
       generic map (

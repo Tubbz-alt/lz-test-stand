@@ -309,6 +309,8 @@ architecture top_level of digitizer is
    signal memWrAddr     : Slv32Array(7 downto 0);
    signal memFull       : slv(7 downto 0);
    
+   signal swTrigger     : sl;
+   
    attribute keep : string;
    attribute keep of clk250 : signal is "true";
    attribute keep of rst250 : signal is "true";
@@ -343,6 +345,10 @@ begin
       sAxilReadSlave   => axilReadSlaves(COMM_INDEX_C),
       sAxilWriteMaster => axilWriteMasters(COMM_INDEX_C),
       sAxilWriteSlave  => axilWriteSlaves(COMM_INDEX_C),
+      -- Software trigger interface
+      swClk            => clk250,
+      swRst            => rst250,
+      swTrigOut        => swTrigger,
       -- PGP Ports
       pgpClkP          => pgpClkP,
       pgpClkN          => pgpClkN,
@@ -575,7 +581,7 @@ begin
          adcRst            => writerRst,
          adcData           => adcData(i),
          gTime             => gTime,
-         extTrigger        => '0',
+         extTrigger        => swTrigger,
          -- AXI-Lite Interface for local registers 
          axilClk           => axilClk,
          axilRst           => axilRst,

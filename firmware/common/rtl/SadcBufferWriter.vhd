@@ -147,7 +147,7 @@ architecture rtl of SadcBufferWriter is
       addrFifoWr     : sl;
       addrFifoRd     : sl;
       addrFifoCnt    : integer;
-      bvalidWait     : slv(7 downto 0);
+      burstsInFifo   : slv(7 downto 0);
    end record TrigType;
 
    constant TRIG_INIT_C : TrigType := (
@@ -192,7 +192,7 @@ architecture rtl of SadcBufferWriter is
       addrFifoWr     => '0',
       addrFifoRd     => '0',
       addrFifoCnt    => 0,
-      bvalidWait     => (others => '0')
+      burstsInFifo   => (others => '0')
    );
    
    type RegType is record
@@ -604,13 +604,22 @@ begin
       -- store header information and let know the reader when the trigger is ready
       ----------------------------------------------------------------------
       
+      -- keep track of how many bursts is currently in AXI FIFO
+      if trig.wMaster.awvalid = '1' and axiWriteSlave.awready = '1' then 
+         vtrig.burstsInFifo := trig.burstsInFifo + 1;
+      end if;
+      -- decrease the counter as data is written into the DDR
+      if axiWriteSlave.bvalid = '1' and trig.burstsInFifo /= 0 then
+         vtrig.burstsInFifo := trig.burstsInFifo - 1;
+      end if;
+      
+      
       case trig.hdrState is
          
          when IDLE_S =>
             vtrig.hdrFifoCnt := 0;
             vtrig.hdrFifoWr := '0';
             vtrig.addrFifoRd := '0';
-            vtrig.bvalidWait := (others=>'0');
             vtrig.trigLenRst := '1';
             if (addrFifoValid = '1') then
                
@@ -627,23 +636,16 @@ begin
          
          when WAIT_TRIG_INFIFO_S =>
             vtrig.addrFifoRd := '0';
-            -- wait until all ADC samples are written to AXI FIFO
-            if addrFifoDout <= trig.trigLenCnt then
+            -- wait until all ADC samples are written to AXI FIFO 
+            -- and are next to be transferred
+            if addrFifoDout <= trig.trigLenCnt and trig.burstsInFifo <= 1 then
                vtrig.trigLenRst := '1';
                vtrig.hdrState   := WAIT_TRIG_INMEM_S;
             end if;
-            -- check if the trigger data is spread in between many AXI bursts
-            -- must wait for 2 x bvalid
-            if trig.buffState /= MOVE_S then 
-               vtrig.bvalidWait := trig.bvalidWait + 1;
-            end if;
-            -- decrease the counter as data is written into the DDR
-            if axiWriteSlave.bvalid = '1' and trig.bvalidWait /= 0 then
-               vtrig.bvalidWait := trig.bvalidWait - 1;
-            end if;
+            
          
          when WAIT_TRIG_INMEM_S =>
-            if axiWriteSlave.bvalid = '1' and trig.bvalidWait = 0 then
+            if axiWriteSlave.bvalid = '1' then
                if hdrFifoFull = '0' then
                   -- copy all other information from the trig FIFO
                   vtrig.hdrState   := WR_HDR_S;
@@ -651,8 +653,6 @@ begin
                   -- wait for header FIFO
                   vtrig.hdrState   := WAIT_HDR_S;
                end if;
-            elsif axiWriteSlave.bvalid = '1' then
-               vtrig.bvalidWait := trig.bvalidWait - 1;
             end if;
          
          when WAIT_HDR_S =>

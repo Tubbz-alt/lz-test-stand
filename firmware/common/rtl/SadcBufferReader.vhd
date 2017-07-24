@@ -231,9 +231,9 @@ begin
       ------------------------------------------------
       
       -- Reset strobing Signals
-      if (axiReadSlave.rvalid = '1') then
+      --if (axiReadSlave.rvalid = '1') then
          vtrig.rMaster.rready := '0';
-      end if;
+      --end if;
       if (axiReadSlave.arready = '1') then
          vtrig.rMaster.arvalid := '0';
       end if;
@@ -373,7 +373,7 @@ begin
                      vtrig.txMaster.tValid := '0';
                      -- do not count
                      vtrig.trigSize := trig.trigSize;
-                  elsif (vtrig.last = '1' and trig.rdHigh = '1') then
+                  elsif (vtrig.last = '1' and trig.rdHigh = '1' and trig.rMaster.arlen = ARLEN_C) then
                      -- for unaligned triggers correct address to one cell before
                      -- make sure that it rolls at the end of the buffer space
                      vtrig.rMaster.araddr := trig.rMaster.araddr(63 downto ADDR_BITS_G) & (trig.rMaster.araddr(ADDR_BITS_G-1 downto 0) - 4);

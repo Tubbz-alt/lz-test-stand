@@ -22,6 +22,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.std_logic_arith.all;
+use ieee.math_real.all;
 
 use work.StdRtlPkg.all;
 use work.AxiLitePkg.all;
@@ -282,52 +283,46 @@ begin
    -----------------------------------------------------------------------
    -- Setup trigger registers
    -----------------------------------------------------------------------
-   process
-   begin
-      
-      wait for 1 us;
+   SETUP_GEN: for i in 0 to 7 generate 
+      process
+         variable seed1 : positive := (i+1)*78;
+         variable seed2 : positive := (i+1)*34;
+         variable rand: real;
+         variable randSize : integer;
+      begin
+         
+         wait for 1 us;
+         -- initial setup
+         axiLiteBusSimWrite(axiClk, axilWriteMasters(i), axilWriteSlaves(i), x"00000000", x"01", false);  -- enable trigger
+         axiLiteBusSimWrite(axiClk, axilWriteMasters(i), axilWriteSlaves(i), x"0000010C", x"05", false);  -- pre delay
+         axiLiteBusSimWrite(axiClk, axilWriteMasters(i), axilWriteSlaves(i), x"00000200", x"202", false); -- size
+         
+         -- change size after every trigger
+         -- randomly 1 to 1050 samples
+         loop
+            
+            wait until rising_edge(extTrigger(i));
+            wait for 500 ns;
+            
+            uniform(seed1, seed2, rand);   -- generate random number 0.0 to 1.0
+            randSize := integer(rand*1049.0+1.0);
+            axiLiteBusSimWrite(axiClk, axilWriteMasters(i), axilWriteSlaves(i), x"00000200", toSlv(randSize, 16), false);
+            
+            
+         end loop;
 
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(0), axilWriteSlaves(0), x"00000000", x"01", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(0), axilWriteSlaves(0), x"0000010C", x"05", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(0), axilWriteSlaves(0), x"00000200", x"202", true);
-      
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(1), axilWriteSlaves(1), x"00000000", x"01", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(1), axilWriteSlaves(1), x"0000010C", x"05", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(1), axilWriteSlaves(1), x"00000200", x"202", true);
-      
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(2), axilWriteSlaves(2), x"00000000", x"01", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(2), axilWriteSlaves(2), x"0000010C", x"05", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(2), axilWriteSlaves(2), x"00000200", x"202", true);
-      
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(3), axilWriteSlaves(3), x"00000000", x"01", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(3), axilWriteSlaves(3), x"0000010C", x"05", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(3), axilWriteSlaves(3), x"00000200", x"202", true);
-      
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(4), axilWriteSlaves(4), x"00000000", x"01", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(4), axilWriteSlaves(4), x"0000010C", x"05", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(4), axilWriteSlaves(4), x"00000200", x"202", true);
-      
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(5), axilWriteSlaves(5), x"00000000", x"01", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(5), axilWriteSlaves(5), x"0000010C", x"05", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(5), axilWriteSlaves(5), x"00000200", x"202", true);
-      
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(6), axilWriteSlaves(6), x"00000000", x"01", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(6), axilWriteSlaves(6), x"0000010C", x"05", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(6), axilWriteSlaves(6), x"00000200", x"202", true);
-      
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(7), axilWriteSlaves(7), x"00000000", x"01", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(7), axilWriteSlaves(7), x"0000010C", x"05", true);
-      axiLiteBusSimWrite(axiClk, axilWriteMasters(7), axilWriteSlaves(7), x"00000200", x"202", true);
-
-      wait;
-      
-   end process;
+         wait;
+         
+      end process;
+   end generate;
    
    -----------------------------------------------------------------------
    -- Generate external trigger
    -----------------------------------------------------------------------
    process
-      variable trigJitter : sl := '0';
+      variable trigJitter : integer := 0;
+      variable seed1, seed2: positive;
+      variable rand: real; 
    begin
       extTrigger <= (others=>'0');
       
@@ -335,14 +330,15 @@ begin
       
       loop
          
-         --wait for 10 us;    -- 10kHz will overflow with 514 samples per trigger
-         wait for 40 us;      -- 25kHz should not overflow with 514 samples per trigger
+         wait for 10 us;    -- 100kHz will overflow with 1050 samples per trigger
+         --wait for 25 us;      -- 40kHz should not overflow with 514 samples per trigger
          
+         uniform(seed1, seed2, rand);   -- generate random number 0.0 to 1.0
+         trigJitter := integer(rand*24);
          wait until falling_edge(adcClk);
-         if trigJitter = '1' then
+         for i in 0 to trigJitter loop
             wait until falling_edge(adcClk);
-         end if;
-         trigJitter := not trigJitter;
+         end loop;
          extTrigger <= (others=>'1');
          wait until falling_edge(adcClk);
          
@@ -502,16 +498,16 @@ begin
                -- count all samples
                if axisMaster.tKeep(3 downto 0) = "1111" then
                   sampleCnt := sampleCnt + 2;
-               elsif axisMaster.tKeep(3 downto 0) = x"0011" then
+               elsif axisMaster.tKeep(3 downto 0) = "0011" and axisMaster.tLast = '1' then
                   sampleCnt := sampleCnt + 1;
-               elsif axisMaster.tKeep(3 downto 0) = x"1100" then
+               elsif axisMaster.tKeep(3 downto 0) = "1100" and axisMaster.tLast = '1' then
                   sampleCnt := sampleCnt + 1;
                else
                   report "Bad tKeep!" severity failure;
                end if;
                
                -- verify all samples
-               if wordCnt /= 5 then
+               if wordCnt /= 5 and (axisMaster.tLast /= '1' or axisMaster.tKeep(3 downto 0) = "1111") then
                   if adcGoingUp = true then
                      if axisMaster.tData(15 downto 0) = ADC_DATA_TOP_C or axisMaster.tData(31 downto 16) = ADC_DATA_TOP_C then
                         adcGoingUp := false;

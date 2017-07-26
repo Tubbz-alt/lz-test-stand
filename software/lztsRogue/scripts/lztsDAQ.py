@@ -33,12 +33,14 @@ import sys
 import PyQt4.QtGui
 import PyQt4.QtCore
 import lztsFpga as fpga
+import lztsViewer as vi
 
 #############################################
 # Define if the GUI is started (1 starts it)
 START_GUI = True
 START_VIEWER = False
 #############################################
+
 
 # Create the PGP interfaces for ePix camera
 pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,0) # Registers for lzts board
@@ -49,10 +51,10 @@ pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,1) # Data for lzts board
 print("")
 print("PGP Card Version: %x" % (pgpVc0.getInfo().version))
 
-
 # Add data stream to file as channel 1
 # File writer
-dataWriter = pyrogue.utilities.fileio.StreamWriter('dataWriter')
+dataWriter = pyrogue.utilities.fileio.StreamWriter(name='dataWriter')
+
 pyrogue.streamConnect(pgpVc1, dataWriter.getChannel(0x1))
 ## Add pseudoscope to file writer
 #pyrogue.streamConnect(pgpVc2, dataWriter.getChannel(0x2))
@@ -64,6 +66,7 @@ pyrogue.streamConnect(cmd, pgpVc1)
 # Create and Connect SRP to VC1 to send commands
 srp = rogue.protocols.srp.SrpV3()
 pyrogue.streamConnectBiDir(pgpVc0,srp)
+
 
 #############################################
 # Microblaze console printout
@@ -84,45 +87,48 @@ class MbDebug(rogue.interfaces.stream.Slave):
 #######################################
 # Custom run control
 #######################################
+
 class MyRunControl(pyrogue.RunControl):
     def __init__(self,name):
-        pyrogue.RunControl.__init__(self,name,'Run Controller ePix 100a', rates={1:'1 Hz', 10:'10 Hz', 30:'30 Hz'})
+        pyrogue.RunControl.__init__(self,name=name,description='Run Controller ePix 100a', rates={1:'1 Hz', 10:'10 Hz', 30:'30 Hz'})
         self._thread = None
 
-    def _setRunState(self,dev,var,value):
-        if self._runState != value:
-            self._runState = value
+    def _setRunState(self,dev,var,value,changed):
+        if changed: 
+            if self.runState.get(read=False) == 'Running': 
+                self._thread = threading.Thread(target=self._run) 
+                self._thread.start() 
+            else: 
+                self._thread.join() 
+                self._thread = None 
 
-            if self._runState == 'Running':
-                self._thread = threading.Thread(target=self._run)
-                self._thread.start()
-            else:
-                self._thread.join()
-                self._thread = None
 
     def _run(self):
-        self._runCount = 0
-        self._last = int(time.time())
-
-        while (self._runState == 'Running'):
-            delay = 1.0 / ({value: key for key,value in self.runRate.enum.items()}[self._runRate])
-            time.sleep(delay)
-            self._root.Trigger()
-
-            self._runCount += 1
-            if self._last != int(time.time()):
-                self._last = int(time.time())
-                self.runCount._updated()
+        self.runCount.set(0) 
+        self._last = int(time.time()) 
+ 
+ 
+        while (self.runState.value() == 'Running'): 
+            delay = 1.0 / ({value: key for key,value in self.runRate.enum.items()}[self._runRate]) 
+            time.sleep(delay) 
+            self._root.Trigger() 
+  
+            self._runCount += 1 
+            if self._last != int(time.time()): 
+                self._last = int(time.time()) 
+                self.runCount._updated() 
             
 ##############################
 # Set base
 ##############################
 class LztsBoard(pyrogue.Root):
-    def __init__(self, guiTop, cmd, dataWriter, srp, **kwargs):
-        super().__init__('lztsBoard','Lzts Board', pollEn=True, **kwargs)
-        self.add(MyRunControl('runControl'))
+    def __init__(self, cmd, dataWriter, srp, **kwargs):
+        
+        pyrogue.Root.__init__(self, name='lztsBoard', description='LZTS Board')
+        
         self.add(dataWriter)
-        self.guiTop = guiTop
+        
+        self.add(MyRunControl('runControl'))
 
         # Add Devices
         self.add(fpga.Lzts(name='Lzts', offset=0, memBase=srp, hidden=False, enabled=True))
@@ -130,21 +136,27 @@ class LztsBoard(pyrogue.Root):
         @self.command()
         def Trigger():
             cmd.sendCmd(0, 0)
+        
+        # Export remote objects
+        self.start(pyroGroup='lztsGui')
 
+
+
+
+
+# Create board
+LztsBoard = LztsBoard(cmd, dataWriter, srp)
 
 # Create GUI
 appTop = PyQt4.QtGui.QApplication(sys.argv)
-guiTop = pyrogue.gui.GuiTop('tixelGui')
-LztsBoard = LztsBoard(guiTop, cmd, dataWriter, srp)
+guiTop = pyrogue.gui.GuiTop(group='lztsGui')
 guiTop.addTree(LztsBoard)
 
 ## Viewer gui
-#gui = vi.Window(cameraType = 'Tixel48x48')
-#gui.eventReader.frameIndex = 0
-#gui.setReadDelay(0)
-#pyrogue.streamTap(pgpVc1, gui.eventReader)
-#pyrogue.streamTap(pgpVc2, gui.eventReaderScope)# PseudoScope
-#pyrogue.streamTap(pgpVc3, gui.eventReaderMonitoring) # Slow Monitoring
+gui = vi.Window()
+pyrogue.streamTap(pgpVc1, gui.eventReaderData)
+
+
 
 ## Create mesh node (this is for remote control only, no data is shared with this)
 #mNode = pyrogue.mesh.MeshNode('rogueEpix100a',iface='eth0',root=None)
@@ -161,5 +173,4 @@ def stop():
     LztsBoard.stop()
     exit()
 
-print("Started rogue mesh and epics V3 server. To exit type stop()")
 

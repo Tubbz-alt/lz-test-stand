@@ -31,7 +31,9 @@ entity SadcBufferReader is
    generic (
       TPD_G             : time                     := 1 ns;
       ADDR_BITS_G       : integer range 12 to 31   := 14;
-      AXI_ERROR_RESP_G  : slv(1 downto 0)          := AXI_RESP_DECERR_C
+      AXI_ERROR_RESP_G  : slv(1 downto 0)          := AXI_RESP_DECERR_C;
+      PGP_LANE_G        : slv(3 downto 0)          := "0000";
+      PGP_VC_G          : slv(3 downto 0)          := "0001"
    );
    port (
       -- ADC Clock Domain
@@ -95,8 +97,7 @@ architecture rtl of SadcBufferReader is
       buffState      : BuffStateType;
       rMaster        : AxiReadMasterType;
       channelSel     : integer;
-      ackCount       : Slv32Array(7 downto 0);
-      errCount       : Slv32Array(7 downto 0);
+      smplCnt        : Slv32Array(7 downto 0);
       rdPtr          : Slv32Array(7 downto 0);
       rdPtrValid     : Slv2Array(7 downto 0);
       rdPtrRst       : slv(7 downto 0);
@@ -117,8 +118,7 @@ architecture rtl of SadcBufferReader is
       buffState      => IDLE_S,
       rMaster        => axiReadMasterInit(AXI_CONFIG_C, AXI_BURST_C, AXI_CACHE_C),
       channelSel     => 0,
-      ackCount       => (others => (others => '0')),
-      errCount       => (others => (others => '0')),
+      smplCnt        => (others => (others => '0')),
       rdPtr          => (others => (others => '0')),
       rdPtrValid     => (others => (others => '0')),
       rdPtrRst       => (others => '0'),
@@ -132,15 +132,13 @@ architecture rtl of SadcBufferReader is
    type RegType is record
       axilReadSlave  : AxiLiteReadSlaveType;
       axilWriteSlave : AxiLiteWriteSlaveType;
-      ackCount       : Slv32Array(7 downto 0);
-      errCount       : Slv32Array(7 downto 0);
+      smplCnt        : Slv32Array(7 downto 0);
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       axilReadSlave  => AXI_LITE_READ_SLAVE_INIT_C,
       axilWriteSlave => AXI_LITE_WRITE_SLAVE_INIT_C,
-      ackCount       => (others => (others => '0')),
-      errCount       => (others => (others => '0'))
+      smplCnt        => (others => (others => '0'))
    );
 
    signal trig    : TrigType  := TRIG_INIT_C;
@@ -174,8 +172,7 @@ begin
       ------------------------------------------------
       -- cross domian sync
       ------------------------------------------------
-      vreg.ackCount        := trig.ackCount;
-      vreg.errCount        := trig.errCount;
+      vreg.smplCnt         := trig.smplCnt;
       
       ------------------------------------------------
       -- register access
@@ -186,8 +183,7 @@ begin
       
       -- Map the registers
       for ch in 7 downto 0 loop
-         axiSlaveRegisterR(regCon, x"000"+toSlv(ch*4, 12), 0, reg.ackCount(ch));
-         axiSlaveRegisterR(regCon, x"020"+toSlv(ch*4, 12), 0, reg.errCount(ch));
+         axiSlaveRegisterR(regCon, x"000"+toSlv(ch*4, 12), 0, reg.smplCnt(ch));
       end loop;
       
       -- Closeout the transaction
@@ -244,14 +240,6 @@ begin
          vtrig.txMaster.tKeep  := (others => '1');
          vtrig.txMaster.tStrb  := (others => '1');
       end if;
-      -- Track read status
-      if axiReadSlave.rvalid = '1' and axiReadSlave.rlast = '1' then
-         if axiReadSlave.rresp /= 0 then
-            vtrig.errCount(trig.channelSel) := trig.errCount(trig.channelSel) + 1;
-         else
-            vtrig.ackCount(trig.channelSel) := trig.ackCount(trig.channelSel) + 1;
-         end if;
-      end if;
       
       ----------------------------------------------------------------------
       -- Buffer read state machine
@@ -277,29 +265,32 @@ begin
                vtrig.txMaster.tValid := '1';
                if trig.hdrCnt = 0 then
                   ssiSetUserSof(SLAVE_AXI_CONFIG_C, vtrig.txMaster, '1');
-                  vtrig.txMaster.tData(15 downto 0) := x"00" & toSlv(trig.channelSel, 8);       -- Slow ADC channel number
+                  vtrig.txMaster.tData(15 downto 0) := x"00" & PGP_LANE_G & PGP_VC_G;           -- PGP lane and VC
                elsif trig.hdrCnt = 1 then
-                  ssiSetUserSof(SLAVE_AXI_CONFIG_C, vtrig.txMaster, '1');
-                  vtrig.txMaster.tData(15 downto 0) := x"1000";                                 -- reserved
+                  vtrig.txMaster.tData(15 downto 0) := x"0000";                                 -- reserved
                elsif trig.hdrCnt = 2 then
+                  vtrig.txMaster.tData(15 downto 0) := x"00" & toSlv(trig.channelSel, 8);       -- Slow ADC channel number
+               elsif trig.hdrCnt = 3 then
+                  vtrig.txMaster.tData(15 downto 0) := x"1000";                                 -- reserved
+               elsif trig.hdrCnt = 4 then
                   vtrig.hdrDout                     := hdrDout(trig.channelSel)(31 downto 16);
                   vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- trigSize
                   vtrig.hdrRd(trig.channelSel)      := '1';
-               elsif trig.hdrCnt = 3 then
+               elsif trig.hdrCnt = 5 then
                   vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- trigSize
-               elsif trig.hdrCnt = 4 then
+               elsif trig.hdrCnt = 6 then
                   vtrig.hdrDout                     := hdrDout(trig.channelSel)(31 downto 16);
                   vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- trigOffset
                   vtrig.hdrRd(trig.channelSel)      := '1';
-               elsif trig.hdrCnt = 5 then
+               elsif trig.hdrCnt = 7 then
                   vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- trigOffset
-               elsif trig.hdrCnt = 6 then
+               elsif trig.hdrCnt = 8 then
                   vtrig.hdrDout                     := hdrDout(trig.channelSel)(31 downto 16);
                   vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- gTime
                   vtrig.hdrRd(trig.channelSel) := '1';
-               elsif trig.hdrCnt = 7 then
+               elsif trig.hdrCnt = 9 then
                   vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- gTime
-               elsif trig.hdrCnt = 8 then
+               elsif trig.hdrCnt = 10 then
                   vtrig.hdrDout                     := hdrDout(trig.channelSel)(31 downto 16);
                   vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- gTime
                   vtrig.hdrRd(trig.channelSel) := '1';
@@ -346,6 +337,7 @@ begin
                -- stream valid flag and counter
                vtrig.txMaster.tValid := '1';
                vtrig.trigSize := trig.trigSize - 1;
+               vtrig.smplCnt(trig.channelSel) := trig.smplCnt(trig.channelSel) + 1;
                
                vtrig.first := '0';
                if trig.rdSize = conv_integer(trig.rMaster.arlen) + 1 then
@@ -373,6 +365,7 @@ begin
                      vtrig.txMaster.tValid := '0';
                      -- do not count
                      vtrig.trigSize := trig.trigSize;
+                     vtrig.smplCnt(trig.channelSel) := trig.smplCnt(trig.channelSel);
                   elsif (vtrig.last = '1' and trig.rdHigh = '1' and trig.rMaster.arlen = ARLEN_C) then
                      -- for unaligned triggers correct address to one cell before
                      -- make sure that it rolls at the end of the buffer space
@@ -381,6 +374,7 @@ begin
                      vtrig.txMaster.tValid := '0';
                      -- do not count
                      vtrig.trigSize := trig.trigSize;
+                     vtrig.smplCnt(trig.channelSel) := trig.smplCnt(trig.channelSel);
                   end if;
                end if;
                
@@ -460,7 +454,7 @@ begin
       TPD_G               => TPD_G,
       PIPE_STAGES_G       => 1,
       SLAVE_READY_EN_G    => true,
-      VALID_THOLD_G       => 0,     -- =0 = only when frame ready
+      VALID_THOLD_G       => 1,     -- =0 = only when frame ready
       -- FIFO configurations
       BRAM_EN_G           => true,
       USE_BUILT_IN_G      => false,

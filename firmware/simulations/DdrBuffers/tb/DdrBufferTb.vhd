@@ -52,6 +52,8 @@ architecture testbed of DdrBufferTb is
    constant TPD_C         : time    := CLK_PERIOD_C/4;
    constant DLY_C         : natural := 16;
    constant SIM_SPEEDUP_C : boolean := true;
+   
+   constant PGP_VC_C      : slv(3 downto 0) := "0001";
 
    constant AXI_CONFIG_C : AxiConfigType := (
       ADDR_WIDTH_C => 31,
@@ -219,7 +221,8 @@ begin
    ------------------------------------------------
    U_SadcBufferReader: entity work.SadcBufferReader
    generic map (
-      ADDR_BITS_G       => ADDR_BITS_C
+      ADDR_BITS_G       => ADDR_BITS_C,
+      PGP_VC_G          => PGP_VC_C
    )
    port map (
       -- ADC Clock Domain
@@ -441,19 +444,22 @@ begin
             end if;
             
             -- check and report the packet content
-            if wordCnt = 0 then     -- header
+            if wordCnt = 0 then
+               --has only PGP info
+               assert axisMaster.tData(3 downto 0) = PGP_VC_C report "Bad PGP VC number" severity failure;
+            elsif wordCnt = 1 then     -- header
                trigCh := conv_integer(axisMaster.tData(7 downto 0));
                if VERBOSE_PRINT then report "Reading channel " & integer'image(trigCh); end if;
                assert trigCh >=0 and trigCh <= 7 report "Bad channel number" severity failure;
-            elsif wordCnt = 1 then  -- header
+            elsif wordCnt = 2 then  -- header
                trigSize := conv_integer(axisMaster.tData(31 downto 0));
                if VERBOSE_PRINT then report "Trigger size " & integer'image(trigSize); end if;
-            elsif wordCnt = 2 then  -- header
+            elsif wordCnt = 3 then  -- header
                trigOffset := conv_integer(axisMaster.tData(31 downto 0));
                if VERBOSE_PRINT then report "Trigger offset " & integer'image(trigOffset); end if;
-            elsif wordCnt = 3 then  -- header
-               trigTimeVect(63 downto 32) := axisMaster.tData(31 downto 0);
             elsif wordCnt = 4 then  -- header
+               trigTimeVect(63 downto 32) := axisMaster.tData(31 downto 0);
+            elsif wordCnt = 5 then  -- header
                trigTimeVect(31 downto 0) := axisMaster.tData(31 downto 0);
                trigTime := conv_integer(trigTimeVect(31 downto 0));
                assert trigTimeVer(trigCh) + TRIG_LATENCY_C = trigTime 
@@ -482,7 +488,7 @@ begin
                --end if;
                
                -- discover data direction in first word
-               if wordCnt = 5 then
+               if wordCnt = 6 then
                   if axisMaster.tData(15 downto 0) = ADC_DATA_BOT_C then
                      adcGoingUp := true;
                   elsif axisMaster.tData(15 downto 0) = ADC_DATA_TOP_C then
@@ -507,7 +513,7 @@ begin
                end if;
                
                -- verify all samples
-               if wordCnt /= 5 and (axisMaster.tLast /= '1' or axisMaster.tKeep(3 downto 0) = "1111") then
+               if wordCnt /= 6 and (axisMaster.tLast /= '1' or axisMaster.tKeep(3 downto 0) = "1111") then
                   if adcGoingUp = true then
                      if axisMaster.tData(15 downto 0) = ADC_DATA_TOP_C or axisMaster.tData(31 downto 16) = ADC_DATA_TOP_C then
                         adcGoingUp := false;

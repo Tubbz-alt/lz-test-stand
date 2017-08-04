@@ -90,7 +90,7 @@ class MbDebug(rogue.interfaces.stream.Slave):
 
 class MyRunControl(pyrogue.RunControl):
     def __init__(self,name):
-        pyrogue.RunControl.__init__(self,name=name,description='Run Controller ePix 100a', rates={1:'1 Hz', 10:'10 Hz', 30:'30 Hz'})
+        pyrogue.RunControl.__init__(self,name=name,description='Run Controller LZTS', rates={1:'1 Hz', 10:'10 Hz', 30:'30 Hz'})
         self._thread = None
 
     def _setRunState(self,dev,var,value,changed):
@@ -102,7 +102,6 @@ class MyRunControl(pyrogue.RunControl):
                 self._thread.join() 
                 self._thread = None 
 
-
     def _run(self):
         self.runCount.set(0) 
         self._last = int(time.time()) 
@@ -111,7 +110,7 @@ class MyRunControl(pyrogue.RunControl):
         while (self.runState.value() == 'Running'): 
             delay = 1.0 / ({value: key for key,value in self.runRate.enum.items()}[self._runRate]) 
             time.sleep(delay) 
-            self._root.Trigger() 
+            self.root.Trigger() 
   
             self._runCount += 1 
             if self._last != int(time.time()): 
@@ -127,8 +126,6 @@ class LztsBoard(pyrogue.Root):
         pyrogue.Root.__init__(self, name='lztsBoard', description='LZTS Board')
         
         self.add(dataWriter)
-        
-        self.add(MyRunControl('runControl'))
 
         # Add Devices
         self.add(fpga.Lzts(name='Lzts', offset=0, memBase=srp, hidden=False, enabled=True))
@@ -136,6 +133,9 @@ class LztsBoard(pyrogue.Root):
         @self.command()
         def Trigger():
             cmd.sendCmd(0, 0)
+        
+        self.add(MyRunControl('runControl'))
+        #self.add(pyrogue.RunControl(name='runControl', rates={1:'1 Hz', 10:'10 Hz',30:'30 Hz'}, cmd=cmd.sendCmd(0, 0)))
         
         # Export remote objects
         self.start(pyroGroup='lztsGui')

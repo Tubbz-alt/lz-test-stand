@@ -126,6 +126,7 @@ class Window(QtGui.QMainWindow, QObject):
         self.FadcCh5 = QtGui.QCheckBox('FADC Ch5')
         self.FadcCh6 = QtGui.QCheckBox('FADC Ch6')
         self.FadcCh7 = QtGui.QCheckBox('FADC Ch7')
+        self.enableFFT = QtGui.QCheckBox('Enable FFT')
         
         controlFrame = QtGui.QFrame()
         controlFrame.setFrameStyle(QtGui.QFrame.Panel);
@@ -138,7 +139,8 @@ class Window(QtGui.QMainWindow, QObject):
         grid.setColumnMinimumWidth(0, 1)
         grid.setRowMinimumHeight(1, 30)
         grid.setRowMinimumHeight(2, 30)
-        grid.addWidget(controlFrame,0,0,3,9)
+        grid.setRowMinimumHeight(3, 30)
+        grid.addWidget(controlFrame,0,0,4,9)
         grid.addWidget(self.SadcCh0, 1, 1)
         grid.addWidget(self.SadcCh1, 1, 2)
         grid.addWidget(self.SadcCh2, 1, 3)  
@@ -155,14 +157,15 @@ class Window(QtGui.QMainWindow, QObject):
         grid.addWidget(self.FadcCh5, 2, 6)  
         grid.addWidget(self.FadcCh6, 2, 7)  
         grid.addWidget(self.FadcCh7, 2, 8)  
+        grid.addWidget(self.enableFFT, 3, 1)  
 
         # line plot 1
-        self.lineDisplay1 = MplCanvas(MyTitle = "SADC Display")
+        self.lineDisplay1 = MplCanvas(MyTitle = "ADC Samples Display")
         hSubbox2 = QHBoxLayout()
         hSubbox2.addWidget(self.lineDisplay1)
         
         # line plot 2
-        self.lineDisplay2 = MplCanvas(MyTitle = "FADC Display")        
+        self.lineDisplay2 = MplCanvas(MyTitle = "FFT Display")        
         hSubbox3 = QHBoxLayout()
         hSubbox3.addWidget(self.lineDisplay2)
         
@@ -188,59 +191,56 @@ class Window(QtGui.QMainWindow, QObject):
 
     def displayDataFromReader(self):
         # converts bytes to array of dwords
-        sadcCh0Data  = np.frombuffer(self.eventReaderData.sadcCh0Data, dtype='uint16')
-        sadcCh1Data  = np.frombuffer(self.eventReaderData.sadcCh1Data, dtype='uint16')
-        sadcCh2Data  = np.frombuffer(self.eventReaderData.sadcCh2Data, dtype='uint16')
-        sadcCh3Data  = np.frombuffer(self.eventReaderData.sadcCh3Data, dtype='uint16')
-        sadcCh4Data  = np.frombuffer(self.eventReaderData.sadcCh4Data, dtype='uint16')
-        sadcCh5Data  = np.frombuffer(self.eventReaderData.sadcCh5Data, dtype='uint16')
-        sadcCh6Data  = np.frombuffer(self.eventReaderData.sadcCh6Data, dtype='uint16')
-        sadcCh7Data  = np.frombuffer(self.eventReaderData.sadcCh7Data, dtype='uint16')
-        fadcCh0Data  = np.frombuffer(self.eventReaderData.fadcCh0Data, dtype='uint16')
-        fadcCh1Data  = np.frombuffer(self.eventReaderData.fadcCh1Data, dtype='uint16')
-        fadcCh2Data  = np.frombuffer(self.eventReaderData.fadcCh2Data, dtype='uint16')
-        fadcCh3Data  = np.frombuffer(self.eventReaderData.fadcCh3Data, dtype='uint16')
-        fadcCh4Data  = np.frombuffer(self.eventReaderData.fadcCh4Data, dtype='uint16')
-        fadcCh5Data  = np.frombuffer(self.eventReaderData.fadcCh5Data, dtype='uint16')
-        fadcCh6Data  = np.frombuffer(self.eventReaderData.fadcCh6Data, dtype='uint16')
-        fadcCh7Data  = np.frombuffer(self.eventReaderData.fadcCh7Data, dtype='uint16')
-        # limits trace length for fast display (may be removed in the future)
-
-        #header are 5 32 bit words
-        sadcCh0Data  = sadcCh0Data[12:]
-        sadcCh1Data  = sadcCh1Data[12:]
-        sadcCh2Data  = sadcCh2Data[12:]
-        sadcCh3Data  = sadcCh3Data[12:]
-        sadcCh4Data  = sadcCh4Data[12:]
-        sadcCh5Data  = sadcCh5Data[12:]
-        sadcCh6Data  = sadcCh6Data[12:]
-        sadcCh7Data  = sadcCh7Data[12:]
-        fadcCh0Data  = fadcCh0Data[12:]
-        fadcCh1Data  = fadcCh1Data[12:]
-        fadcCh2Data  = fadcCh2Data[12:]
-        fadcCh3Data  = fadcCh3Data[12:]
-        fadcCh4Data  = fadcCh4Data[12:]
-        fadcCh5Data  = fadcCh5Data[12:]
-        fadcCh6Data  = fadcCh6Data[12:]
-        fadcCh7Data  = fadcCh7Data[12:]
+        chData = [bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray()]
+        for i in range(0, 16):
+            chData[i] = np.frombuffer(self.eventReaderData.channelDataArray[i], dtype='uint16')
+            #header are 5 32 bit words
+            chData[i] = chData[i][12:]
         
-        self.lineDisplay1.update_plot(  self.SadcCh0.isChecked(), "SADC Channel 0", 'b',  sadcCh0Data, 
-                                        self.SadcCh1.isChecked(), "SADC Channel 1", 'b',  sadcCh1Data,
-                                        self.SadcCh2.isChecked(), "SADC Channel 2", 'b',  sadcCh2Data,
-                                        self.SadcCh3.isChecked(), "SADC Channel 3", 'b',  sadcCh3Data,
-                                        self.SadcCh4.isChecked(), "SADC Channel 4", 'b',  sadcCh4Data,
-                                        self.SadcCh5.isChecked(), "SADC Channel 5", 'b',  sadcCh5Data,
-                                        self.SadcCh6.isChecked(), "SADC Channel 6", 'b',  sadcCh6Data,
-                                        self.SadcCh7.isChecked(), "SADC Channel 7", 'b',  sadcCh7Data)
         
-        self.lineDisplay2.update_plot(  self.FadcCh0.isChecked(), "SADC Channel 0", 'b',  fadcCh0Data,
-                                        self.FadcCh1.isChecked(), "SADC Channel 1", 'b',  fadcCh1Data,
-                                        self.FadcCh2.isChecked(), "SADC Channel 2", 'b',  fadcCh2Data,
-                                        self.FadcCh3.isChecked(), "SADC Channel 3", 'b',  fadcCh3Data,
-                                        self.FadcCh4.isChecked(), "SADC Channel 4", 'b',  fadcCh4Data,
-                                        self.FadcCh5.isChecked(), "SADC Channel 5", 'b',  fadcCh5Data,
-                                        self.FadcCh6.isChecked(), "SADC Channel 6", 'b',  fadcCh6Data,
-                                        self.FadcCh7.isChecked(), "SADC Channel 7", 'b',  fadcCh7Data)
+        
+        enabled = [self.SadcCh0.isChecked(), self.SadcCh1.isChecked(), self.SadcCh2.isChecked(), self.SadcCh3.isChecked(), 
+                   self.SadcCh4.isChecked(), self.SadcCh5.isChecked(), self.SadcCh6.isChecked(), self.SadcCh7.isChecked(),
+                   self.FadcCh0.isChecked(), self.FadcCh1.isChecked(), self.FadcCh2.isChecked(), self.FadcCh3.isChecked(), 
+                   self.FadcCh4.isChecked(), self.FadcCh5.isChecked(), self.FadcCh6.isChecked(), self.FadcCh7.isChecked()]
+        colors = ['xkcd:blue',    
+                  'xkcd:brown',   
+                  'xkcd:black',   
+                  'xkcd:coral',   
+                  'xkcd:cyan',    
+                  'xkcd:darkblue',
+                  'xkcd:aqua',    
+                  'xkcd:fuchsia', 
+                  'xkcd:gold',    
+                  'xkcd:green',   
+                  'xkcd:magenta', 
+                  'xkcd:olive',   
+                  'xkcd:orange',  
+                  'xkcd:purple',  
+                  'xkcd:red',     
+                  'xkcd:plum']
+        
+        labels = ["SADC Channel 0",
+                  "SADC Channel 1",
+                  "SADC Channel 2",
+                  "SADC Channel 3",
+                  "SADC Channel 4",
+                  "SADC Channel 5",
+                  "SADC Channel 6",
+                  "SADC Channel 7",
+                  "FADC Channel 0",
+                  "FADC Channel 1",
+                  "FADC Channel 2",
+                  "FADC Channel 3",
+                  "FADC Channel 4",
+                  "FADC Channel 5",
+                  "FADC Channel 6",
+                  "FADC Channel 7"]
+        
+        
+        self.lineDisplay1.update_plot( enabled, chData, colors, labels)
+        if self.enableFFT.isChecked():
+            self.lineDisplay2.update_fft( enabled, chData, colors, labels)
         
         self.eventReaderData.busy = False
         
@@ -262,22 +262,7 @@ class EventReader(rogue.interfaces.stream.Slave):
         self.numProcessFrames  = 0
         self.lastFrame = rogue.interfaces.stream.Frame
         self.frameDataArray = [bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray()]
-        self.fadcCh0Data = bytearray()
-        self.fadcCh1Data = bytearray()
-        self.fadcCh2Data = bytearray()
-        self.fadcCh3Data = bytearray()
-        self.fadcCh4Data = bytearray()
-        self.fadcCh5Data = bytearray()
-        self.fadcCh6Data = bytearray()
-        self.fadcCh7Data = bytearray()
-        self.sadcCh0Data = bytearray()
-        self.sadcCh1Data = bytearray()
-        self.sadcCh2Data = bytearray()
-        self.sadcCh3Data = bytearray()
-        self.sadcCh4Data = bytearray()
-        self.sadcCh5Data = bytearray()
-        self.sadcCh6Data = bytearray()
-        self.sadcCh7Data = bytearray()
+        self.channelDataArray = [bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray()]
         self.parent = parent
         #############################
         # define the data type IDs
@@ -339,41 +324,11 @@ class EventReader(rogue.interfaces.stream.Slave):
                 # sort slow ADC channnels
                 if ((p[7] & 0x10)>>4 == 1):
                     if (PRINT_VERBOSE): print('Slow ADC channnel: ', (p[4] & 0xFF))
-                    if ((p[4] & 0xFF) == 0):
-                        self.sadcCh0Data[:] = p
-                    elif ((p[4] & 0xFF) == 1):
-                        self.sadcCh1Data[:] = p
-                    elif ((p[4] & 0xFF) == 2):
-                        self.sadcCh2Data[:] = p
-                    elif ((p[4] & 0xFF) == 3):
-                        self.sadcCh3Data[:] = p
-                    elif ((p[4] & 0xFF) == 4):
-                        self.sadcCh4Data[:] = p
-                    elif ((p[4] & 0xFF) == 5):
-                        self.sadcCh5Data[:] = p
-                    elif ((p[4] & 0xFF) == 6):
-                        self.sadcCh6Data[:] = p
-                    elif ((p[4] & 0xFF) == 7):
-                        self.sadcCh7Data[:] = p
+                    self.channelDataArray[(p[4] & 0xFF)][:] = p
                 # sort fast ADC channnels
                 elif ((p[7] & 0x10)>>4 == 0):
                     if (PRINT_VERBOSE): print('Fast ADC channnel: ', (p[4] & 0xFF))
-                    if ((p[4] & 0xFF) == 0):
-                        self.fadcCh0Data[:] = p
-                    elif ((p[4] & 0xFF) == 1):
-                        self.fadcCh1Data[:] = p
-                    elif ((p[4] & 0xFF) == 2):
-                        self.fadcCh2Data[:] = p
-                    elif ((p[4] & 0xFF) == 3):
-                        self.fadcCh3Data[:] = p
-                    elif ((p[4] & 0xFF) == 4):
-                        self.fadcCh4Data[:] = p
-                    elif ((p[4] & 0xFF) == 5):
-                        self.fadcCh5Data[:] = p
-                    elif ((p[4] & 0xFF) == 6):
-                        self.fadcCh6Data[:] = p
-                    elif ((p[4] & 0xFF) == 7):
-                        self.fadcCh7Data[:] = p
+                    self.channelDataArray[7+(p[4] & 0xFF)][:] = p
                 # Emit the signal.
                 self.parent.dataTrigger.emit()
 
@@ -408,57 +363,37 @@ class MplCanvas(FigureCanvas):
         #if one wants to plot something at the begining of the application fill this function.
         #self.axes.plot([0, 1, 2, 3], [1, 2, 0, 4], 'b')
         self.axes.plot([], [], 'b')
-
-    def update_plot(self):
-        # Build a list of 4 random integers between 0 and 10 (both inclusive)
-        l = [-1, -2, 10, 14] #[random.randint(0, 10) for i in range(4)]
-        #self.axes.cla()
-        self.axes.plot([0, 1, 2, 3], l, 'r')
-        self.draw()
-
-    #the arguments are expected in the following sequence
-    # (display enabled, line name, line color, data array)
-    def update_plot(self, *args):
-        argIndex = 0
-        lineName = ""
-#        if (self.fig.cbar!=None):              
-#            self.fig.cbar.remove()
+    
+    def update_plot(self, enabled, chData, colors, labels):
 
         self.axes.cla()
-        for arg in args:
-            if (argIndex == 0):
-                lineEnabled = arg
-            if (argIndex == 1):
-                lineName = arg
-            if (argIndex == 2):
-                lineColor = arg
-            if (argIndex == 3):
-                ##if (PRINT_VERBOSE): print(lineName)
-                if (lineEnabled):
-                    l = arg #[random.randint(0, 10) for i in range(4)]
-                    self.axes.plot(l, lineColor)
-                argIndex = -1
-            argIndex = argIndex + 1    
+        for i in range(0, 16):
+            N = len(chData[i])
+            if (N > 0 and enabled[i] == True):
+                self.axes.plot(chData[i], colors[i], label=labels[i])
+                self.axes.legend() 
         self.axes.set_title(self.MyTitle)        
         self.draw()
 
-    def update_figure(self, image=None, contrast=None, autoScale = True):
+    def update_fft(self, enabled, chData, colors, labels):
         self.axes.cla()
-        self.axes.autoscale = autoScale
-
-        if (len(image)>0):
-            #self.axes.gray()        
-            if (contrast != None):
-                self.cax = self.axes.imshow(image, interpolation='nearest', cmap='gray',vmin=contrast[1], vmax=contrast[0])
-            else:
-                self.cax = self.axes.imshow(image, interpolation='nearest', cmap='gray')
-
-#            if (self.fig.cbar==None):              
-#                self.fig.cbar = self.fig.colorbar(self.cax)
-#            else:
-#                self.fig.cbar.remove()
-#                self.fig.cbar = self.fig.colorbar(self.cax)
+        for i in range(0, 16):
+            # Number of samplepoints
+            N = len(chData[i])
+            if (N > 0 and enabled[i] == True):
+                # sample spacing
+                T = 1.0 / 250000000.0
+                #yf = np.fft.rfft(chData[i]*np.hanning(N))
+                yf = np.fft.rfft(chData[i])
+                #print(np.hanning(N))
+                #print(np.hanning(N)*chData[i])
+                yf = np.fft.rfft(chData[i])
+                xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
+                #freq = np.fft.fftfreq(N, d=4e-9)
+                #self.axes.plot(freq[:len(yf)], yf, colors[i], label=labels[i])
+                self.axes.semilogx(xf[1:], np.abs(yf[1:N//2]), colors[i], label=labels[i])
+                self.axes.legend()  
+        self.axes.set_title(self.MyTitle)        
         self.draw()
-
         
-
+    

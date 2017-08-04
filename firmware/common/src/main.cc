@@ -21,24 +21,37 @@
 
 int main() { 
    
+   int i;   
    
-   //xil_printf("Version %x\n\r",     Xil_In32(BUS_OFFSET+0x00000000));
-   //xil_printf("PGP Bits %x\n\r",    Xil_In32(BUS_OFFSET+0x04000020));
-   //xil_printf("PGP RX CLK %d\n\r",    Xil_In32(BUS_OFFSET+0x04000064));
-   //xil_printf("PGP TX CLK %d\n\r",    Xil_In32(BUS_OFFSET+0x04000068));
-   //xil_printf("PGP RX cellErrorCount %d\n\r",    Xil_In32(BUS_OFFSET+0x04000028));
-   //xil_printf("PGP RX linkDownCount %d\n\r",    Xil_In32(BUS_OFFSET+0x0400002C));
-   //xil_printf("PGP RX linkErrorCount %d\n\r",    Xil_In32(BUS_OFFSET+0x04000030));
-   //xil_printf("PGP RX remOverflow0Cnt %d\n\r",    Xil_In32(BUS_OFFSET+0x04000034));
-   //xil_printf("PGP RX remOverflow1Cnt %d\n\r",    Xil_In32(BUS_OFFSET+0x04000038));
-   //xil_printf("PGP RX remOverflow2Cnt %d\n\r",    Xil_In32(BUS_OFFSET+0x0400003C));
-   //xil_printf("PGP RX remOverflow3Cnt %d\n\r",    Xil_In32(BUS_OFFSET+0x04000040));
-   //xil_printf("PGP RX frameErrCount %d\n\r",    Xil_In32(BUS_OFFSET+0x04000044));
-   //xil_printf("PGP RX frameCount %d\n\r",    Xil_In32(BUS_OFFSET+0x04000048));
-   //xil_printf("MemTester rdy %x\n\r",    Xil_In32(BUS_OFFSET+0x03000100)&0x1);
-   //xil_printf("MemTester err %x\n\r",    Xil_In32(BUS_OFFSET+0x03000104)&0x1);
-   //xil_printf("MemTester wTimer %d\n\r",    Xil_In32(BUS_OFFSET+0x03000108));
-   //xil_printf("MemTester rTimer %d\n\r",    Xil_In32(BUS_OFFSET+0x0300010C));
+   // enable slow ADC power required for deskew procedure
+   Xil_Out32(POWER_ENABLE, DCDCA_P3V7 | DCDCA_P2V3 | LDO_SLOW);
+   MB_Sleep(500);
+   // power up ADCs
+   Xil_Out32(POWER_SADC_CTRL1, 0);
+   Xil_Out32(POWER_SADC_CTRL2, 0);
+   MB_Sleep(500);
+   // reset ADCs
+   Xil_Out32(POWER_SADC_RST, 0xf);
+   MB_Sleep(500);
+   Xil_Out32(POWER_SADC_RST, 0x0);
+   MB_Sleep(500);
+   
+   for (i=0; i<4; i++) {
+      // configure ADC
+      //Xil_Out32(adcAddrOffset[i]+0x20, 0x10);   //ADC reg8 - data format
+      Xil_Out32(adcAddrOffset[i]+0x54, 0x1);    //ADC reg 15 - DDR mode
+      Xil_Out32(adcAddrOffset[i]+0x3C, 0x0);    //ADC reg F - real data
+      
+      //configure ADC deserializer
+      Xil_Out32(adcDmodeRegs[i], 3);
+      Xil_Out32(adcInvertRegs[i], 1);
+      Xil_Out32(adcConvertRegs[i], 3);
+   }
+   
+   
+   //set SADC delays
+   for (i=0; i<64; i++)
+      Xil_Out32(adcLaneDelayRegs[i], adcLaneDelayInit[i]);
    
    while (1) {
       

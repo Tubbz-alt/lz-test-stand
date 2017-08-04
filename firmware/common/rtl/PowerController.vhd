@@ -77,8 +77,21 @@ entity PowerController is
       pokLdoA0p5V0      : in  sl;
       pokLdoA1p5V0      : in  sl;
       
-      -- add power sync
-      
+      -- DCDC sync outputs
+      syncDcDcDp6V      : out sl;
+      syncDcDcAp6V      : out sl;
+      syncDcDcAm6V      : out sl;
+      syncDcDcAp5V4     : out sl;
+      syncDcDcAp3V7     : out sl;
+      syncDcDcAp2V3     : out sl;
+      syncDcDcAp1V6     : out sl;
+      syncDcDcDp3V3     : out sl;
+      syncDcDcDp1V8     : out sl;
+      syncDcDcDp1V2     : out sl;
+      syncDcDcDp0V95    : out sl;
+      syncDcDcMgt1V0    : out sl;
+      syncDcDcMgt1V2    : out sl;
+      syncDcDcMgt1V8    : out sl;
       
       -- slow ADC signals
       sadcRst           : out slv(3 downto 0);
@@ -106,6 +119,13 @@ architecture RTL of PowerController is
       fadcPdn           : slv(3 downto 0);
       sAxilWriteSlave   : AxiLiteWriteSlaveType;
       sAxilReadSlave    : AxiLiteReadSlaveType;
+      syncAll           : sl;
+      sync              : slv(13 downto 0);
+      syncClkCnt        : Slv32Array(13 downto 0);
+      syncPhaseCnt      : Slv32Array(13 downto 0);
+      syncHalfClk       : Slv32Array(13 downto 0);
+      syncPhase         : Slv32Array(13 downto 0);
+      syncOut           : slv(13 downto 0);
    end record RegType;
 
    constant REG_INIT_C : RegType := (
@@ -118,7 +138,14 @@ architecture RTL of PowerController is
       sampEn            => (others=>'0'),
       fadcPdn           => (others=>'1'),
       sAxilWriteSlave   => AXI_LITE_WRITE_SLAVE_INIT_C,
-      sAxilReadSlave    => AXI_LITE_READ_SLAVE_INIT_C
+      sAxilReadSlave    => AXI_LITE_READ_SLAVE_INIT_C,
+      syncAll           => '0',
+      sync              => (others=>'0'),
+      syncClkCnt        => (others=>(others=>'0')),
+      syncPhaseCnt      => (others=>(others=>'0')),
+      syncHalfClk       => (others=>(others=>'0')),
+      syncPhase         => (others=>(others=>'0')),
+      syncOut           => (others=>'0')
    );
 
    signal r   : RegType := REG_INIT_C;
@@ -128,6 +155,20 @@ architecture RTL of PowerController is
    
 begin
    
+   syncDcDcAp6V   <= r.syncOut(0);
+   syncDcDcAm6V   <= r.syncOut(1);
+   syncDcDcAp5V4  <= r.syncOut(2);
+   syncDcDcAp3V7  <= r.syncOut(3);
+   syncDcDcAp2V3  <= r.syncOut(4);
+   syncDcDcAp1V6  <= r.syncOut(5);
+   syncDcDcDp6V   <= r.syncOut(6);
+   syncDcDcDp3V3  <= r.syncOut(7);
+   syncDcDcDp1V8  <= r.syncOut(8);
+   syncDcDcDp1V2  <= r.syncOut(9);
+   syncDcDcDp0V95 <= r.syncOut(10);
+   syncDcDcMgt1V0 <= r.syncOut(11);
+   syncDcDcMgt1V2 <= r.syncOut(12);
+   syncDcDcMgt1V8 <= r.syncOut(13);
    
    powerOkAll( 0) <= pokDcDcDp6V    ;
    powerOkAll( 1) <= pokDcDcAp6V    ;
@@ -173,6 +214,9 @@ begin
    begin
       v := r;
       
+      -- reset strobes
+      v.syncAll := '0';
+      
       -- sync inputs
       v.powerOkAll := powerOkAll;
       
@@ -192,7 +236,41 @@ begin
       
       axiSlaveRegister (regCon, x"300", 0, v.fadcPdn);
       
+      -- DCDC sync registers
+      axiSlaveRegister(regCon, x"400", 0, v.syncAll);
+      for i in 13 downto 0 loop
+         axiSlaveRegister(regCon, x"500"+toSlv(i*4, 12), 0, v.syncHalfClk(i));
+         axiSlaveRegister(regCon, x"600"+toSlv(i*4, 12), 0, v.syncPhase(i));
+      end loop;
+      
       axiSlaveDefault(regCon, v.sAxilWriteSlave, v.sAxilReadSlave, AXIL_ERR_RESP_G);
+      
+      -- DCDC sync logic
+      for i in 13 downto 0 loop
+         -- phase counters
+         if r.syncAll = '1' then
+            v.syncPhaseCnt(i) := (others=>'0');
+            v.sync(i)         := '1';
+         elsif r.syncPhaseCnt(i) < r.syncPhase(i) then
+            v.syncPhaseCnt(i) := r.syncPhaseCnt(i) + 1;
+         else
+            v.sync(i)         := '0';
+         end if;
+         -- clock counters
+         if r.sync(i) = '1' then
+            v.syncClkCnt(i)   := (others=>'0');
+            v.syncOut(i)      := '0';
+         elsif r.syncClkCnt(i) = r.syncHalfClk(i) then
+            v.syncClkCnt(i)   := (others=>'0');
+            v.syncOut(i)      := not r.syncOut(i);
+         else
+            v.syncClkCnt(i)   := r.syncClkCnt(i) + 1;
+         end if;
+         -- disable sync if resister is zero
+         if r.syncHalfClk(i) = 0 then
+            v.syncOut(i)      := '0';
+         end if;
+      end loop;
       
       if (axilRst = '1') then
          v := REG_INIT_C;

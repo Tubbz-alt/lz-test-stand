@@ -33,6 +33,15 @@ set_clock_groups -asynchronous \
    -group [get_clocks -include_generated_clocks {clk250}] \
    -group [get_clocks -include_generated_clocks {axilClk}]
 
+
+# Lock slow ADC interfaces to clock regions to avoid timing changes that require to re-train the ADC
+# Can comment out temporarly to find better placement if it causes timing closure issues
+set_property CLOCK_REGION X0Y4 [get_cells GEN_250MSPS[0].U_250MspsAdc/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
+set_property CLOCK_REGION X2Y3 [get_cells GEN_250MSPS[1].U_250MspsAdc/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
+set_property CLOCK_REGION X2Y4 [get_cells GEN_250MSPS[2].U_250MspsAdc/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
+set_property CLOCK_REGION X2Y2 [get_cells GEN_250MSPS[3].U_250MspsAdc/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
+
+
 ############################
 ## Pinout Configuration   ##
 ############################
@@ -60,6 +69,22 @@ set_property PACKAGE_PIN AJ11 [get_ports {enLdoFast}]
 set_property PACKAGE_PIN AG11 [get_ports {enLdoAm5V}]
 set_property IOSTANDARD LVCMOS33 [get_ports {enDcDc*}] 
 set_property IOSTANDARD LVCMOS33 [get_ports {enLdo*}] 
+
+set_property PACKAGE_PIN AK12 [get_ports {syncDcDcDp6V}]
+set_property PACKAGE_PIN AL12 [get_ports {syncDcDcAp6V}]
+set_property PACKAGE_PIN AG12 [get_ports {syncDcDcAm6V}]
+set_property PACKAGE_PIN AE12 [get_ports {syncDcDcAp5V4}]
+set_property PACKAGE_PIN AE11 [get_ports {syncDcDcAp3V7}]
+set_property PACKAGE_PIN AD11 [get_ports {syncDcDcAp2V3}]
+set_property PACKAGE_PIN AH12 [get_ports {syncDcDcAp1V6}]
+set_property PACKAGE_PIN AL13 [get_ports {syncDcDcDp3V3}]
+set_property PACKAGE_PIN AK13 [get_ports {syncDcDcDp1V8}]
+set_property PACKAGE_PIN AF13 [get_ports {syncDcDcDp1V2}]
+set_property PACKAGE_PIN AF12 [get_ports {syncDcDcDp0V95}]
+set_property PACKAGE_PIN AH13 [get_ports {syncDcDcMgt1V0}]
+set_property PACKAGE_PIN AJ13 [get_ports {syncDcDcMgt1V2}]
+set_property PACKAGE_PIN AE13 [get_ports {syncDcDcMgt1V8}]
+set_property IOSTANDARD LVCMOS33 [get_ports {syncDcDc*}] 
 
 set_property PACKAGE_PIN AM9  [get_ports {pokDcDcDp6V}]
 set_property PACKAGE_PIN AJ9  [get_ports {pokDcDcAp6V}]

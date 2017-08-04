@@ -194,9 +194,24 @@ class Window(QtGui.QMainWindow, QObject):
         chData = [bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray()]
         for i in range(0, 16):
             chData[i] = np.frombuffer(self.eventReaderData.channelDataArray[i], dtype='uint16')
+            
+            # read from the header how many samples in the trigger
+            # the packet can be padded with extra zeros (2 bytes)
+            trigSamples = 0
+            if len(chData[i]) >= 11:
+               trigSamples = (chData[i][5] << 16) | chData[i][4]
+               #print(trigSamples)
+               #print(len(chData[i][12:]))
+            
             #header are 5 32 bit words
-            chData[i] = chData[i][12:]
-        
+            if trigSamples < len(chData[i][12:]):
+               chData[i] = chData[i][12:trigSamples]
+            else:
+               chData[i] = chData[i][12:]
+            
+            
+            
+            
         
         
         enabled = [self.SadcCh0.isChecked(), self.SadcCh1.isChecked(), self.SadcCh2.isChecked(), self.SadcCh3.isChecked(), 

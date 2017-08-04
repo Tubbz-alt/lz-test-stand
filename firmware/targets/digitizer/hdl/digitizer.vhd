@@ -50,6 +50,21 @@ entity digitizer is
       enLdoSlow         : out sl;
       enLdoFast         : out sl;
       enLdoAm5V         : out sl;
+      -- DCDC sync outputs
+      syncDcDcDp6V      : out sl;
+      syncDcDcAp6V      : out sl;
+      syncDcDcAm6V      : out sl;
+      syncDcDcAp5V4     : out sl;
+      syncDcDcAp3V7     : out sl;
+      syncDcDcAp2V3     : out sl;
+      syncDcDcAp1V6     : out sl;
+      syncDcDcDp3V3     : out sl;
+      syncDcDcDp1V8     : out sl;
+      syncDcDcDp1V2     : out sl;
+      syncDcDcDp0V95    : out sl;
+      syncDcDcMgt1V0    : out sl;
+      syncDcDcMgt1V2    : out sl;
+      syncDcDcMgt1V8    : out sl;
       -- power OK ins
       pokDcDcDp6V       : in  sl;
       pokDcDcAp6V       : in  sl;
@@ -136,7 +151,7 @@ architecture top_level of digitizer is
    constant START_ADDR_C : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '0');
    constant STOP_ADDR_C  : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
 
-   constant NUM_AXI_MASTERS_C : natural := 20;
+   constant NUM_AXI_MASTERS_C : natural := 21;
 
    constant VERSION_INDEX_C   : natural := 0;
    constant SYSMON_INDEX_C    : natural := 1;
@@ -158,6 +173,7 @@ architecture top_level of digitizer is
    constant SADCWR6_INDEX_C   : natural := 17;
    constant SADCWR7_INDEX_C   : natural := 18;
    constant SADCRD_INDEX_C    : natural := 19;
+   constant SADCTEST_INDEX_C  : natural := 20;
 
    constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := (
       VERSION_INDEX_C  => (
@@ -239,6 +255,10 @@ architecture top_level of digitizer is
       SADCRD_INDEX_C => (
          baseAddr      => x"13000000",
          addrBits      => 24,
+         connectivity  => x"FFFF"),
+      SADCTEST_INDEX_C => (
+         baseAddr      => x"14000000",
+         addrBits      => 24,
          connectivity  => x"FFFF")
    );
    
@@ -292,7 +312,8 @@ architecture top_level of digitizer is
    signal axiBistWriteMaster   : AxiWriteMasterType;
    signal axiBistWriteSlave    : AxiWriteSlaveType;
    
-   signal adcData    : Slv16Array(7 downto 0);
+   signal adcData       : Slv16Array(7 downto 0);
+   signal adcDataTester : Slv32Array(7 downto 0);
    
    signal gTime      : slv(63 downto 0);
    
@@ -459,6 +480,20 @@ begin
       enLdoSlow         => enLdoSlow,
       enLdoFast         => enLdoFast,
       enLdoAm5V         => enLdoAm5V,
+      syncDcDcDp6V      => syncDcDcDp6V,
+      syncDcDcAp6V      => syncDcDcAp6V,
+      syncDcDcAm6V      => syncDcDcAm6V,
+      syncDcDcAp5V4     => syncDcDcAp5V4,
+      syncDcDcAp3V7     => syncDcDcAp3V7,
+      syncDcDcAp2V3     => syncDcDcAp2V3,
+      syncDcDcAp1V6     => syncDcDcAp1V6,
+      syncDcDcDp3V3     => syncDcDcDp3V3,
+      syncDcDcDp1V8     => syncDcDcDp1V8,
+      syncDcDcDp1V2     => syncDcDcDp1V2,
+      syncDcDcDp0V95    => syncDcDcDp0V95,
+      syncDcDcMgt1V0    => syncDcDcMgt1V0,
+      syncDcDcMgt1V2    => syncDcDcMgt1V2,
+      syncDcDcMgt1V8    => syncDcDcMgt1V8,
       pokDcDcDp6V       => pokDcDcDp6V,
       pokDcDcAp6V       => pokDcDcAp6V,
       pokDcDcAm6V       => pokDcDcAm6V,
@@ -565,6 +600,39 @@ begin
       );
       
    end generate;
+   
+   ------------------------------------------------
+   -- 250 MSPS ADCs pattern tester
+   ------------------------------------------------
+   
+   GEN_250MSPS_TESTER: for i in 0 to 7 generate
+      adcDataTester(i)(31 downto 16)   <= (others=>'0');
+      adcDataTester(i)(15 downto 0)    <= adcData(i);
+   end generate;
+   
+   U_AdcPatternTester: entity work.AdcPatternTester
+   generic map (
+      ADC_BITS_G        => 16,
+      NUM_CHANNELS_G    => 8
+   )
+   port map ( 
+      -- ADC Interface
+      adcClk            => clk250,
+      adcRst            => rst250,
+      adcData           => adcDataTester,
+      
+      -- Axi Interface
+      axilClk           => axilClk,
+      axilRst           => axilRst,
+      axilWriteMaster   => axilWriteMasters(SADCTEST_INDEX_C),
+      axilWriteSlave    => axilWriteSlaves(SADCTEST_INDEX_C),
+      axilReadMaster    => axilReadMasters(SADCTEST_INDEX_C),
+      axilReadSlave     => axilReadSlaves(SADCTEST_INDEX_C),
+      
+      -- Direct status bits
+      testDone          => open,
+      testFailed        => open
+   );
    
    ------------------------------------------------
    -- 250 MSPS ADCs Buffer Writers

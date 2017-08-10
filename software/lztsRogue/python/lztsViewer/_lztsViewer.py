@@ -195,15 +195,19 @@ class Window(QtGui.QMainWindow, QObject):
         for i in range(0, 16):
             chData[i] = np.frombuffer(self.eventReaderData.channelDataArray[i], dtype='uint16')
             
-            # read from the header how many samples in the trigger
-            # the packet can be padded with extra zeros (2 bytes)
+            # currently header is 12 x 16 bit words (will be more)
+            # read header information
             trigSamples = 0
+            trigOffset = 0
             if len(chData[i]) >= 11:
                trigSamples = (chData[i][5] << 16) | chData[i][4]
-               #print(trigSamples)
+               trigOffset = (chData[i][7] << 16) | chData[i][6]
+               print('Trigger size is %d samples' %(trigSamples))
+               print('Trigger offset is %d samples' %(trigOffset))
                #print(len(chData[i][12:]))
             
-            #header are 5 32 bit words
+            # check how many samples in the trigger
+            # the packet can be padded with extra zeros (2 bytes)
             if trigSamples < len(chData[i][12:]):
                chData[i] = chData[i][12:trigSamples]
             else:

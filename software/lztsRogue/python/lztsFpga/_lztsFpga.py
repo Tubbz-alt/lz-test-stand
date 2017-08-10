@@ -121,6 +121,8 @@ class LztsPowerRegisters(pr.Device):
       self.add((pr.RemoteVariable(name='SADCCtrl2',   description='SADCCtrl2',   offset=0x00000208, bitSize=4, bitOffset=0,  base=pr.UInt, mode='RW')))
       self.add((pr.RemoteVariable(name='SAMPEn',      description='SAMPEn',      offset=0x0000020C, bitSize=4, bitOffset=0,  base=pr.UInt, mode='RW')))
       
+      #self.add((pr.RemoteVariable(name='DDRRstN',     description='DDRRstN',     offset=0x00000280, bitSize=1, bitOffset=0,  base=pr.Bool, mode='RW')))
+      
       self.add((pr.RemoteVariable(name='FADCPdn',     description='FADCPdn',     offset=0x00000300, bitSize=4, bitOffset=0,  base=pr.UInt, mode='RW')))
       
       self.add((pr.RemoteVariable(name='DcDcSyncAll',       description='DcDcSyncAll',       offset=0x00000400, bitSize=1,  bitOffset=0,  base=pr.Bool, mode='RW')))

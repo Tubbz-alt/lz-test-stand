@@ -331,6 +331,7 @@ architecture top_level of digitizer is
    signal memFull       : slv(7 downto 0);
    
    signal swTrigger     : sl;
+   signal ddrRstN       : sl;
    
    attribute keep : string;
    attribute keep of clk250 : signal is "true";
@@ -518,7 +519,8 @@ begin
       sadcCtrl1         => sadcCtrl1,
       sadcCtrl2         => sadcCtrl2,
       sampEn            => sampEn,
-      fadcPdn           => fadcPdn
+      fadcPdn           => fadcPdn,
+      ddrRstN           => ddrRstN
    );
 
    
@@ -860,7 +862,8 @@ begin
       c0_ddr4_act_n    => c0_ddr4_act_n,
       c0_ddr4_ck_c     => c0_ddr4_ck_c,
       c0_ddr4_ck_t     => c0_ddr4_ck_t,
-      calibComplete    => calibComplete
+      calibComplete    => calibComplete,
+      c0_ddr4_aresetn  => ddrRstN
    );
    
    ------------------------------------------------

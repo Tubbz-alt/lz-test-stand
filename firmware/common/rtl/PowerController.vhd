@@ -100,7 +100,10 @@ entity PowerController is
       sampEn            : out slv(3 downto 0);
       
       -- fast ADC signals
-      fadcPdn           : out slv(3 downto 0)
+      fadcPdn           : out slv(3 downto 0);
+      
+      -- DDR aresetn
+      ddrRstN           : out sl
    );
 end PowerController;
 
@@ -126,6 +129,7 @@ architecture RTL of PowerController is
       syncHalfClk       : Slv32Array(13 downto 0);
       syncPhase         : Slv32Array(13 downto 0);
       syncOut           : slv(13 downto 0);
+      ddrRstN           : sl;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
@@ -145,7 +149,8 @@ architecture RTL of PowerController is
       syncPhaseCnt      => (others=>(others=>'0')),
       syncHalfClk       => (others=>(others=>'0')),
       syncPhase         => (others=>(others=>'0')),
-      syncOut           => (others=>'0')
+      syncOut           => (others=>'0'),
+      ddrRstN           => '1'
    );
 
    signal r   : RegType := REG_INIT_C;
@@ -234,6 +239,8 @@ begin
       axiSlaveRegister (regCon, x"208", 0, v.sadcCtrl2);
       axiSlaveRegister (regCon, x"20C", 0, v.sampEn);
       
+      axiSlaveRegister (regCon, x"280", 0, v.ddrRstN);
+      
       axiSlaveRegister (regCon, x"300", 0, v.fadcPdn);
       
       -- DCDC sync registers
@@ -281,11 +288,12 @@ begin
       sAxilWriteSlave   <= r.sAxilWriteSlave;
       sAxilReadSlave    <= r.sAxilReadSlave;
       
-      sadcRst           <=r.sadcRst;
-      sadcCtrl1         <=r.sadcCtrl1;
-      sadcCtrl2         <=r.sadcCtrl2;
-      sampEn            <=r.sampEn;
-      fadcPdn           <=r.fadcPdn;
+      sadcRst           <= r.sadcRst;
+      sadcCtrl1         <= r.sadcCtrl1;
+      sadcCtrl2         <= r.sadcCtrl2;
+      sampEn            <= r.sampEn;
+      fadcPdn           <= r.fadcPdn;
+      ddrRstN           <= r.ddrRstN;
 
    end process comb;
 

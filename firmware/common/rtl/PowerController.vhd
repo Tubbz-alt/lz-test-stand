@@ -101,6 +101,7 @@ entity PowerController is
       
       -- fast ADC signals
       fadcPdn           : out slv(3 downto 0);
+      fadcReset         : out slv(3 downto 0);
       
       -- DDR aresetn
       ddrRstN           : out sl
@@ -120,6 +121,7 @@ architecture RTL of PowerController is
       sadcCtrl2         : slv(3 downto 0);
       sampEn            : slv(3 downto 0);
       fadcPdn           : slv(3 downto 0);
+      fadcReset         : slv(3 downto 0);
       sAxilWriteSlave   : AxiLiteWriteSlaveType;
       sAxilReadSlave    : AxiLiteReadSlaveType;
       syncAll           : sl;
@@ -141,6 +143,7 @@ architecture RTL of PowerController is
       sadcCtrl2         => (others=>'1'),
       sampEn            => (others=>'0'),
       fadcPdn           => (others=>'1'),
+      fadcReset         => (others=>'1'),
       sAxilWriteSlave   => AXI_LITE_WRITE_SLAVE_INIT_C,
       sAxilReadSlave    => AXI_LITE_READ_SLAVE_INIT_C,
       syncAll           => '0',
@@ -242,6 +245,7 @@ begin
       axiSlaveRegister (regCon, x"280", 0, v.ddrRstN);
       
       axiSlaveRegister (regCon, x"300", 0, v.fadcPdn);
+      axiSlaveRegister (regCon, x"304", 0, v.fadcReset);
       
       -- DCDC sync registers
       axiSlaveRegister(regCon, x"400", 0, v.syncAll);
@@ -293,6 +297,7 @@ begin
       sadcCtrl2         <= r.sadcCtrl2;
       sampEn            <= r.sampEn;
       fadcPdn           <= r.fadcPdn;
+      fadcReset         <= r.fadcReset;
       ddrRstN           <= r.ddrRstN;
 
    end process comb;

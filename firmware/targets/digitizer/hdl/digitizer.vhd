@@ -88,7 +88,36 @@ entity digitizer is
       pokLdoA1p5V0      : in  sl;
       
       -- fast ADC pins
+      devClkP           : in  sl;
+      devClkN           : in  sl;
+      sysRefClkP        : in  sl;
+      sysRefClkN        : in  sl;
+      lmkRefClkP        : out sl;
+      lmkRefClkN        : out sl;
+      
+      jesdRxDa2P        : in  slv(3 downto 0);
+      jesdRxDa2N        : in  slv(3 downto 0);
+      jesdRxDa1P        : in  slv(3 downto 0);
+      jesdRxDa1N        : in  slv(3 downto 0);
+      jesdRxDb2P        : in  slv(3 downto 0);
+      jesdRxDb2N        : in  slv(3 downto 0);
+      jesdRxDb1P        : in  slv(3 downto 0);
+      jesdRxDb1N        : in  slv(3 downto 0);
+      
+      jesdSync          : out slv(3 downto 0);
+      
       fadcPdn           : out slv(3 downto 0);
+      fadcReset         : out slv(3 downto 0);
+      fadcSen           : out slv(3 downto 0);
+      fadcSclk          : out sl;
+      fadcSdin          : out sl;
+      fadcSdout         : in  sl;
+      
+      lmkCs             : out   sl;
+      lmkSck            : out   sl;
+      lmkSdio           : inout sl;
+      lmkReset          : out   sl;
+      lmkSync           : out   sl;
       
       -- slow ADC pins
       sadcSclk          : out sl;
@@ -113,9 +142,12 @@ entity digitizer is
       c0_sys_clk_p      : in    sl;
       c0_sys_clk_n      : in    sl;
       -- DRR Memory interface ports
-      c0_ddr4_dq        : inout slv(63 downto 0);
-      c0_ddr4_dqs_c     : inout slv(7 downto 0);
-      c0_ddr4_dqs_t     : inout slv(7 downto 0);
+      --c0_ddr4_dq        : inout slv(63 downto 0);
+      --c0_ddr4_dqs_c     : inout slv(7 downto 0);
+      --c0_ddr4_dqs_t     : inout slv(7 downto 0);
+      c0_ddr4_dq        : inout slv(31 downto 0);
+      c0_ddr4_dqs_c     : inout slv(3 downto 0);
+      c0_ddr4_dqs_t     : inout slv(3 downto 0);
       c0_ddr4_adr       : out   slv(16 downto 0);
       c0_ddr4_ba        : out   slv(1 downto 0);
       c0_ddr4_bg        : out   slv(0 to 0);
@@ -125,7 +157,8 @@ entity digitizer is
       c0_ddr4_ck_c      : out   slv(0 to 0);
       c0_ddr4_cke       : out   slv(0 to 0);
       c0_ddr4_cs_n      : out   slv(0 to 0);
-      c0_ddr4_dm_dbi_n  : inout slv(7 downto 0);
+      --c0_ddr4_dm_dbi_n  : inout slv(7 downto 0);
+      c0_ddr4_dm_dbi_n  : inout slv(3 downto 0);
       c0_ddr4_odt       : out   slv(0 to 0);
       -- PGP signals
       pgpClkP           : in    sl;
@@ -143,15 +176,15 @@ end digitizer;
 architecture top_level of digitizer is
 
    constant DDR_AXI_CONFIG_C : AxiConfigType := axiConfig(
-      ADDR_WIDTH_C => 31,
-      DATA_BYTES_C => 64,
+      ADDR_WIDTH_C => 30,
+      DATA_BYTES_C => 32,
       ID_BITS_C    => 4,
       LEN_BITS_C   => 8);
 
    constant START_ADDR_C : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '0');
    constant STOP_ADDR_C  : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
 
-   constant NUM_AXI_MASTERS_C : natural := 21;
+   constant NUM_AXI_MASTERS_C : natural := 23;
 
    constant VERSION_INDEX_C   : natural := 0;
    constant SYSMON_INDEX_C    : natural := 1;
@@ -174,95 +207,24 @@ architecture top_level of digitizer is
    constant SADCWR7_INDEX_C   : natural := 18;
    constant SADCRD_INDEX_C    : natural := 19;
    constant SADCTEST_INDEX_C  : natural := 20;
-
-   constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := (
-      VERSION_INDEX_C  => (
-         baseAddr      => x"00000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SYSMON_INDEX_C   => (
-         baseAddr      => x"01000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      BOOT_MEM_INDEX_C => (
-         baseAddr      => x"02000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      DDR_MEM_INDEX_C  => (
-         baseAddr      => x"03000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      COMM_INDEX_C     => (
-         baseAddr      => x"04000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      POWER_INDEX_C     => (
-         baseAddr      => x"05000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCONF_INDEX_C     => (
-         baseAddr      => x"06000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCRD0_INDEX_C     => (
-         baseAddr      => x"07000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCRD1_INDEX_C     => (
-         baseAddr      => x"08000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCRD2_INDEX_C     => (
-         baseAddr      => x"09000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCRD3_INDEX_C     => (
-         baseAddr      => x"0A000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCWR0_INDEX_C => (
-         baseAddr      => x"0B000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCWR1_INDEX_C => (
-         baseAddr      => x"0C000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCWR2_INDEX_C => (
-         baseAddr      => x"0D000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCWR3_INDEX_C => (
-         baseAddr      => x"0E000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCWR4_INDEX_C => (
-         baseAddr      => x"0F000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCWR5_INDEX_C => (
-         baseAddr      => x"10000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCWR6_INDEX_C => (
-         baseAddr      => x"11000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCWR7_INDEX_C => (
-         baseAddr      => x"12000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCRD_INDEX_C => (
-         baseAddr      => x"13000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF"),
-      SADCTEST_INDEX_C => (
-         baseAddr      => x"14000000",
-         addrBits      => 24,
-         connectivity  => x"FFFF")
-   );
+   constant MMCM_INDEX_C      : natural := 21;
+   constant FADC_TOP_INDEX_C  : natural := 22;
    
-   constant ADDR_BITS_C : integer := 28;
+   function CrossbarConfigInit return AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) is
+      variable temp : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0);
+   begin
+     forLoop: for i in 0 to NUM_AXI_MASTERS_C-1 loop
+       temp(i).baseAddr := std_logic_vector(to_unsigned(i * 2**24, 32));
+       temp(i).addrBits := 24;
+       temp(i).connectivity := x"FFFF";
+     end loop;
+
+     return temp;
+   end function CrossbarConfigInit;
+   
+   constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := CrossbarConfigInit;
+   
+   constant ADDR_BITS_C : integer := 27;
    
    signal axilClk         : sl;
    signal axilRst         : sl;
@@ -317,6 +279,7 @@ architecture top_level of digitizer is
    
    signal gTime      : slv(63 downto 0);
    
+   signal clk250ddr  : sl;
    signal clk250     : sl;
    signal rst250     : sl;
    
@@ -383,8 +346,9 @@ begin
    ----------------------------------------------
    -- Clock Manager
    ----------------------------------------------
-   -- clkIn       - 156.25 MHz
+   -- clkIn       - 250.00 MHz
    -- clkOut(0)   - 250.00 MHz
+   -- clkOut(1)   - 125.00 MHz
    U_PLL : entity work.ClockManagerUltraScale
    generic map(
       TPD_G             => TPD_G,
@@ -392,22 +356,31 @@ begin
       INPUT_BUFG_G      => false,
       FB_BUFG_G         => true,
       RST_IN_POLARITY_G => '1',
-      NUM_CLOCKS_G      => 1,
+      NUM_CLOCKS_G      => 2,
       -- MMCM attributes
       BANDWIDTH_G       => "OPTIMIZED",
-      CLKIN_PERIOD_G    => 6.4,
+      CLKIN_PERIOD_G    => 4.0,
       DIVCLK_DIVIDE_G   => 10,
-      CLKFBOUT_MULT_G   => 64,
-      CLKOUT0_DIVIDE_G  => 4
+      CLKFBOUT_MULT_G   => 40,
+      CLKOUT0_DIVIDE_G  => 4,
+      CLKOUT1_DIVIDE_G  => 8
    )
    port map(
       -- Clock Input
-      clkIn     => axilClk,
-      rstIn     => axilRst,
+      clkIn             => clk250ddr,
       -- Clock Outputs
-      clkOut(0) => clk250,
+      clkOut(0)         => clk250,
+      clkOut(1)         => lmkRefOut,
       -- Reset Outputs
-      rstOut(0) => rst250
+      rstOut(0)         => rst250,
+      rstOut(1)         => open,
+      -- AXI-Lite Interface 
+      axilClk           => axilClk,
+      axilRst           => axilRst,
+      axilReadMaster    => axilReadMasters(MMCM_INDEX_C),
+      axilReadSlave     => axilReadSlaves(MMCM_INDEX_C),
+      axilWriteMaster   => axilWriteMasters(MMCM_INDEX_C),
+      axilWriteSlave    => axilWriteSlaves(MMCM_INDEX_C)
    );
 
    --------------------------------
@@ -520,9 +493,9 @@ begin
       sadcCtrl2         => sadcCtrl2,
       sampEn            => sampEn,
       fadcPdn           => fadcPdn,
+      fadcReset         => fadcReset,
       ddrRstN           => ddrRstN
    );
-
    
    ----------------------------------------------------
    -- 250 MSPS ADCs configuration SPI
@@ -863,7 +836,8 @@ begin
       c0_ddr4_ck_c     => c0_ddr4_ck_c,
       c0_ddr4_ck_t     => c0_ddr4_ck_t,
       calibComplete    => calibComplete,
-      c0_ddr4_aresetn  => ddrRstN
+      c0_ddr4_aresetn  => ddrRstN,
+      clk250out        => clk250ddr
    );
    
    ------------------------------------------------

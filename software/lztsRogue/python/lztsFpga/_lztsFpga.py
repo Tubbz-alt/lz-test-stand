@@ -58,7 +58,8 @@ class Lzts(pr.Device):
             SadcBufferWriter(name='SadcBufferWriter6',      offset=0x11000000, enabled=False, expand=False),
             SadcBufferWriter(name='SadcBufferWriter7',      offset=0x12000000, enabled=False, expand=False),
             SadcBufferReader(name='SadcBufferReader',       offset=0x13000000, enabled=False, expand=False),
-            SadcPatternTester(name='SadcPatternTester',     offset=0x14000000, enabled=False, expand=False)))
+            SadcPatternTester(name='SadcPatternTester',     offset=0x14000000, enabled=False, expand=False),
+            SadcMMCMReg(name='SadcMMCMReg',                 offset=0x15000000, enabled=False, expand=False)))
       
 
 class LztsPowerRegisters(pr.Device):
@@ -329,6 +330,51 @@ class MicroblazeLog(pr.Device):
       
       self.add(pr.Variable(name='MemLow',    description='MemLow',   offset=0x01*4,    bitSize=2048*8, bitOffset=0, base='string', mode='RO'))
       self.add(pr.Variable(name='MemHigh',   description='MemHigh',  offset=0x201*4,   bitSize=2044*8, bitOffset=0, base='string', mode='RO'))
+      
+      #####################################
+      # Create commands
+      #####################################
+      
+      # A command has an associated function. The function can be a series of
+      # python commands in a string. Function calls are executed in the command scope
+      # the passed arg is available as 'arg'. Use 'dev' to get to device scope.
+      # A command can also be a call to a local function with local scope.
+      # The command object and the arg are passed
+   
+   @staticmethod   
+   def frequencyConverter(self):
+      def func(dev, var):         
+         return '{:.3f} kHz'.format(1/(self.clkPeriod * self._count(var.dependencies)) * 1e-3)
+      return func
+
+
+class SadcMMCMReg(pr.Device):
+   def __init__(self, **kwargs):
+      """Create the configuration device for Slow ADC MMCM"""
+      super().__init__(description='Slow ADC MMCM Configuration Registers', **kwargs)
+      
+      # Creation. memBase is either the register bus server (srp, rce mapped memory, etc) or the device which
+      # contains this object. In most cases the parent and memBase are the same but they can be 
+      # different in more complex bus structures. They will also be different for the top most node.
+      # The setMemBase call can be used to update the memBase for this Device. All sub-devices and local
+      # blocks will be updated.
+      
+      #############################################
+      # Create block / variable combinations
+      #############################################
+      
+      
+      self.add((pr.RemoteVariable(name='PhaseMux',    description='PhaseMux',    offset=0x00000020, bitSize=3,  bitOffset=13, base=pr.UInt, mode='RW')))
+      self.add((pr.RemoteVariable(name='HighTime',    description='HighTime',    offset=0x00000020, bitSize=6,  bitOffset=6,  base=pr.UInt, mode='RW')))
+      self.add((pr.RemoteVariable(name='LowTime',     description='LowTime',     offset=0x00000020, bitSize=6,  bitOffset=0,  base=pr.UInt, mode='RW')))
+      
+      self.add((pr.RemoteVariable(name='Frac',        description='Frac',        offset=0x00000024, bitSize=3,  bitOffset=12, base=pr.UInt, mode='RW')))
+      self.add((pr.RemoteVariable(name='FracEn',      description='FracEn',      offset=0x00000024, bitSize=1,  bitOffset=11, base=pr.Bool, mode='RW')))
+      self.add((pr.RemoteVariable(name='FracWfR',     description='FracWfR',     offset=0x00000024, bitSize=1,  bitOffset=10, base=pr.Bool, mode='RW')))
+      self.add((pr.RemoteVariable(name='Mx',          description='Mx',          offset=0x00000024, bitSize=2,  bitOffset=8,  base=pr.UInt, mode='RW')))
+      self.add((pr.RemoteVariable(name='Edge',        description='Edge',        offset=0x00000024, bitSize=1,  bitOffset=7,  base=pr.Bool, mode='RW')))
+      self.add((pr.RemoteVariable(name='NoCount',     description='NoCount',     offset=0x00000024, bitSize=1,  bitOffset=6,  base=pr.Bool, mode='RW')))
+      self.add((pr.RemoteVariable(name='DelayTime',   description='DelayTime',   offset=0x00000024, bitSize=6,  bitOffset=0,  base=pr.UInt, mode='RW')))
       
       #####################################
       # Create commands

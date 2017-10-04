@@ -25,6 +25,9 @@ loadSource -path "$::DIR_PATH/ip/AxiInterconnnect/AxiInterconnect.dcp"
 # loadIpCore -path "$::DIR_PATH/ip/AxiInterconnnect/AxiInterconnect.xci"
 loadSource -path "$::DIR_PATH/ip/AxiInterconnnect/AxiIcWrapper.vhd"
 
+loadSource  -path "$::DIR_PATH/ip/JesdGthFadc/JesdGthFadc.dcp"
+# loadIpCore -path "$::DIR_PATH/ip/JesdGthFadc/JesdGthFadc.xci"
+
 # Load Constraints
 loadConstraints -path "$::DIR_PATH/ip/MigCore/MigCorePinout.xdc" 
 

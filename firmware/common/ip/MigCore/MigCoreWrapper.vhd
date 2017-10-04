@@ -34,15 +34,17 @@ entity MigCoreWrapper is
       axiReadSlave     : out   AxiReadSlaveType;
       axiWriteMaster   : in    AxiWriteMasterType;
       axiWriteSlave    : out   AxiWriteSlaveType;
+      -- Out clock 250 MHz 
+      clk250out        : out   sl;
       -- DDR PHY Ref clk
       c0_sys_clk_p     : in    sl;
       c0_sys_clk_n     : in    sl;
       -- DRR Memory interface ports
       sys_rst          : in    sl := '0';
       c0_ddr4_aresetn  : in    sl := '1';
-      c0_ddr4_dq       : inout slv(63 downto 0);
-      c0_ddr4_dqs_c    : inout slv(7 downto 0);
-      c0_ddr4_dqs_t    : inout slv(7 downto 0);
+      c0_ddr4_dq       : inout slv(31 downto 0);
+      c0_ddr4_dqs_c    : inout slv(3 downto 0);
+      c0_ddr4_dqs_t    : inout slv(3 downto 0);
       c0_ddr4_adr      : out   slv(16 downto 0);
       c0_ddr4_ba       : out   slv(1 downto 0);
       c0_ddr4_bg       : out   slv(0 to 0);
@@ -52,7 +54,7 @@ entity MigCoreWrapper is
       c0_ddr4_ck_c     : out   slv(0 to 0);
       c0_ddr4_cke      : out   slv(0 to 0);
       c0_ddr4_cs_n     : out   slv(0 to 0);
-      c0_ddr4_dm_dbi_n : inout slv(7 downto 0);
+      c0_ddr4_dm_dbi_n : inout slv(3 downto 0);
       c0_ddr4_odt      : out   slv(0 to 0);
       calibComplete    : out   sl);
 end MigCoreWrapper;
@@ -70,10 +72,10 @@ architecture mapping of MigCoreWrapper is
          c0_ddr4_ba              : out   std_logic_vector(1 downto 0);
          c0_ddr4_cke             : out   std_logic_vector(0 downto 0);
          c0_ddr4_cs_n            : out   std_logic_vector(0 downto 0);
-         c0_ddr4_dm_dbi_n        : inout std_logic_vector(7 downto 0);
-         c0_ddr4_dq              : inout std_logic_vector(63 downto 0);
-         c0_ddr4_dqs_c           : inout std_logic_vector(7 downto 0);
-         c0_ddr4_dqs_t           : inout std_logic_vector(7 downto 0);
+         c0_ddr4_dm_dbi_n        : inout std_logic_vector(3 downto 0);
+         c0_ddr4_dq              : inout std_logic_vector(31 downto 0);
+         c0_ddr4_dqs_c           : inout std_logic_vector(3 downto 0);
+         c0_ddr4_dqs_t           : inout std_logic_vector(3 downto 0);
          c0_ddr4_odt             : out   std_logic_vector(0 downto 0);
          c0_ddr4_bg              : out   std_logic_vector(0 downto 0);
          c0_ddr4_reset_n         : out   std_logic;
@@ -84,7 +86,7 @@ architecture mapping of MigCoreWrapper is
          c0_ddr4_ui_clk_sync_rst : out   std_logic;
          c0_ddr4_aresetn         : in    std_logic;
          c0_ddr4_s_axi_awid      : in    std_logic_vector(3 downto 0);
-         c0_ddr4_s_axi_awaddr    : in    std_logic_vector(30 downto 0);
+         c0_ddr4_s_axi_awaddr    : in    std_logic_vector(29 downto 0);
          c0_ddr4_s_axi_awlen     : in    std_logic_vector(7 downto 0);
          c0_ddr4_s_axi_awsize    : in    std_logic_vector(2 downto 0);
          c0_ddr4_s_axi_awburst   : in    std_logic_vector(1 downto 0);
@@ -94,8 +96,8 @@ architecture mapping of MigCoreWrapper is
          c0_ddr4_s_axi_awqos     : in    std_logic_vector(3 downto 0);
          c0_ddr4_s_axi_awvalid   : in    std_logic;
          c0_ddr4_s_axi_awready   : out   std_logic;
-         c0_ddr4_s_axi_wdata     : in    std_logic_vector(511 downto 0);
-         c0_ddr4_s_axi_wstrb     : in    std_logic_vector(63 downto 0);
+         c0_ddr4_s_axi_wdata     : in    std_logic_vector(255 downto 0);
+         c0_ddr4_s_axi_wstrb     : in    std_logic_vector(31 downto 0);
          c0_ddr4_s_axi_wlast     : in    std_logic;
          c0_ddr4_s_axi_wvalid    : in    std_logic;
          c0_ddr4_s_axi_wready    : out   std_logic;
@@ -104,7 +106,7 @@ architecture mapping of MigCoreWrapper is
          c0_ddr4_s_axi_bresp     : out   std_logic_vector(1 downto 0);
          c0_ddr4_s_axi_bvalid    : out   std_logic;
          c0_ddr4_s_axi_arid      : in    std_logic_vector(3 downto 0);
-         c0_ddr4_s_axi_araddr    : in    std_logic_vector(30 downto 0);
+         c0_ddr4_s_axi_araddr    : in    std_logic_vector(29 downto 0);
          c0_ddr4_s_axi_arlen     : in    std_logic_vector(7 downto 0);
          c0_ddr4_s_axi_arsize    : in    std_logic_vector(2 downto 0);
          c0_ddr4_s_axi_arburst   : in    std_logic_vector(1 downto 0);
@@ -119,7 +121,8 @@ architecture mapping of MigCoreWrapper is
          c0_ddr4_s_axi_rvalid    : out   std_logic;
          c0_ddr4_s_axi_rresp     : out   std_logic_vector(1 downto 0);
          c0_ddr4_s_axi_rid       : out   std_logic_vector(3 downto 0);
-         c0_ddr4_s_axi_rdata     : out   std_logic_vector(511 downto 0);
+         c0_ddr4_s_axi_rdata     : out   std_logic_vector(255 downto 0);
+         addn_ui_clkout1         : out   std_logic;
          sys_rst                 : in    std_logic
          );
    end component;
@@ -181,7 +184,7 @@ begin
          c0_ddr4_ck_t            => c0_ddr4_ck_t,
          -- Slave Interface Write Address Ports
          c0_ddr4_s_axi_awid      => ddrWriteMaster.awid(3 downto 0),
-         c0_ddr4_s_axi_awaddr    => ddrWriteMaster.awaddr(30 downto 0),
+         c0_ddr4_s_axi_awaddr    => ddrWriteMaster.awaddr(29 downto 0),
          c0_ddr4_s_axi_awlen     => ddrWriteMaster.awlen,
          c0_ddr4_s_axi_awsize    => ddrWriteMaster.awsize,
          c0_ddr4_s_axi_awburst   => ddrWriteMaster.awburst,
@@ -192,8 +195,8 @@ begin
          c0_ddr4_s_axi_awvalid   => ddrWriteMaster.awvalid,
          c0_ddr4_s_axi_awready   => ddrWriteSlave.awready,
          -- Slave Interface Write Data Ports
-         c0_ddr4_s_axi_wdata     => ddrWriteMaster.wdata(511 downto 0),
-         c0_ddr4_s_axi_wstrb     => ddrWriteMaster.wstrb(63 downto 0),
+         c0_ddr4_s_axi_wdata     => ddrWriteMaster.wdata(255 downto 0),
+         c0_ddr4_s_axi_wstrb     => ddrWriteMaster.wstrb(31 downto 0),
          c0_ddr4_s_axi_wlast     => ddrWriteMaster.wlast,
          c0_ddr4_s_axi_wvalid    => ddrWriteMaster.wvalid,
          c0_ddr4_s_axi_wready    => ddrWriteSlave.wready,
@@ -204,7 +207,7 @@ begin
          c0_ddr4_s_axi_bready    => ddrWriteMaster.bready,
          -- Slave Interface Read Address Ports
          c0_ddr4_s_axi_arid      => ddrReadMaster.arid(3 downto 0),
-         c0_ddr4_s_axi_araddr    => ddrReadMaster.araddr(30 downto 0),
+         c0_ddr4_s_axi_araddr    => ddrReadMaster.araddr(29 downto 0),
          c0_ddr4_s_axi_arlen     => ddrReadMaster.arlen,
          c0_ddr4_s_axi_arsize    => ddrReadMaster.arsize,
          c0_ddr4_s_axi_arburst   => ddrReadMaster.arburst,
@@ -216,10 +219,13 @@ begin
          c0_ddr4_s_axi_arready   => ddrReadSlave.arready,
          -- Slave Interface Read Data Ports
          c0_ddr4_s_axi_rid       => ddrReadSlave.rid(3 downto 0),
-         c0_ddr4_s_axi_rdata     => ddrReadSlave.rdata(511 downto 0),
+         c0_ddr4_s_axi_rdata     => ddrReadSlave.rdata(255 downto 0),
          c0_ddr4_s_axi_rresp     => ddrReadSlave.rresp,
          c0_ddr4_s_axi_rlast     => ddrReadSlave.rlast,
          c0_ddr4_s_axi_rvalid    => ddrReadSlave.rvalid,
-         c0_ddr4_s_axi_rready    => ddrReadMaster.rready);
+         c0_ddr4_s_axi_rready    => ddrReadMaster.rready,
+         -- out clock
+         addn_ui_clkout1         => clk250out
+      );
 
 end mapping;

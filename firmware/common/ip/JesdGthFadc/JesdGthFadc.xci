@@ -59,7 +59,7 @@
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_RX_OUTCLK_SOURCE">1</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_RX_PLL_TYPE">2</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_RX_RECCLK_OUTPUT">0x000000000000000000000000000000000000000000000000</spirit:configurableElementValue>
-        <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_RX_REFCLK_FREQUENCY">200</spirit:configurableElementValue>
+        <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_RX_REFCLK_FREQUENCY">250</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_RX_SLIDE_MODE">0</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_RX_USER_CLOCKING_CONTENTS">0</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_RX_USER_CLOCKING_INSTANCE_CTRL">0</spirit:configurableElementValue>
@@ -90,7 +90,7 @@
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_TX_OUTCLK_FREQUENCY">250.0000000</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_TX_OUTCLK_SOURCE">4</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_TX_PLL_TYPE">2</spirit:configurableElementValue>
-        <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_TX_REFCLK_FREQUENCY">200</spirit:configurableElementValue>
+        <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_TX_REFCLK_FREQUENCY">250</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_TX_USER_CLOCKING_CONTENTS">0</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_TX_USER_CLOCKING_INSTANCE_CTRL">0</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.C_TX_USER_CLOCKING_RATIO_FSRC_FUSRCLK">1</spirit:configurableElementValue>
@@ -647,7 +647,7 @@
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.INTERNAL_PORT_ENABLED_UBMDMTDO_OUT">-1</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.INTERNAL_PORT_ENABLED_UBRSVDOUT_OUT">-1</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.INTERNAL_PORT_ENABLED_UBTXUART_OUT">-1</spirit:configurableElementValue>
-        <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.INTERNAL_PORT_ENABLEMENT_UPDATED">14</spirit:configurableElementValue>
+        <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.INTERNAL_PORT_ENABLEMENT_UPDATED">17</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.INTERNAL_PORT_USAGE_UPDATED">0</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.INTERNAL_PRESET">None</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.INTERNAL_RX_COMMA_PRESET_UPDATE">5</spirit:configurableElementValue>
@@ -784,8 +784,8 @@
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.RX_PPM_OFFSET">0</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.RX_QPLL_FRACN_NUMERATOR">0</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.RX_RECCLK_OUTPUT"/>
-        <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.RX_REFCLK_FREQUENCY">200</spirit:configurableElementValue>
-        <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.RX_REFCLK_SOURCE">X0Y19 clk1-2 X0Y18 clk1-2 X0Y17 clk1-2 X0Y16 clk1-2 X0Y15 clk1-1 X0Y14 clk1-1 X0Y13 clk1-1 X0Y12 clk1-1 X0Y7 clk1+1 X0Y6 clk1+1 X0Y5 clk1+1 X0Y4 clk1+1 X0Y3 clk1+2 X0Y2 clk1+2 X0Y1 clk1+2 X0Y0 clk1+2</spirit:configurableElementValue>
+        <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.RX_REFCLK_FREQUENCY">250</spirit:configurableElementValue>
+        <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.RX_REFCLK_SOURCE"/>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.RX_SLIDE_MODE">OFF</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.RX_SSC_PPM">0</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.RX_TERMINATION">PROGRAMMABLE</spirit:configurableElementValue>
@@ -811,8 +811,8 @@
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.TX_OUTCLK_SOURCE">TXPROGDIVCLK</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.TX_PLL_TYPE">CPLL</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.TX_QPLL_FRACN_NUMERATOR">0</spirit:configurableElementValue>
-        <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.TX_REFCLK_FREQUENCY">200</spirit:configurableElementValue>
-        <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.TX_REFCLK_SOURCE">X0Y19 clk1-2 X0Y18 clk1-2 X0Y17 clk1-2 X0Y16 clk1-2 X0Y15 clk1-1 X0Y14 clk1-1 X0Y13 clk1-1 X0Y12 clk1-1 X0Y7 clk1+1 X0Y6 clk1+1 X0Y5 clk1+1 X0Y4 clk1+1 X0Y3 clk1+2 X0Y2 clk1+2 X0Y1 clk1+2 X0Y0 clk1+2</spirit:configurableElementValue>
+        <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.TX_REFCLK_FREQUENCY">250</spirit:configurableElementValue>
+        <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.TX_REFCLK_SOURCE"/>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.TX_USER_DATA_WIDTH">32</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.USB_ENABLE">false</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PORT_ENABLEMENT.bgbypassb_in">false</spirit:configurableElementValue>

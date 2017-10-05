@@ -2,7 +2,7 @@
 -- File       : LzDigitizerPgpCore.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-02-04
--- Last update: 2017-04-26
+-- Last update: 2017-10-05
 -------------------------------------------------------------------------------
 -- Description: LZ LzDigitizerPgpCore Target's Top Level
 -- 
@@ -64,8 +64,7 @@ entity LzDigitizerPgpCore is
       pgpRxP           : in  sl;
       pgpRxN           : in  sl;
       pgpTxP           : out sl;
-      pgpTxN           : out sl
-   );
+      pgpTxN           : out sl);
 end LzDigitizerPgpCore;
 
 architecture top_level of LzDigitizerPgpCore is
@@ -86,12 +85,19 @@ architecture top_level of LzDigitizerPgpCore is
    signal fabRst        : sl;
    signal clk           : sl;
    signal rst           : sl;
-   signal reset         : slv(1 downto 0);
+   signal reset         : sl;
 
 begin
 
    axilClk <= clk;
-   axilRst <= rst;
+
+   U_rst : entity work.RstPipeline
+      generic map (
+         TPD_G => TPD_G)
+      port map (
+         clk    => clk,
+         rstIn  => rst,
+         rstOut => axilRst);
 
    U_IBUFDS_GTE3 : IBUFDS_GTE3
       generic map (
@@ -124,7 +130,7 @@ begin
       port map (
          clk    => fabClk,
          rstOut => fabRst);
-   
+
    -- clkOut(0) - 156.25 MHz
    U_PLL : entity work.ClockManagerUltraScale
       generic map(
@@ -147,15 +153,15 @@ begin
          -- Clock Outputs
          clkOut(0) => clk,
          -- Reset Outputs
-         rstOut(0) => reset(0));
+         rstOut(0) => reset);
 
-   process(clk)
-   begin
-      if rising_edge(clk) then
-         rst      <= reset(1) after TPD_G;  -- Register to help with timing
-         reset(1) <= reset(0) after TPD_G;  -- Register to help with timing
-      end if;
-   end process;
+   U_rst : entity work.RstPipeline
+      generic map (
+         TPD_G => TPD_G)
+      port map (
+         clk    => clk,
+         rstIn  => reset,
+         rstOut => rst);
 
    U_PGP : entity work.Pgp2bGthUltra
       generic map (
@@ -215,7 +221,7 @@ begin
          swClk           => swClk,
          swRst           => swRst,
          swTrigOut       => swTrigOut
-      );
+         );
 
    U_PgpMon : entity work.Pgp2bAxi
       generic map (

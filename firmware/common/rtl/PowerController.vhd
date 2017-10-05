@@ -42,6 +42,12 @@ entity PowerController is
       sAxilReadMaster   : in  AxiLiteReadMasterType;
       sAxilReadSlave    : out AxiLiteReadSlaveType;
       
+      -- System Ports
+      leds              : out slv(3 downto 0);
+      pwrCtrlIn        : in PwrCtrlInType;
+      pwrCtrlOut        : out PwrCtrlOutType;      
+      
+      
       -- LEDs
       leds              : out slv(3 downto 0);
       
@@ -163,51 +169,51 @@ architecture RTL of PowerController is
    
 begin
    
-   syncDcDcAp6V   <= r.syncOut(0);
-   syncDcDcAm6V   <= r.syncOut(1);
-   syncDcDcAp5V4  <= r.syncOut(2);
-   syncDcDcAp3V7  <= r.syncOut(3);
-   syncDcDcAp2V3  <= r.syncOut(4);
-   syncDcDcAp1V6  <= r.syncOut(5);
-   syncDcDcDp6V   <= r.syncOut(6);
-   syncDcDcDp3V3  <= r.syncOut(7);
-   syncDcDcDp1V8  <= r.syncOut(8);
-   syncDcDcDp1V2  <= r.syncOut(9);
-   syncDcDcDp0V95 <= r.syncOut(10);
-   syncDcDcMgt1V0 <= r.syncOut(11);
-   syncDcDcMgt1V2 <= r.syncOut(12);
-   syncDcDcMgt1V8 <= r.syncOut(13);
+   pwrCtrlOut.syncDcDcAp6V   <= r.syncOut(0);
+   pwrCtrlOut.syncDcDcAm6V   <= r.syncOut(1);
+   pwrCtrlOut.syncDcDcAp5V4  <= r.syncOut(2);
+   pwrCtrlOut.syncDcDcAp3V7  <= r.syncOut(3);
+   pwrCtrlOut.syncDcDcAp2V3  <= r.syncOut(4);
+   pwrCtrlOut.syncDcDcAp1V6  <= r.syncOut(5);
+   pwrCtrlOut.syncDcDcDp6V   <= r.syncOut(6);
+   pwrCtrlOut.syncDcDcDp3V3  <= r.syncOut(7);
+   pwrCtrlOut.syncDcDcDp1V8  <= r.syncOut(8);
+   pwrCtrlOut.syncDcDcDp1V2  <= r.syncOut(9);
+   pwrCtrlOut.syncDcDcDp0V95 <= r.syncOut(10);
+   pwrCtrlOut.syncDcDcMgt1V0 <= r.syncOut(11);
+   pwrCtrlOut.syncDcDcMgt1V2 <= r.syncOut(12);
+   pwrCtrlOut.syncDcDcMgt1V8 <= r.syncOut(13);
    
-   powerOkAll( 0) <= pokDcDcDp6V    ;
-   powerOkAll( 1) <= pokDcDcAp6V    ;
-   powerOkAll( 2) <= pokDcDcAm6V    ;
-   powerOkAll( 3) <= pokDcDcAp5V4   ;
-   powerOkAll( 4) <= pokDcDcAp3V7   ;
-   powerOkAll( 5) <= pokDcDcAp2V3   ;
-   powerOkAll( 6) <= pokDcDcAp1V6   ;
-   powerOkAll( 7) <= pokLdoA0p1V8   ;
-   powerOkAll( 8) <= pokLdoA0p3V3   ;
-   powerOkAll( 9) <= pokLdoAd1p1V2  ;
-   powerOkAll(10) <= pokLdoAd2p1V2  ;
-   powerOkAll(11) <= pokLdoA1p1V9   ;
-   powerOkAll(12) <= pokLdoA2p1V9   ;
-   powerOkAll(13) <= pokLdoAd1p1V9  ;
-   powerOkAll(14) <= pokLdoAd2p1V9  ;
-   powerOkAll(15) <= pokLdoA1p3V3   ;
-   powerOkAll(16) <= pokLdoA2p3V3   ;
-   powerOkAll(17) <= pokLdoAvclkp3V3;
-   powerOkAll(18) <= pokLdoA0p5V0   ;
-   powerOkAll(19) <= pokLdoA1p5V0   ;
+   powerOkAll( 0) <= pwrCtrlIn.pokDcDcDp6V    ;
+   powerOkAll( 1) <= pwrCtrlIn.pokDcDcAp6V    ;
+   powerOkAll( 2) <= pwrCtrlIn.pokDcDcAm6V    ;
+   powerOkAll( 3) <= pwrCtrlIn.pokDcDcAp5V4   ;
+   powerOkAll( 4) <= pwrCtrlIn.pokDcDcAp3V7   ;
+   powerOkAll( 5) <= pwrCtrlIn.pokDcDcAp2V3   ;
+   powerOkAll( 6) <= pwrCtrlIn.pokDcDcAp1V6   ;
+   powerOkAll( 7) <= pwrCtrlIn.pokLdoA0p1V8   ;
+   powerOkAll( 8) <= pwrCtrlIn.pokLdoA0p3V3   ;
+   powerOkAll( 9) <= pwrCtrlIn.pokLdoAd1p1V2  ;
+   powerOkAll(10) <= pwrCtrlIn.pokLdoAd2p1V2  ;
+   powerOkAll(11) <= pwrCtrlIn.pokLdoA1p1V9   ;
+   powerOkAll(12) <= pwrCtrlIn.pokLdoA2p1V9   ;
+   powerOkAll(13) <= pwrCtrlIn.pokLdoAd1p1V9  ;
+   powerOkAll(14) <= pwrCtrlIn.pokLdoAd2p1V9  ;
+   powerOkAll(15) <= pwrCtrlIn.pokLdoA1p3V3   ;
+   powerOkAll(16) <= pwrCtrlIn.pokLdoA2p3V3   ;
+   powerOkAll(17) <= pwrCtrlIn.pokLdoAvclkp3V3;
+   powerOkAll(18) <= pwrCtrlIn.pokLdoA0p5V0   ;
+   powerOkAll(19) <= pwrCtrlIn.pokLdoA1p5V0   ;
    
    
-   enDcDcAm6V  <= r.powerEnAll(0);
-   enDcDcAp5V4 <= r.powerEnAll(1);
-   enDcDcAp3V7 <= r.powerEnAll(2);
-   enDcDcAp2V3 <= r.powerEnAll(3);
-   enDcDcAp1V6 <= r.powerEnAll(4);
-   enLdoSlow   <= r.powerEnAll(5);
-   enLdoFast   <= r.powerEnAll(6);
-   enLdoAm5V   <= r.powerEnAll(7);
+   pwrCtrlOut.enDcDcAm6V  <= r.powerEnAll(0);
+   pwrCtrlOut.enDcDcAp5V4 <= r.powerEnAll(1);
+   pwrCtrlOut.enDcDcAp3V7 <= r.powerEnAll(2);
+   pwrCtrlOut.enDcDcAp2V3 <= r.powerEnAll(3);
+   pwrCtrlOut.enDcDcAp1V6 <= r.powerEnAll(4);
+   pwrCtrlOut.enLdoSlow   <= r.powerEnAll(5);
+   pwrCtrlOut.enLdoFast   <= r.powerEnAll(6);
+   pwrCtrlOut.enLdoAm5V   <= r.powerEnAll(7);
    
    leds <= r.leds;
    

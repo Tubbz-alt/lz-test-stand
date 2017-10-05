@@ -2,7 +2,7 @@
 -- File       : MigCoreWrapper.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-04-21
--- Last update: 2017-07-05
+-- Last update: 2017-10-05
 -------------------------------------------------------------------------------
 -- Description:
 -------------------------------------------------------------------------------
@@ -22,6 +22,7 @@ use ieee.std_logic_arith.all;
 
 use work.StdRtlPkg.all;
 use work.AxiPkg.all;
+use work.AppPkg.all;
 
 entity MigCoreWrapper is
    generic (
@@ -40,11 +41,9 @@ entity MigCoreWrapper is
       c0_sys_clk_p     : in    sl;
       c0_sys_clk_n     : in    sl;
       -- DRR Memory interface ports
-      sys_rst          : in    sl := '0';
-      c0_ddr4_aresetn  : in    sl := '1';
-      c0_ddr4_dq       : inout slv(31 downto 0);
-      c0_ddr4_dqs_c    : inout slv(3 downto 0);
-      c0_ddr4_dqs_t    : inout slv(3 downto 0);
+      c0_ddr4_dq       : inout slv(DDR_WIDTH_C-1 downto 0);
+      c0_ddr4_dqs_c    : inout slv((DDR_WIDTH_C/8)-1 downto 0);
+      c0_ddr4_dqs_t    : inout slv((DDR_WIDTH_C/8)-1 downto 0);
       c0_ddr4_adr      : out   slv(16 downto 0);
       c0_ddr4_ba       : out   slv(1 downto 0);
       c0_ddr4_bg       : out   slv(0 to 0);
@@ -54,7 +53,7 @@ entity MigCoreWrapper is
       c0_ddr4_ck_c     : out   slv(0 to 0);
       c0_ddr4_cke      : out   slv(0 to 0);
       c0_ddr4_cs_n     : out   slv(0 to 0);
-      c0_ddr4_dm_dbi_n : inout slv(3 downto 0);
+      c0_ddr4_dm_dbi_n : inout slv((DDR_WIDTH_C/8)-1 downto 0);
       c0_ddr4_odt      : out   slv(0 to 0);
       calibComplete    : out   sl);
 end MigCoreWrapper;
@@ -226,6 +225,6 @@ begin
          c0_ddr4_s_axi_rready    => ddrReadMaster.rready,
          -- out clock
          addn_ui_clkout1         => clk250out
-      );
+         );
 
 end mapping;

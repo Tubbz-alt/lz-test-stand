@@ -1,18 +1,18 @@
 -------------------------------------------------------------------------------
 -- File       : AdcPatternTester.vhd
 -- Company    : SLAC National Accelerator Laboratory
--- Created    : 05/27/2016
--- Last update: 05/27/2016
+-- Created    : 2017-02-04
+-- Last update: 2017-10-05
 -------------------------------------------------------------------------------
 -- Description:   Test which compares the data stream to selected pattern
 --                Designed for the automated delay alignment of the fast LVDS lines  
 --                of ADCs with single or multiple serial data lanes
 -------------------------------------------------------------------------------
--- This file is part of 'SLAC Firmware Standard Library'.
+-- This file is part of 'LZ Test Stand Firmware'.
 -- It is subject to the license terms in the LICENSE.txt file found in the 
 -- top-level directory of this distribution and at: 
 --    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
--- No part of 'SLAC Firmware Standard Library', including this file, 
+-- No part of 'LZ Test Stand Firmware', including this file, 
 -- may be copied, modified, propagated, or distributed except according to 
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------

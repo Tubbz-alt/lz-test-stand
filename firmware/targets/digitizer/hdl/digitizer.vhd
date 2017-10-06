@@ -1,17 +1,15 @@
 -------------------------------------------------------------------------------
 -- File       : digitizer.vhd
--- Author     : Maciej Kwiatkowski <mkwiatko@slac.stanford.edu>
--- Company    : SLAC National Accelerator Laboratory
--- Created    : 2017-02-04
+-- Created    : 2017-06-09
 -- Last update: 2017-10-05
 -------------------------------------------------------------------------------
 -- Description: LZ Digitizer Target's Top Level
 -------------------------------------------------------------------------------
--- This file is part of 'firmware-template'.
+-- This file is part of 'LZ Test Stand Firmware'.
 -- It is subject to the license terms in the LICENSE.txt file found in the 
 -- top-level directory of this distribution and at: 
 --    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
--- No part of 'firmware-template', including this file, 
+-- No part of 'LZ Test Stand Firmware', including this file, 
 -- may be copied, modified, propagated, or distributed except according to 
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
@@ -117,6 +115,7 @@ end digitizer;
 
 architecture top_level of digitizer is
 
+   -- constant NUM_AXI_MASTERS_C : natural := 6;
    constant NUM_AXI_MASTERS_C : natural := 5;
 
    constant PWR_SYNC_INDEX_C    : natural := 1;
@@ -125,7 +124,7 @@ architecture top_level of digitizer is
    constant SADC_BUFFER_INDEX_C : natural := 4;
    constant FADC_PHY_INDEX_C    : natural := 5;
 
-   constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS0_C, AXI_BASE_ADDR_G, 31, 24);
+   constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 31, 24);
 
    signal axilWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_C-1 downto 1);
    signal axilWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_C-1 downto 1);
@@ -138,11 +137,6 @@ architecture top_level of digitizer is
    signal axilWriteSlave  : AxiLiteWriteSlaveType;
    signal axilReadSlave   : AxiLiteReadSlaveType;
    signal axilReadMaster  : AxiLiteReadMasterType;
-
-   signal axilWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
-   signal axilWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
-   signal axilReadMasters  : AxiLiteReadMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
-   signal axilReadSlaves   : AxiLiteReadSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
 
    signal mbTxMaster   : AxiStreamMasterType;
    signal mbTxSlave    : AxiStreamSlaveType;
@@ -159,6 +153,7 @@ architecture top_level of digitizer is
    signal rst250    : sl;
    signal ddrRstN   : sl;
    signal writerRst : sl;
+   signal lmkRefOut : sl;
 
    signal swTrigger : sl;
    signal pwrLed    : slv(3 downto 0);
@@ -242,13 +237,15 @@ begin
          NUM_AXI_MASTERS_G => NUM_AXI_MASTERS_C,
          AXI_CONFIG_G      => AXI_CONFIG_C,
          AXI_ERROR_RESP_G  => AXI_ERROR_RESP_G)
-      port (
+      port map (
          -- Clock and Reset
          axilClk            => axilClk,
          axilRst            => axilRst,
          clk250             => clk250,
          rst250             => rst250,
+         ddrRstN            => ddrRstN,
          writerRst          => writerRst,
+         lmkRefOut          => lmkRefOut,
          -- DRR Memory interface ports
          c0_sys_clk_p       => c0_sys_clk_p,
          c0_sys_clk_n       => c0_sys_clk_n,
@@ -269,6 +266,8 @@ begin
          -- ADC AXI Interface (clk250 domain)
          axiAdcWriteMasters => axiAdcWriteMasters,
          axiAdcWriteSlaves  => axiAdcWriteSlaves,
+         axiDoutReadMaster  => axiDoutReadMaster,
+         axiDoutReadSlave   => axiDoutReadSlave,
          -- MB Streaming Interface
          mbTxMaster         => mbTxMaster,
          mbTxSlave          => mbTxSlave,
@@ -288,7 +287,7 @@ begin
    ----------------------
    -- Power Supply Module
    ----------------------
-   U_PowerController : entity work.PowerController
+   U_PwrCtrl : entity work.PowerController
       generic map (
          TPD_G => TPD_G)
       port map (
@@ -317,7 +316,7 @@ begin
          TPD_G            => TPD_G,
          AXI_BASE_ADDR_G  => AXI_CONFIG_C(SADC_PHY_INDEX_C).baseAddr,
          AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
-      port (
+      port map (
          -- Clocks and Resets
          axilClk         => axilClk,
          axilRst         => axilRst,
@@ -344,12 +343,10 @@ begin
          -- ADC Interface (adcClk domain)
          adcData         => adcData,
          -- AXI-Lite Interface (axilClk domain)
-         axilClk         => axilClk,
-         axilRst         => axilRst,
-         axilReadMaster  => axilReadMasters(SADC_BUFFER_INDEX_C),
-         axilReadSlave   => axilReadSlaves(SADC_BUFFER_INDEX_C),
-         axilWriteMaster => axilWriteMasters(SADC_BUFFER_INDEX_C),
-         axilWriteSlave  => axilWriteSlaves(SADC_BUFFER_INDEX_C));
+         axilReadMaster  => axilReadMasters(SADC_PHY_INDEX_C),
+         axilReadSlave   => axilReadSlaves(SADC_PHY_INDEX_C),
+         axilWriteMaster => axilWriteMasters(SADC_PHY_INDEX_C),
+         axilWriteSlave  => axilWriteSlaves(SADC_PHY_INDEX_C));
 
    -----------------------
    -- 250 MSPS ADCs Buffer
@@ -360,7 +357,7 @@ begin
          ADDR_BITS_G      => ADDR_BITS_C,
          AXI_BASE_ADDR_G  => AXI_CONFIG_C(SADC_BUFFER_INDEX_C).baseAddr,
          AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
-      port (
+      port map (
          -- ADC interface
          adcClk          => clk250,
          adcRst          => writerRst,
@@ -372,6 +369,11 @@ begin
          axiWriteSlave   => axiAdcWriteSlaves,
          axiReadMaster   => axiDoutReadMaster,
          axiReadSlave    => axiDoutReadSlave,
+         -- AxiStream output (axisClk domain)
+         axisClk         => axilClk,
+         axisRst         => axilRst,
+         axisMaster      => dataTxMaster,
+         axisSlave       => dataTxSlave,
          -- AXI-Lite Interface (axilClk domain)
          axilClk         => axilClk,
          axilRst         => axilRst,

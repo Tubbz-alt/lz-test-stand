@@ -1,17 +1,16 @@
 -------------------------------------------------------------------------------
 -- File       : SystemCore.vhd
--- Author     : Maciej Kwiatkowski <mkwiatko@slac.stanford.edu>
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-02-04
 -- Last update: 2017-10-05
 -------------------------------------------------------------------------------
 -- Description: LZ Digitizer Target's Top Level
 -------------------------------------------------------------------------------
--- This file is part of 'firmware-template'.
+-- This file is part of 'LZ Test Stand Firmware'.
 -- It is subject to the license terms in the LICENSE.txt file found in the 
 -- top-level directory of this distribution and at: 
 --    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
--- No part of 'firmware-template', including this file, 
+-- No part of 'LZ Test Stand Firmware', including this file, 
 -- may be copied, modified, propagated, or distributed except according to 
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
@@ -41,10 +40,11 @@ entity SystemCore is
       -- Clock and Reset
       axilClk            : in    sl;
       axilRst            : in    sl;
-      clk250             : out    sl;
-      rst250             : out    sl;
+      clk250             : out   sl;
+      rst250             : out   sl;
       ddrRstN            : in    sl;
       writerRst          : out   sl;
+      lmkRefOut          : out   sl;
       -- DDR PHY Ref clk
       c0_sys_clk_p       : in    sl;
       c0_sys_clk_n       : in    sl;
@@ -75,10 +75,10 @@ entity SystemCore is
       mAxilReadSlave     : out   AxiLiteReadSlaveType;
       mAxilWriteMaster   : in    AxiLiteWriteMasterType;
       mAxilWriteSlave    : out   AxiLiteWriteSlaveType;
-      sAxilReadMasters   : in    AxiLiteReadMasterArray(NUM_AXI_MASTERS_G-1 downto 1);
-      sAxilReadSlaves    : out   AxiLiteReadSlaveArray(NUM_AXI_MASTERS_G-1 downto 1);
-      sAxilWriteMasters  : in    AxiLiteWriteMasterArray(NUM_AXI_MASTERS_G-1 downto 1);
-      sAxilWriteSlaves   : out   AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_G-1 downto 1);
+      sAxilReadMasters   : out   AxiLiteReadMasterArray(NUM_AXI_MASTERS_G-1 downto 1);
+      sAxilReadSlaves    : in    AxiLiteReadSlaveArray(NUM_AXI_MASTERS_G-1 downto 1);
+      sAxilWriteMasters  : out   AxiLiteWriteMasterArray(NUM_AXI_MASTERS_G-1 downto 1);
+      sAxilWriteSlaves   : in    AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_G-1 downto 1);
       -- SYSMON Ports
       vPIn               : in    sl;
       vNIn               : in    sl);
@@ -94,7 +94,12 @@ architecture top_level of SystemCore is
    constant DDR_MEM_INDEX_C  : natural := 3;
    constant MMCM_INDEX_C     : natural := 4;
 
-   constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS1_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS1_C, AXI_BASE_ADDR_G, 24, 16);
+   constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 24, 16);
+
+   signal mbReadMaster  : AxiLiteReadMasterType;
+   signal mbReadSlave   : AxiLiteReadSlaveType;
+   signal mbWriteMaster : AxiLiteWriteMasterType;
+   signal mbWriteSlave  : AxiLiteWriteSlaveType;
 
    signal regWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_G-1 downto 0);
    signal regWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_G-1 downto 0);
@@ -129,7 +134,9 @@ architecture top_level of SystemCore is
    signal memReady      : sl;
    signal memFailed     : sl;
    signal writerReset   : sl;
-   signal clk250ddr : sl;
+   signal clk250ddr     : sl;
+   signal clock250      : sl;
+   signal reset250      : sl;
 
    signal mbIrq : slv(7 downto 0) := (others => '0');  -- unused 
 
@@ -180,7 +187,7 @@ begin
          rstOut => rst250);
 
    clk250 <= clock250;
-         
+
    --------------------------------
    -- Microblaze Embedded Processor
    --------------------------------

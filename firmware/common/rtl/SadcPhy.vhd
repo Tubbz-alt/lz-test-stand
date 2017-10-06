@@ -6,11 +6,11 @@
 -------------------------------------------------------------------------------
 -- Description: 
 -------------------------------------------------------------------------------
--- This file is part of 'SLAC PGP Gen3 Card'.
+-- This file is part of 'LZ Test Stand Firmware'.
 -- It is subject to the license terms in the LICENSE.txt file found in the 
 -- top-level directory of this distribution and at: 
 --    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
--- No part of 'SLAC PGP Gen3 Card', including this file, 
+-- No part of 'LZ Test Stand Firmware', including this file, 
 -- may be copied, modified, propagated, or distributed except according to 
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
@@ -27,36 +27,36 @@ use work.AxiStreamPkg.all;
 
 entity SadcPhy is
    generic (
-      TPD_G            : time                   := 1 ns;
-      AXI_ERROR_RESP_G : slv(1 downto 0)        := AXI_RESP_DECERR_C;
-      AXI_BASE_ADDR_G  : slv(31 downto 0)       := (others => '0'));
+      TPD_G            : time             := 1 ns;
+      AXI_ERROR_RESP_G : slv(1 downto 0)  := AXI_RESP_DECERR_C;
+      AXI_BASE_ADDR_G  : slv(31 downto 0) := (others => '0'));
    port (
       -- Clocks and Resets
-      axiClk         : in    sl;
-      axiRst         : in    sl;
-      adcClk         : in    sl;
-      adcRst         : in    sl;
-      refclk200MHz   : in    sl;      
-      -- Parallel LVDS ADC Ports
-      sadcSclk         : out   sl;
-      sadcSDin         : in    sl;
-      sadcSDout        : out   sl;
-      sadcCsb          : out   slv(3 downto 0);
-      sadcRst          : out   slv(3 downto 0);
-      sadcCtrl1        : out   slv(3 downto 0);
-      sadcCtrl2        : out   slv(3 downto 0);
-      sampEn           : out   slv(3 downto 0);
-      sadcClkFbP       : in    slv(3 downto 0);
-      sadcClkFbN       : in    slv(3 downto 0);
-      sadcDataP        : in    Slv16Array(3 downto 0);
-      sadcDataN        : in    Slv16Array(3 downto 0);
-      sadcClkP         : out   slv(3 downto 0);
-      sadcClkN         : out   slv(3 downto 0);
-      sadcSyncP        : out   slv(3 downto 0);
-      sadcSyncN        : out   slv(3 downto 0);      
-      -- AXI-Lite Interface (axilClk domain)
       axilClk         : in  sl;
       axilRst         : in  sl;
+      adcClk          : in  sl;
+      adcRst          : in  sl;
+      refclk200MHz    : in  sl;
+      -- Parallel LVDS ADC Ports
+      sadcSclk        : out sl;
+      sadcSDin        : in  sl;
+      sadcSDout       : out sl;
+      sadcCsb         : out slv(3 downto 0);
+      sadcRst         : out slv(3 downto 0);
+      sadcCtrl1       : out slv(3 downto 0);
+      sadcCtrl2       : out slv(3 downto 0);
+      sampEn          : out slv(3 downto 0);
+      sadcClkFbP      : in  slv(3 downto 0);
+      sadcClkFbN      : in  slv(3 downto 0);
+      sadcDataP       : in  Slv16Array(3 downto 0);
+      sadcDataN       : in  Slv16Array(3 downto 0);
+      sadcClkP        : out slv(3 downto 0);
+      sadcClkN        : out slv(3 downto 0);
+      sadcSyncP       : out slv(3 downto 0);
+      sadcSyncN       : out slv(3 downto 0);
+      -- ADC Interface (adcClk domain)
+      adcData         : out Slv16Array(7 downto 0);
+      -- AXI-Lite Interface (axilClk domain)
       axilReadMaster  : in  AxiLiteReadMasterType;
       axilReadSlave   : out AxiLiteReadSlaveType;
       axilWriteMaster : in  AxiLiteWriteMasterType;
@@ -73,7 +73,7 @@ architecture mapping of SadcPhy is
    signal axilWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
    signal axilReadMasters  : AxiLiteReadMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
    signal axilReadSlaves   : AxiLiteReadSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
-   
+
 begin
 
    ---------------------
@@ -97,7 +97,7 @@ begin
          mAxiWriteSlaves     => axilWriteSlaves,
          mAxiReadMasters     => axilReadMasters,
          mAxiReadSlaves      => axilReadSlaves);
-         
+
    ------------------------
    -- 250 MSPS ADCs readout
    ------------------------
@@ -134,7 +134,7 @@ begin
             adcRst         => adcRst,
             refclk200MHz   => refclk200MHz);
 
-   end generate GEN_VEC;         
+   end generate GEN_VEC;
 
    ----------------------------------
    -- 250 MSPS ADCs configuration SPI
@@ -158,5 +158,5 @@ begin
          coreSDin       => sadcSDin,
          coreSDout      => sadcSDout,
          coreMCsb       => sadcCsb);
-         
+
 end mapping;

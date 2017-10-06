@@ -6,11 +6,11 @@
 -------------------------------------------------------------------------------
 -- Description: 
 -------------------------------------------------------------------------------
--- This file is part of 'SLAC PGP Gen3 Card'.
+-- This file is part of 'LZ Test Stand Firmware'.
 -- It is subject to the license terms in the LICENSE.txt file found in the 
 -- top-level directory of this distribution and at: 
 --    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
--- No part of 'SLAC PGP Gen3 Card', including this file, 
+-- No part of 'LZ Test Stand Firmware', including this file, 
 -- may be copied, modified, propagated, or distributed except according to 
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
@@ -41,8 +41,13 @@ entity SadcBuffer is
       -- AXI Interface (adcClk domain)
       axiWriteMaster  : out AxiWriteMasterArray(7 downto 0);
       axiWriteSlave   : in  AxiWriteSlaveArray(7 downto 0);
-      axiReadMaster   : out AxiWriteMasterType;
-      axiReadSlave    : in  AxiWriteSlaveType;
+      axiReadMaster   : out AxiReadMasterType;
+      axiReadSlave    : in  AxiReadSlaveType;
+      -- AxiStream output (axisClk domain)
+      axisClk         : in  sl;
+      axisRst         : in  sl;
+      axisMaster      : out AxiStreamMasterType;
+      axisSlave       : in  AxiStreamSlaveType;
       -- AXI-Lite Interface (axilClk domain)
       axilClk         : in  sl;
       axilRst         : in  sl;
@@ -112,17 +117,17 @@ begin
             adcRst          => adcRst,
             adcData         => adcData(i),
             gTime           => gTime,
-            extTrigger      => swTrigger,
+            extTrigger      => extTrigger,
             -- AXI-Lite Interface for local registers 
             axilClk         => axilClk,
             axilRst         => axilRst,
-            axilReadMaster  => axilReadMasters(SADCWR0_INDEX_C+i),
-            axilReadSlave   => axilReadSlaves(SADCWR0_INDEX_C+i),
-            axilWriteMaster => axilWriteMasters(SADCWR0_INDEX_C+i),
-            axilWriteSlave  => axilWriteSlaves(SADCWR0_INDEX_C+i),
+            axilReadMaster  => axilReadMasters(i),
+            axilReadSlave   => axilReadSlaves(i),
+            axilWriteMaster => axilWriteMasters(i),
+            axilWriteSlave  => axilWriteSlaves(i),
             -- AXI Interface (adcClk)
-            axiWriteMaster  => axiAdcWriteMasters(i),
-            axiWriteSlave   => axiAdcWriteSlaves(i),
+            axiWriteMaster  => axiWriteMaster(i),
+            axiWriteSlave   => axiWriteSlave(i),
             -- Trigger information to data reader (adcClk)
             hdrDout         => hdrDout(i),
             hdrValid        => hdrValid(i),
@@ -157,18 +162,18 @@ begin
          -- AXI Interface (adcClk)
          axiReadMaster   => axiReadMaster,
          axiReadSlave    => axiReadSlave,
-         -- Trigger information from data writers (adcClk)
+         -- Trigger information from data writers (adcClk domain)
          hdrDout         => hdrDout,
          hdrValid        => hdrValid,
          hdrRd           => hdrRd,
-         -- Buffer handshake to/from data writers (adcClk)
+         -- Buffer handshake to/from data writers (adcClk domain)
          memWrAddr       => memWrAddr,
          memFull         => memFull,
-         -- AxiStream output
-         axisClk         => axilClk,
-         axisRst         => axilRst,
-         axisMaster      => dataTxMaster,
-         axisSlave       => dataTxSlave);
+         -- AxiStream output (axisClk domain)
+         axisClk         => axisClk,
+         axisRst         => axisRst,
+         axisMaster      => axisMaster,
+         axisSlave       => axisSlave);
 
    -------------------------------
    -- 250 MSPS ADCs pattern tester

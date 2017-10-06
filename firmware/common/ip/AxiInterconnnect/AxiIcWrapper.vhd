@@ -25,6 +25,8 @@ use work.StdRtlPkg.all;
 use work.AxiPkg.all;
 
 entity AxiIcWrapper is
+   generic (
+      TPD_G : time := 1 ns);
    port (
       -- AXI Slaves for ADC channels
       -- 128 Bit Data Bus

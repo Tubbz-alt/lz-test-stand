@@ -41,6 +41,8 @@ entity MigCoreWrapper is
       c0_sys_clk_p     : in    sl;
       c0_sys_clk_n     : in    sl;
       -- DRR Memory interface ports
+      sys_rst          : in    sl := '0';
+      c0_ddr4_aresetn  : in    sl := '1';
       c0_ddr4_dq       : inout slv(DDR_WIDTH_C-1 downto 0);
       c0_ddr4_dqs_c    : inout slv((DDR_WIDTH_C/8)-1 downto 0);
       c0_ddr4_dqs_t    : inout slv((DDR_WIDTH_C/8)-1 downto 0);

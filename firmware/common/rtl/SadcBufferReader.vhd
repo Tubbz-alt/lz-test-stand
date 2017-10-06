@@ -1,17 +1,16 @@
 -------------------------------------------------------------------------------
 -- File       : SadcBufferReader.vhd
--- Author     : Maciej Kwiatkowski <mkwiatko@slac.stanford.edu>
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-07-14
 -- Last update: 2017-07-14
 -------------------------------------------------------------------------------
 -- Description:
 -------------------------------------------------------------------------------
--- This file is part of ''LZ Test Stand Firmware'.
+-- This file is part of 'LZ Test Stand Firmware'.
 -- It is subject to the license terms in the LICENSE.txt file found in the 
 -- top-level directory of this distribution and at: 
 --    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
--- No part of 'SLAC Firmware Standard Library', including this file, 
+-- No part of 'LZ Test Stand Firmware', including this file, 
 -- may be copied, modified, propagated, or distributed except according to 
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
@@ -49,14 +48,14 @@ entity SadcBufferReader is
       -- AXI Interface (adcClk)
       axiReadMaster     : out AxiReadMasterType;
       axiReadSlave      : in  AxiReadSlaveType;
-      -- Trigger information from data writers (adcClk)
+      -- Trigger information from data writers (adcClk domain)
       hdrDout           : in  Slv32Array(7 downto 0);
       hdrValid          : in  slv(7 downto 0);
       hdrRd             : out slv(7 downto 0);
-      -- Buffer handshake to/from data writers (adcClk)
+      -- Buffer handshake to/from data writers (adcClk domain)
       memWrAddr         : in  Slv32Array(7 downto 0);
       memFull           : out slv(7 downto 0);
-      -- AxiStream output
+      -- AxiStream output (axisClk domain)
       axisClk           : in  sl;
       axisRst           : in  sl;
       axisMaster        : out AxiStreamMasterType;

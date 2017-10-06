@@ -1,9 +1,9 @@
 ##############################################################################
-## This file is part of 'firmware-template'.
+## This file is part of 'LZ Test Stand Firmware'.
 ## It is subject to the license terms in the LICENSE.txt file found in the 
 ## top-level directory of this distribution and at: 
 ##    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
-## No part of 'firmware-template', including this file, 
+## No part of 'LZ Test Stand Firmware', including this file, 
 ## may be copied, modified, propagated, or distributed except according to 
 ## the terms contained in the LICENSE.txt file.
 ##############################################################################
@@ -20,8 +20,8 @@ create_clock -name sadc1ClkP -period  4.000 [get_ports {sadcClkFbP[1]}]
 create_clock -name sadc2ClkP -period  4.000 [get_ports {sadcClkFbP[2]}]
 create_clock -name sadc3ClkP -period  4.000 [get_ports {sadcClkFbP[3]}]
 
-#create_generated_clock -name clk250      [get_pins {U_DDR/U_MigCore/inst/u_ddr4_infrastructure/gen_mmcme3.u_mmcme_adv_inst/CLKOUT1}]
-create_generated_clock -name clk250      [get_pins {U_PLL/MmcmGen.U_Mmcm/CLKOUT0}]
+#create_generated_clock -name clk250      [get_pins {U_Core/U_DDR/U_MigCore/inst/u_ddr4_infrastructure/gen_mmcme3.u_mmcme_adv_inst/CLKOUT1}]
+create_generated_clock -name clk250      [get_pins {U_Core/U_PLL/MmcmGen.U_Mmcm/CLKOUT0}]
 create_generated_clock -name axilClk     [get_pins {U_PGP/U_PLL/PllGen.U_Pll/CLKOUT0}]
 
 set_clock_groups -asynchronous \
@@ -37,10 +37,10 @@ set_clock_groups -asynchronous \
 
 # Lock slow ADC interfaces to clock regions to avoid timing changes that require to re-train the ADC
 # Can comment out temporarly to find better placement if it causes timing closure issues
-set_property CLOCK_REGION X0Y4 [get_cells GEN_250MSPS[0].U_250MspsAdc/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
-set_property CLOCK_REGION X2Y3 [get_cells GEN_250MSPS[1].U_250MspsAdc/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
-set_property CLOCK_REGION X2Y4 [get_cells GEN_250MSPS[2].U_250MspsAdc/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
-set_property CLOCK_REGION X2Y2 [get_cells GEN_250MSPS[3].U_250MspsAdc/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
+set_property CLOCK_REGION X0Y4 [get_cells U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
+set_property CLOCK_REGION X2Y3 [get_cells U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
+set_property CLOCK_REGION X2Y4 [get_cells U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
+set_property CLOCK_REGION X2Y2 [get_cells U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
 
 
 ############################

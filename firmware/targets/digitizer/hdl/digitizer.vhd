@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- File       : digitizer.vhd
 -- Created    : 2017-06-09
--- Last update: 2017-10-05
+-- Last update: 2017-10-09
 -------------------------------------------------------------------------------
 -- Description: LZ Digitizer Target's Top Level
 -------------------------------------------------------------------------------
@@ -41,31 +41,29 @@ entity digitizer is
       pwrCtrlIn        : in    PwrCtrlInType;
       pwrCtrlOut       : out   PwrCtrlOutType;
       -- JESD ADC Ports
-      devClkP          : in    sl;
-      devClkN          : in    sl;
-      sysRefClkP       : in    sl;
-      sysRefClkN       : in    sl;
-      lmkRefClkP       : out   sl;
-      lmkRefClkN       : out   sl;
-      jesdRxDa2P       : in    slv(3 downto 0);
-      jesdRxDa2N       : in    slv(3 downto 0);
-      jesdRxDa1P       : in    slv(3 downto 0);
-      jesdRxDa1N       : in    slv(3 downto 0);
-      jesdRxDb2P       : in    slv(3 downto 0);
-      jesdRxDb2N       : in    slv(3 downto 0);
-      jesdRxDb1P       : in    slv(3 downto 0);
-      jesdRxDb1N       : in    slv(3 downto 0);
+      jesdClkP         : in    sl;
+      jesdClkN         : in    sl;
+      jesdSysRefP      : in    sl;
+      jesdSysRefN      : in    sl;
+      jesdRxP          : in    slv(15 downto 0);
+      jesdRxN          : in    slv(15 downto 0);
+      jesdTxP          : out   slv(15 downto 0);
+      jesdTxN          : out   slv(15 downto 0);
       jesdSync         : out   slv(3 downto 0);
-      fadcPdn          : out   slv(3 downto 0);
-      fadcReset        : out   slv(3 downto 0);
-      fadcSen          : out   slv(3 downto 0);
+      -- Fast ADC SPI Ports
       fadcSclk         : out   sl;
       fadcSdin         : out   sl;
       fadcSdout        : in    sl;
-      lmkCs            : out   sl;
+      fadcSen          : out   slv(3 downto 0);
+      fadcReset        : out   slv(3 downto 0);
+      fadcPdn          : out   slv(3 downto 0);
+      -- LMK Ports
+      lmkRefClkP       : out   sl;
+      lmkRefClkN       : out   sl;
+      lmkCsL           : out   sl;
       lmkSck           : out   sl;
       lmkSdio          : inout sl;
-      lmkReset         : out   sl;
+      lmkRst           : out   sl;
       lmkSync          : out   sl;
       -- Parallel LVDS ADC Ports
       sadcSclk         : out   sl;
@@ -115,14 +113,14 @@ end digitizer;
 
 architecture top_level of digitizer is
 
-   -- constant NUM_AXI_MASTERS_C : natural := 6;
-   constant NUM_AXI_MASTERS_C : natural := 5;
+   constant NUM_AXI_MASTERS_C : natural := 7;
 
    constant PWR_SYNC_INDEX_C    : natural := 1;
    constant COMM_INDEX_C        : natural := 2;
    constant SADC_PHY_INDEX_C    : natural := 3;
    constant SADC_BUFFER_INDEX_C : natural := 4;
    constant FADC_PHY_INDEX_C    : natural := 5;
+   constant FADC_BUFFER_INDEX_C : natural := 6;
 
    constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 31, 24);
 
@@ -143,35 +141,33 @@ architecture top_level of digitizer is
    signal dataTxMaster : AxiStreamMasterType;
    signal dataTxSlave  : AxiStreamSlaveType;
 
-   signal adcData            : Slv16Array(7 downto 0);
+   signal sAdcData           : Slv16Array(7 downto 0);
    signal axiAdcWriteMasters : AxiWriteMasterArray(7 downto 0);
    signal axiAdcWriteSlaves  : AxiWriteSlaveArray(7 downto 0);
    signal axiDoutReadMaster  : AxiReadMasterType;
    signal axiDoutReadSlave   : AxiReadSlaveType;
 
-   signal clk250    : sl;
-   signal rst250    : sl;
+   signal fAdcValid : slv(7 downto 0);
+   signal fAdcData  : Slv64Array(7 downto 0);
+
+   signal adcClk    : sl;
+   signal adcRst    : sl;
    signal ddrRstN   : sl;
    signal writerRst : sl;
-   signal lmkRefOut : sl;
 
    signal swTrigger : sl;
    signal pwrLed    : slv(3 downto 0);
    signal gTime     : slv(63 downto 0);
-
-   attribute keep           : string;
-   attribute keep of clk250 : signal is "true";
-   attribute keep of rst250 : signal is "true";
 
 begin
 
    --------------------------------
    -- Temporary global time counter
    --------------------------------
-   process(clk250)
+   process(adcClk)
    begin
-      if rising_edge(clk250) then
-         if rst250 = '1' then
+      if rising_edge(adcClk) then
+         if adcRst = '1' then
             gTime <= (others => '0') after TPD_G;
          else
             gTime <= gTime + 1 after TPD_G;
@@ -216,8 +212,8 @@ begin
          sAxilWriteMaster => axilWriteMasters(COMM_INDEX_C),
          sAxilWriteSlave  => axilWriteSlaves(COMM_INDEX_C),
          -- Software trigger interface
-         swClk            => clk250,
-         swRst            => rst250,
+         swClk            => adcClk,
+         swRst            => adcRst,
          swTrigOut        => swTrigger,
          -- PGP Ports
          pgpClkP          => pgpClkP,
@@ -241,11 +237,10 @@ begin
          -- Clock and Reset
          axilClk            => axilClk,
          axilRst            => axilRst,
-         clk250             => clk250,
-         rst250             => rst250,
+         adcClk             => adcClk,
+         adcRst             => adcRst,
          ddrRstN            => ddrRstN,
          writerRst          => writerRst,
-         lmkRefOut          => lmkRefOut,
          -- DRR Memory interface ports
          c0_sys_clk_p       => c0_sys_clk_p,
          c0_sys_clk_n       => c0_sys_clk_n,
@@ -304,13 +299,11 @@ begin
          sadcCtrl1        => sadcCtrl1,
          sadcCtrl2        => sadcCtrl2,
          sampEn           => sampEn,
-         fadcPdn          => fadcPdn,
-         fadcReset        => fadcReset,
          ddrRstN          => ddrRstN);
 
-   -----------------------
-   -- 250 MSPS ADCs Buffer
-   -----------------------
+   --------------------
+   -- 250 MSPS ADCs PHY
+   --------------------
    U_SadcPhy : entity work.SadcPhy
       generic map (
          TPD_G            => TPD_G,
@@ -320,9 +313,9 @@ begin
          -- Clocks and Resets
          axilClk         => axilClk,
          axilRst         => axilRst,
-         adcClk          => clk250,
-         adcRst          => rst250,
-         refclk200MHz    => clk250,
+         adcClk          => adcClk,
+         adcRst          => adcRst,
+         refclk200MHz    => adcClk,     -- Should be 200 MHz???
          -- Parallel LVDS ADC Ports
          sadcSclk        => sadcSclk,
          sadcSDin        => sadcSDin,
@@ -341,7 +334,7 @@ begin
          sadcSyncP       => sadcSyncP,
          sadcSyncN       => sadcSyncN,
          -- ADC Interface (adcClk domain)
-         adcData         => adcData,
+         adcData         => sAdcData,
          -- AXI-Lite Interface (axilClk domain)
          axilReadMaster  => axilReadMasters(SADC_PHY_INDEX_C),
          axilReadSlave   => axilReadSlaves(SADC_PHY_INDEX_C),
@@ -359,9 +352,9 @@ begin
          AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
       port map (
          -- ADC interface
-         adcClk          => clk250,
+         adcClk          => adcClk,
          adcRst          => writerRst,
-         adcData         => adcData,
+         adcData         => sAdcData,
          gTime           => gTime,
          extTrigger      => swTrigger,
          -- AXI Interface (adcClk)
@@ -381,5 +374,76 @@ begin
          axilReadSlave   => axilReadSlaves(SADC_BUFFER_INDEX_C),
          axilWriteMaster => axilWriteMasters(SADC_BUFFER_INDEX_C),
          axilWriteSlave  => axilWriteSlaves(SADC_BUFFER_INDEX_C));
+
+   ---------------------
+   -- 1000 MSPS ADCs PHY
+   ---------------------
+   U_FadcPhy : entity work.FastAdcPhy
+      generic map (
+         TPD_G            => TPD_G,
+         AXI_BASE_ADDR_G  => AXI_CONFIG_C(FADC_PHY_INDEX_C).baseAddr,
+         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+      port map (
+         -- JESD ADC Ports
+         jesdClkP        => jesdClkP,
+         jesdClkN        => jesdClkN,
+         jesdSysRefP     => jesdSysRefP,
+         jesdSysRefN     => jesdSysRefN,
+         jesdRxP         => jesdRxP,
+         jesdRxN         => jesdRxN,
+         jesdTxP         => jesdTxP,
+         jesdTxN         => jesdTxN,
+         jesdSync        => jesdSync,
+         -- Fast ADC SPI Ports
+         fadcSclk        => fadcSclk,
+         fadcSdin        => fadcSdin,
+         fadcSdout       => fadcSdout,
+         fadcSen         => fadcSen,
+         fadcPdn         => fadcPdn,
+         fadcReset       => fadcReset,
+         -- LMK Ports
+         lmkRefClkP      => lmkRefClkP,
+         lmkRefClkN      => lmkRefClkN,
+         lmkCsL          => lmkCsL,
+         lmkSck          => lmkSck,
+         lmkSdio         => lmkSdio,
+         lmkRst          => lmkRst,
+         lmkSync         => lmkSync,
+         -- JESD ADC Interface
+         adcClk          => adcClk,
+         adcRst          => adcRst,
+         adcValid        => fAdcValid,
+         adcData         => fAdcData,
+         -- AXI-Lite Interface (axilClk domain)
+         axilClk         => axilClk,
+         axilRst         => axilRst,
+         axilReadMaster  => axilReadMasters(FADC_PHY_INDEX_C),
+         axilReadSlave   => axilReadSlaves(FADC_PHY_INDEX_C),
+         axilWriteMaster => axilWriteMasters(FADC_PHY_INDEX_C),
+         axilWriteSlave  => axilWriteSlaves(FADC_PHY_INDEX_C));
+
+   ------------------------
+   -- 1000 MSPS ADCs Buffer
+   ------------------------
+   U_FadcBuffer : entity work.FastAdcBuffer
+      generic map (
+         TPD_G            => TPD_G,
+         AXI_BASE_ADDR_G  => AXI_CONFIG_C(FADC_BUFFER_INDEX_C).baseAddr,
+         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+      port map (
+         -- ADC interface
+         adcClk          => adcClk,
+         adcRst          => writerRst,
+         adcValid        => fAdcValid,
+         adcData         => fAdcData,
+         gTime           => gTime,
+         extTrigger      => swTrigger,
+         -- AXI-Lite Interface (axilClk domain)
+         axilClk         => axilClk,
+         axilRst         => axilRst,
+         axilReadMaster  => axilReadMasters(FADC_BUFFER_INDEX_C),
+         axilReadSlave   => axilReadSlaves(FADC_BUFFER_INDEX_C),
+         axilWriteMaster => axilWriteMasters(FADC_BUFFER_INDEX_C),
+         axilWriteSlave  => axilWriteSlaves(FADC_BUFFER_INDEX_C));
 
 end top_level;

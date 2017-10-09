@@ -8,21 +8,21 @@
 ## the terms contained in the LICENSE.txt file.
 ##############################################################################
 
-
 ##########################
 ## Timing Constraints   ##
 ##########################
 
-create_clock -name pgpClkP -period  6.400 [get_ports {pgpClkP}]
-create_clock -name ddrClkP -period  5.000 [get_ports {c0_sys_clk_p}]
-create_clock -name sadc0ClkP -period  4.000 [get_ports {sadcClkFbP[0]}]
-create_clock -name sadc1ClkP -period  4.000 [get_ports {sadcClkFbP[1]}]
-create_clock -name sadc2ClkP -period  4.000 [get_ports {sadcClkFbP[2]}]
-create_clock -name sadc3ClkP -period  4.000 [get_ports {sadcClkFbP[3]}]
+create_clock -name pgpClkP   -period 6.400 [get_ports {pgpClkP}]
+create_clock -name ddrClkP   -period 5.000 [get_ports {c0_sys_clk_p}]
+create_clock -name sadc0ClkP -period 4.000 [get_ports {sadcClkFbP[0]}]
+create_clock -name sadc1ClkP -period 4.000 [get_ports {sadcClkFbP[1]}]
+create_clock -name sadc2ClkP -period 4.000 [get_ports {sadcClkFbP[2]}]
+create_clock -name sadc3ClkP -period 4.000 [get_ports {sadcClkFbP[3]}]
 
-#create_generated_clock -name clk250      [get_pins {U_Core/U_DDR/U_MigCore/inst/u_ddr4_infrastructure/gen_mmcme3.u_mmcme_adv_inst/CLKOUT1}]
-create_generated_clock -name clk250      [get_pins {U_Core/U_PLL/MmcmGen.U_Mmcm/CLKOUT0}]
-create_generated_clock -name axilClk     [get_pins {U_PGP/U_PLL/PllGen.U_Pll/CLKOUT0}]
+create_generated_clock -name adcClk     [get_pins {U_Core/U_PLL/PllGen.U_Pll/CLKOUT0}]
+create_generated_clock -name axilClk    [get_pins {U_PGP/U_PLL/PllGen.U_Pll/CLKOUT0}]
+create_generated_clock -name ddrIntClk0 [get_pins {U_Core/U_DDR/U_MigCore/inst/u_ddr4_infrastructure/gen_mmcme3.u_mmcme_adv_inst/CLKOUT0}]
+create_generated_clock -name ddrIntClk1 [get_pins {U_Core/U_DDR/U_MigCore/inst/u_ddr4_infrastructure/gen_mmcme3.u_mmcme_adv_inst/CLKOUT6}]
 
 set_clock_groups -asynchronous \
    -group [get_clocks -include_generated_clocks {pgpClkP}] \
@@ -31,17 +31,15 @@ set_clock_groups -asynchronous \
    -group [get_clocks -include_generated_clocks {sadc1ClkP}] \
    -group [get_clocks -include_generated_clocks {sadc2ClkP}] \
    -group [get_clocks -include_generated_clocks {sadc3ClkP}] \
-   -group [get_clocks -include_generated_clocks {clk250}] \
+   -group [get_clocks -include_generated_clocks {adcClk}] \
    -group [get_clocks -include_generated_clocks {axilClk}]
 
-
 # Lock slow ADC interfaces to clock regions to avoid timing changes that require to re-train the ADC
-# Can comment out temporarly to find better placement if it causes timing closure issues
+# Can comment out temporarily to find better placement if it causes timing closure issues
 set_property CLOCK_REGION X0Y4 [get_cells U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
 set_property CLOCK_REGION X2Y3 [get_cells U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
 set_property CLOCK_REGION X2Y4 [get_cells U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
 set_property CLOCK_REGION X2Y2 [get_cells U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
-
 
 ############################
 ## Pinout Configuration   ##
@@ -212,60 +210,118 @@ set_property -dict { IOSTANDARD LVDS DIFF_TERM_ADV TERM_100 } [get_ports {sadcDa
 set_property -dict { IOSTANDARD LVDS } [get_ports {sadcClkP[*]}]
 set_property -dict { IOSTANDARD LVDS } [get_ports {sadcSyncP[*]}]
 
-
 set_property PACKAGE_PIN L24 [get_ports {sampEn[0]}]
 set_property PACKAGE_PIN L23 [get_ports {sampEn[1]}]
 set_property PACKAGE_PIN K25 [get_ports {sampEn[2]}]
 set_property PACKAGE_PIN L25 [get_ports {sampEn[3]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {sampEn*}] 
 
+set_property PACKAGE_PIN T6  [get_ports {jesdClkP}]
+set_property PACKAGE_PIN T5  [get_ports {jesdClkN}]
 
+###################################################
+#                      BANK228                    #
+###################################################
 
-set_property PACKAGE_PIN T6  [get_ports {devClkP}]
-set_property PACKAGE_PIN T5  [get_ports {devClkN}]
+set_property PACKAGE_PIN D6 [get_ports jesdTxP[0]]
+set_property PACKAGE_PIN D5 [get_ports jesdTxN[0]]
+set_property PACKAGE_PIN D2 [get_ports jesdRxP[0]]; # JESD0_DA1P
+set_property PACKAGE_PIN D1 [get_ports jesdRxN[0]]; # JESD0_DA1M
 
-set_property PACKAGE_PIN E4 [get_ports jesdRxDa2P[0]]
-set_property PACKAGE_PIN E3 [get_ports jesdRxDa2N[0]]
-set_property PACKAGE_PIN D2 [get_ports jesdRxDa1P[0]]
-set_property PACKAGE_PIN D1 [get_ports jesdRxDa1N[0]]
-set_property PACKAGE_PIN B2 [get_ports jesdRxDb2P[0]]
-set_property PACKAGE_PIN B1 [get_ports jesdRxDb2N[0]]
-set_property PACKAGE_PIN A4 [get_ports jesdRxDb1P[0]]
-set_property PACKAGE_PIN A3 [get_ports jesdRxDb1N[0]]
+set_property PACKAGE_PIN F6 [get_ports jesdTxP[1]]
+set_property PACKAGE_PIN F5 [get_ports jesdTxN[1]]
+set_property PACKAGE_PIN E4 [get_ports jesdRxP[1]]; # JESD0_DA2P
+set_property PACKAGE_PIN E3 [get_ports jesdRxN[1]]; # JESD0_DA2M
 
-set_property PACKAGE_PIN M2 [get_ports jesdRxDa2P[1]]
-set_property PACKAGE_PIN M1 [get_ports jesdRxDa2N[1]]
-set_property PACKAGE_PIN K2 [get_ports jesdRxDa1P[1]]
-set_property PACKAGE_PIN K1 [get_ports jesdRxDa1N[1]]
-set_property PACKAGE_PIN H2 [get_ports jesdRxDb2P[1]]
-set_property PACKAGE_PIN H1 [get_ports jesdRxDb2N[1]]
-set_property PACKAGE_PIN F2 [get_ports jesdRxDb1P[1]]
-set_property PACKAGE_PIN F1 [get_ports jesdRxDb1N[1]]
+set_property PACKAGE_PIN B6 [get_ports jesdTxP[2]]
+set_property PACKAGE_PIN B5 [get_ports jesdTxN[2]]
+set_property PACKAGE_PIN A4 [get_ports jesdRxP[2]]; # JESD0_DB1P
+set_property PACKAGE_PIN A3 [get_ports jesdRxN[2]]; # JESD0_DB1M
 
-set_property PACKAGE_PIN AP2 [get_ports jesdRxDa2P[2]]
-set_property PACKAGE_PIN AP1 [get_ports jesdRxDa2N[2]]
-set_property PACKAGE_PIN AM2 [get_ports jesdRxDa1P[2]]
-set_property PACKAGE_PIN AM1 [get_ports jesdRxDa1N[2]]
-set_property PACKAGE_PIN AK2 [get_ports jesdRxDb2P[2]]
-set_property PACKAGE_PIN AK1 [get_ports jesdRxDb2N[2]]
-set_property PACKAGE_PIN AJ4 [get_ports jesdRxDb1P[2]]
-set_property PACKAGE_PIN AJ3 [get_ports jesdRxDb1N[2]]
+set_property PACKAGE_PIN C4 [get_ports jesdTxP[3]]
+set_property PACKAGE_PIN C3 [get_ports jesdTxN[3]]
+set_property PACKAGE_PIN B2 [get_ports jesdRxP[3]]; # JESD0_DB2P
+set_property PACKAGE_PIN B1 [get_ports jesdRxN[3]]; # JESD0_DB2M
 
-set_property PACKAGE_PIN AH2 [get_ports jesdRxDa2P[3]]
-set_property PACKAGE_PIN AH1 [get_ports jesdRxDa2N[3]]
-set_property PACKAGE_PIN AF2 [get_ports jesdRxDa1P[3]]
-set_property PACKAGE_PIN AF1 [get_ports jesdRxDa1N[3]]
-set_property PACKAGE_PIN AD2 [get_ports jesdRxDb2P[3]]
-set_property PACKAGE_PIN AD1 [get_ports jesdRxDb2N[3]]
-set_property PACKAGE_PIN AB2 [get_ports jesdRxDb1P[3]]
-set_property PACKAGE_PIN AB1 [get_ports jesdRxDb1N[3]]
+###################################################
+#                      BANK227                    #
+###################################################
 
-set_property PACKAGE_PIN W25  [get_ports {lmkRefClkP}]
-set_property PACKAGE_PIN Y25  [get_ports {lmkRefClkN}]
-set_property -dict { IOSTANDARD LVDS } [get_ports {lmkRefClkP[*]}]
-set_property PACKAGE_PIN W23  [get_ports {sysRefClkP}]
-set_property PACKAGE_PIN W24  [get_ports {sysRefClkN}]
-set_property -dict { IOSTANDARD LVDS DIFF_TERM_ADV TERM_100 } [get_ports {sysRefClkP[*]}]
+set_property PACKAGE_PIN L4 [get_ports jesdTxP[4]]
+set_property PACKAGE_PIN L3 [get_ports jesdTxN[4]]
+set_property PACKAGE_PIN K2 [get_ports jesdRxP[4]]; # JESD1_DA1P
+set_property PACKAGE_PIN K1 [get_ports jesdRxN[4]]; # JESD1_DA1M
+
+set_property PACKAGE_PIN N4 [get_ports jesdTxP[5]]
+set_property PACKAGE_PIN N3 [get_ports jesdTxN[5]]
+set_property PACKAGE_PIN M2 [get_ports jesdRxP[5]]; # JESD1_DA2P
+set_property PACKAGE_PIN M1 [get_ports jesdRxN[5]]; # JESD1_DA2M
+
+set_property PACKAGE_PIN G4 [get_ports jesdTxP[6]]
+set_property PACKAGE_PIN G3 [get_ports jesdTxN[6]]
+set_property PACKAGE_PIN F2 [get_ports jesdRxP[6]]; # JESD1_DB1P
+set_property PACKAGE_PIN F1 [get_ports jesdRxN[6]]; # JESD1_DB1M
+
+set_property PACKAGE_PIN J4 [get_ports jesdTxP[7]]
+set_property PACKAGE_PIN J3 [get_ports jesdTxN[7]]
+set_property PACKAGE_PIN H2 [get_ports jesdRxP[7]]; # JESD1_DB2P
+set_property PACKAGE_PIN H1 [get_ports jesdRxN[7]]; # JESD1_DB2M
+
+###################################################
+#                      BANK224                    #
+###################################################
+
+set_property PACKAGE_PIN AM6 [get_ports jesdTxP[8]]
+set_property PACKAGE_PIN AM5 [get_ports jesdTxN[8]]
+set_property PACKAGE_PIN AM2 [get_ports jesdRxP[8]]; # JESD2_DA1P
+set_property PACKAGE_PIN AM1 [get_ports jesdRxN[8]]; # JESD2_DA1M
+
+set_property PACKAGE_PIN AN4 [get_ports jesdTxP[9]]
+set_property PACKAGE_PIN AN3 [get_ports jesdTxN[9]]
+set_property PACKAGE_PIN AP2 [get_ports jesdRxP[9]]; # JESD2_DA2P
+set_property PACKAGE_PIN AP1 [get_ports jesdRxN[9]]; # JESD2_DA2M
+
+set_property PACKAGE_PIN AK6 [get_ports jesdTxP[10]]
+set_property PACKAGE_PIN AK5 [get_ports jesdTxN[10]]
+set_property PACKAGE_PIN AJ4 [get_ports jesdRxP[10]]; # JESD2_DB1P
+set_property PACKAGE_PIN AJ3 [get_ports jesdRxN[10]]; # JESD2_DB1M
+
+set_property PACKAGE_PIN AL4 [get_ports jesdTxP[11]]
+set_property PACKAGE_PIN AL3 [get_ports jesdTxN[11]]
+set_property PACKAGE_PIN AK2 [get_ports jesdRxP[11]]; # JESD2_DB2P
+set_property PACKAGE_PIN AK1 [get_ports jesdRxN[11]]; # JESD2_DB2M
+
+###################################################
+#                      BANK225                    #
+###################################################
+
+set_property PACKAGE_PIN AG4 [get_ports jesdTxP[12]]
+set_property PACKAGE_PIN AG3 [get_ports jesdTxN[12]]
+set_property PACKAGE_PIN AF2 [get_ports jesdRxP[12]]; # JESD3_DA1P
+set_property PACKAGE_PIN AF1 [get_ports jesdRxN[12]]; # JESD3_DA1M
+
+set_property PACKAGE_PIN AH6 [get_ports jesdTxP[13]]
+set_property PACKAGE_PIN AH5 [get_ports jesdTxN[13]]
+set_property PACKAGE_PIN AH2 [get_ports jesdRxP[13]]; # JESD3_DA2P
+set_property PACKAGE_PIN AH1 [get_ports jesdRxN[13]]; # JESD3_DA2M
+
+set_property PACKAGE_PIN AC4 [get_ports jesdTxP[14]]
+set_property PACKAGE_PIN AC3 [get_ports jesdTxN[14]]
+set_property PACKAGE_PIN AB2 [get_ports jesdRxP[14]]; # JESD3_DB1P
+set_property PACKAGE_PIN AB1 [get_ports jesdRxN[14]]; # JESD3_DB1M
+
+set_property PACKAGE_PIN AE4 [get_ports jesdTxP[15]]
+set_property PACKAGE_PIN AE3 [get_ports jesdTxN[15]]
+set_property PACKAGE_PIN AD2 [get_ports jesdRxP[15]]; # JESD3_DB2P
+set_property PACKAGE_PIN AD1 [get_ports jesdRxN[15]]; # JESD3_DB2M
+
+###################################################
+
+set_property -dict { PACKAGE_PIN W25 IOSTANDARD LVDS } [get_ports {lmkRefClkP}]
+set_property -dict { PACKAGE_PIN Y25 IOSTANDARD LVDS } [get_ports {lmkRefClkN}]
+
+set_property -dict { PACKAGE_PIN W23 IOSTANDARD LVDS DIFF_TERM_ADV TERM_100 } [get_ports {jesdSysRefP}]
+set_property -dict { PACKAGE_PIN W24 IOSTANDARD LVDS DIFF_TERM_ADV TERM_100 } [get_ports {jesdSysRefN}]
 
 set_property PACKAGE_PIN T23  [get_ports {jesdSync[0]}]
 set_property PACKAGE_PIN V22  [get_ports {jesdSync[1]}]
@@ -298,16 +354,11 @@ set_property PACKAGE_PIN U25 [get_ports {fadcReset[2]}]
 set_property PACKAGE_PIN V27 [get_ports {fadcReset[3]}]
 set_property IOSTANDARD LVCMOS18 [get_ports {fadcReset*}] 
 
-set_property PACKAGE_PIN J26  [get_ports {lmkCs}]
-set_property PACKAGE_PIN H26  [get_ports {lmkSck}]
-set_property PACKAGE_PIN J24  [get_ports {lmkSdio}]
-set_property PACKAGE_PIN J25  [get_ports {lmkReset}]
-set_property PACKAGE_PIN K26  [get_ports {lmkSync}]
-set_property IOSTANDARD LVCMOS33 [get_ports {lmkCs}] 
-set_property IOSTANDARD LVCMOS33 [get_ports {lmkSck}] 
-set_property IOSTANDARD LVCMOS33 [get_ports {lmkSdio}] 
-set_property IOSTANDARD LVCMOS33 [get_ports {lmkReset}] 
-set_property IOSTANDARD LVCMOS33 [get_ports {lmkSync}] 
+set_property -dict { IOSTANDARD LVCMOS33 PULLTYPE PULLUP PACKAGE_PIN J26 } [get_ports {lmkCsL}]
+set_property -dict { IOSTANDARD LVCMOS33 PULLTYPE PULLUP PACKAGE_PIN H26 } [get_ports {lmkSck}]
+set_property -dict { IOSTANDARD LVCMOS33 PULLTYPE PULLUP PACKAGE_PIN J24 } [get_ports {lmkSdio}]
+set_property -dict { IOSTANDARD LVCMOS33 PULLTYPE PULLUP PACKAGE_PIN J25 } [get_ports {lmkRst}]
+set_property -dict { IOSTANDARD LVCMOS33 PULLTYPE PULLUP PACKAGE_PIN K26 } [get_ports {lmkSync}]
 
 ##########################
 ## Misc. Configurations ##

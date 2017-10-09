@@ -34,6 +34,7 @@ package AppPkg is
    constant STOP_ADDR_C  : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
 
    constant ADDR_BITS_C : integer := 27;
+   constant JESD_LANE_C : integer := 16;
 
    type PwrCtrlInType is record
       -- power OK ins

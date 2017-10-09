@@ -40,11 +40,10 @@ entity SystemCore is
       -- Clock and Reset
       axilClk            : in    sl;
       axilRst            : in    sl;
-      clk250             : out   sl;
-      rst250             : out   sl;
+      adcClk             : out   sl;
+      adcRst             : out   sl;
       ddrRstN            : in    sl;
       writerRst          : out   sl;
-      lmkRefOut          : out   sl;
       -- DDR PHY Ref clk
       c0_sys_clk_p       : in    sl;
       c0_sys_clk_n       : in    sl;
@@ -94,7 +93,7 @@ architecture top_level of SystemCore is
    constant DDR_MEM_INDEX_C  : natural := 3;
    constant MMCM_INDEX_C     : natural := 4;
 
-   constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 24, 16);
+   constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 24, 20);
 
    signal mbReadMaster  : AxiLiteReadMasterType;
    signal mbReadSlave   : AxiLiteReadSlaveType;
@@ -135,8 +134,8 @@ architecture top_level of SystemCore is
    signal memFailed     : sl;
    signal writerReset   : sl;
    signal clk250ddr     : sl;
-   signal clock250      : sl;
-   signal reset250      : sl;
+   signal adcClock      : sl;
+   signal adcReset      : sl;
 
    signal mbIrq : slv(7 downto 0) := (others => '0');  -- unused 
 
@@ -148,27 +147,23 @@ begin
    U_PLL : entity work.ClockManagerUltraScale
       generic map(
          TPD_G             => TPD_G,
-         TYPE_G            => "MMCM",
+         TYPE_G            => "PLL",
          INPUT_BUFG_G      => false,
          FB_BUFG_G         => true,
          RST_IN_POLARITY_G => '1',
-         NUM_CLOCKS_G      => 2,
+         NUM_CLOCKS_G      => 1,
          -- MMCM attributes
-         BANDWIDTH_G       => "OPTIMIZED",
-         CLKIN_PERIOD_G    => 4.0,      -- 250 MHz
-         DIVCLK_DIVIDE_G   => 10,       -- 25 MHz = 250 MHz /10
-         CLKFBOUT_MULT_G   => 40,       -- 1 GHz = 25 MHz * 40
-         CLKOUT0_DIVIDE_G  => 4,        -- 250 MHz = 1GHz/4
-         CLKOUT1_DIVIDE_G  => 8)        -- 125 MHz = 1GHz/8
+         CLKIN_PERIOD_G    => 4.0,
+         DIVCLK_DIVIDE_G   => 1,
+         CLKFBOUT_MULT_G   => 4,
+         CLKOUT0_DIVIDE_G  => 4)
       port map(
          -- Clock Input
          clkIn           => clk250ddr,
          -- Clock Outputs
-         clkOut(0)       => clock250,
-         clkOut(1)       => lmkRefOut,
+         clkOut(0)       => adcClock,
          -- Reset Outputs
-         rstOut(0)       => reset250,
-         rstOut(1)       => open,
+         rstOut(0)       => adcReset,
          -- AXI-Lite Interface 
          axilClk         => axilClk,
          axilRst         => axilRst,
@@ -182,11 +177,11 @@ begin
       generic map (
          TPD_G => TPD_G)
       port map (
-         clk    => clock250,
-         rstIn  => reset250,
-         rstOut => rst250);
+         clk    => adcClock,
+         rstIn  => adcReset,
+         rstOut => adcRst);
 
-   clk250 <= clock250;
+   adcClk <= adcClock;
 
    --------------------------------
    -- Microblaze Embedded Processor
@@ -427,12 +422,12 @@ begin
          -- AXI Slaves for ADC channels
          -- 128 Bit Data Bus
          -- 1 burst packet FIFOs
-         axiAdcClk          => clock250,
+         axiAdcClk          => adcClock,
          axiAdcWriteMasters => axiAdcWriteMasters,
          axiAdcWriteSlaves  => axiAdcWriteSlaves,
          -- AXI Slave for data readout
          -- 32 Bit Data Bus
-         axiDoutClk         => clock250,
+         axiDoutClk         => adcClock,
          axiDoutReadMaster  => axiDoutReadMaster,
          axiDoutReadSlave   => axiDoutReadSlave,
          -- AXI Slave for memory tester (aximClk domain)
@@ -451,10 +446,10 @@ begin
          aximWriteSlave     => axiWriteSlave);
 
    -- keep memory writers in reset during memory test
-   memRst : process (clock250) is
+   memRst : process (adcClock) is
    begin
-      if rising_edge(clock250) then
-         if reset250 = '1' then
+      if rising_edge(adcClock) then
+         if adcReset = '1' then
             writerReset <= '1' after TPD_G;
          elsif memReady = '1' and memFailed = '0' then
             writerReset <= '0' after TPD_G;

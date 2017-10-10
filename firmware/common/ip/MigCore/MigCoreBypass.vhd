@@ -14,15 +14,17 @@
 -- may be copied, modified, propagated, or distributed except according to 
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.std_logic_arith.all;
 
 use work.StdRtlPkg.all;
-use work.AxiLitePkg.all;
 use work.AxiPkg.all;
+use work.AppPkg.all;
+
+library unisim;
+use unisim.vcomponents.all;
 
 entity MigCoreWrapper is
    generic (
@@ -35,13 +37,17 @@ entity MigCoreWrapper is
       axiReadSlave     : out   AxiReadSlaveType;
       axiWriteMaster   : in    AxiWriteMasterType;
       axiWriteSlave    : out   AxiWriteSlaveType;
+      -- Out clock 250 MHz 
+      clk250out        : out   sl;
       -- DDR PHY Ref clk
       c0_sys_clk_p     : in    sl;
       c0_sys_clk_n     : in    sl;
       -- DRR Memory interface ports
-      c0_ddr4_dq       : inout slv(63 downto 0);
-      c0_ddr4_dqs_c    : inout slv(7 downto 0);
-      c0_ddr4_dqs_t    : inout slv(7 downto 0);
+      sys_rst          : in    sl := '0';
+      c0_ddr4_aresetn  : in    sl := '1';
+      c0_ddr4_dq       : inout slv(DDR_WIDTH_C-1 downto 0);
+      c0_ddr4_dqs_c    : inout slv((DDR_WIDTH_C/8)-1 downto 0);
+      c0_ddr4_dqs_t    : inout slv((DDR_WIDTH_C/8)-1 downto 0);
       c0_ddr4_adr      : out   slv(16 downto 0);
       c0_ddr4_ba       : out   slv(1 downto 0);
       c0_ddr4_bg       : out   slv(0 to 0);
@@ -51,14 +57,41 @@ entity MigCoreWrapper is
       c0_ddr4_ck_c     : out   slv(0 to 0);
       c0_ddr4_cke      : out   slv(0 to 0);
       c0_ddr4_cs_n     : out   slv(0 to 0);
-      c0_ddr4_dm_dbi_n : inout slv(7 downto 0);
+      c0_ddr4_dm_dbi_n : inout slv((DDR_WIDTH_C/8)-1 downto 0);
       c0_ddr4_odt      : out   slv(0 to 0);
       calibComplete    : out   sl);
 end MigCoreWrapper;
 
 architecture mapping of MigCoreWrapper is
 
+   signal clk250 : sl;
+
 begin
+
+   IBUFDS_SysRef : IBUFDS
+      port map (
+         I  => c0_sys_clk_p,
+         IB => c0_sys_clk_n,
+         O  => clk250);
+
+   U_PLL : entity work.ClockManagerUltraScale
+      generic map(
+         TPD_G             => TPD_G,
+         TYPE_G            => "PLL",
+         INPUT_BUFG_G      => true,
+         FB_BUFG_G         => true,
+         RST_IN_POLARITY_G => '1',
+         NUM_CLOCKS_G      => 1,
+         -- MMCM attributes
+         CLKIN_PERIOD_G    => 5.0,
+         DIVCLK_DIVIDE_G   => 1,
+         CLKFBOUT_MULT_G   => 5,
+         CLKOUT0_DIVIDE_G  => 4)
+      port map(
+         -- Clock Input
+         clkIn           => clk250,
+         -- Clock Outputs
+         clkOut(0)       => clk250out);
 
    axiClk <= '0';
    axiRst <= '1';

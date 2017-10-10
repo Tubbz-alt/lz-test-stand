@@ -28,7 +28,12 @@ def hex2yaml(fDin,fDout):
     ofd = open(fDout, 'w')  
     
     # Open the input file
-    with open(fDin, 'r') as ifd:    
+    with open(fDin, 'r') as ifd: 
+        ofd.write("    LMK:\n")
+        ofd.write("      EnableSync: 0xFF\n")
+        ofd.write("      EnableSysRef: 0x3\n")
+        ofd.write("      SyncBit: 0x1\n")
+              
     
         for i, line in enumerate(ifd):     
              
@@ -38,20 +43,20 @@ def hex2yaml(fDin,fDout):
             elif (i<232):
                 line = line.strip() 
                 if(i%2):
-                    pat = re.compile("[=]")                
-                    fields=pat.split(line)                    
-                    data = (ast.literal_eval(fields[1])&0xFF)
-                    yaml = (('          LmkReg_0x%04X: 0x%02X\n') % (addr,data))
-                    ofd.write(yaml)                    
-                    if(addr==357):
-                        ofd.write("          LmkReg_0x0171: 0xAA\n")
-                        ofd.write("          LmkReg_0x0172: 0x02\n")
-                        ofd.write("          LmkReg_0x0173: 0x0 \n") 
-                        ofd.write("          LmkReg_0x0174: 0x0 \n") 
-                else:
-                    pat = re.compile("[R\t\n]")                
+                    pat = re.compile("[=]")
                     fields=pat.split(line)
-                    addr = ast.literal_eval(fields[1])                
+                    data = (ast.literal_eval(fields[1])&0xFF)
+                    yaml = (('      LmkReg_0x%04X: 0x%02X\n') % (addr,data))
+                    ofd.write(yaml)
+                    if(addr==357):
+                        ofd.write("      LmkReg_0x0171: 0xAA\n")
+                        ofd.write("      LmkReg_0x0172: 0x02\n")
+                        ofd.write("      LmkReg_0x0173: 0x0 \n") 
+                        ofd.write("      LmkReg_0x0174: 0x0 \n") 
+                else:
+                    pat = re.compile("[R\t\n]")
+                    fields=pat.split(line)
+                    addr = ast.literal_eval(fields[1])
             else:
                 pass
         

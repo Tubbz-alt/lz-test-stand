@@ -1,3 +1,79 @@
+lztsBoard:
+  enable: 'True'
+  forceWrite: 'False'
+  dataWriter:
+    enable: 'True'
+    dataFile: ''
+    open: 'False'
+    bufferSize: '0'
+    maxFileSize: '0'
+  runControl:
+    enable: 'True'
+    runState: Stopped
+    runRate: 1 Hz
+    runCount: '0'    
+  Lzts:
+    enable: 'True'
+    LztsPowerRegisters:
+      enable: 'True'
+      EnDcDcAm6V: 'True'
+      EnDcDcAp5V4: 'False'
+      EnDcDcAp3V7: 'True'
+      EnDcDcAp2V3: 'True'
+      EnDcDcAp1V6: 'False'
+      EnLdoSlow: 'True'
+      EnLdoFast: 'False'
+      EnLdoAm5V: 'True'
+      Led0: 'True'
+      Led1: 'False'
+      Led2: 'True'
+      Led3: 'False'
+      SADCRst: '0x0'
+      SADCCtrl1: '0x0'
+      SADCCtrl2: '0x0'
+      SAMPEn: '0xf'
+      FADCPdn: '0xf'
+      DcDcSyncAll: 'False'
+      DcDcHalfClkAp6V: '0x0'
+      DcDcHalfClkAm6V: '0x0'
+      DcDcHalfClkAp5V4: '0x0'
+      DcDcHalfClkAp3V7: '0x0'
+      DcDcHalfClkAp2V3: '0x0'
+      DcDcHalfClkAp1V6: '0x0'
+      DcDcHalfClkDp6V: '0x0'
+      DcDcHalfClkDp3V3: '0x0'
+      DcDcHalfClkDp1V8: '0x0'
+      DcDcHalfClkDp1V2: '0x0'
+      DcDcHalfClkDp0V95: '0x0'
+      DcDcHalfClkMgt1V0: '0x0'
+      DcDcHalfClkMgt1V2: '0x0'
+      DcDcHalfClkMgt1V8: '0x0'
+      DcDcPhaseAp6V: '0x0'
+      DcDcPhaseAm6V: '0x0'
+      DcDcPhaseAp5V4: '0x0'
+      DcDcPhaseAp3V7: '0x0'
+      DcDcPhaseAp2V3: '0x0'
+      DcDcPhaseAp1V6: '0x0'
+      DcDcPhaseDp6V: '0x0'
+      DcDcPhaseDp3V3: '0x0'
+      DcDcPhaseDp1V8: '0x0'
+      DcDcPhaseDp1V2: '0x0'
+      DcDcPhaseDp0V95: '0x0'
+      DcDcPhaseMgt1V0: '0x0'
+      DcDcPhaseMgt1V2: '0x0'
+      DcDcPhaseMgt1V8: '0x0'
+    JesdRx:
+      Enable: 0xFFFF
+      Polarity: 0x0
+      InvertAdcData: 0x00
+      LinkErrMask: 0x3F # Mask Enable the errors that are required to brake the link. bit 5-0: positionErr - s_bufOvf - s_bufUnf - dispErr - decErr - s_alignErr
+      ScrambleEnable: 0x1
+      ResetGTs: 0x0
+      ClearErrors: 0x0
+      InvertSync: Inverted
+      ReplaceEnable: Enabled
+      SubClass: 0x1
+      SysrefDelay: 0x8
     LMK:
       EnableSync: 0xFF
       EnableSysRef: 0x3
@@ -113,3 +189,11 @@
       LmkReg_0x016D: 0x00
       LmkReg_0x016E: 0x13
       LmkReg_0x0173: 0x00
+      
+      
+      
+      
+      
+      
+      
+

@@ -265,7 +265,7 @@ begin
          ADDRESS_SIZE_G    => 15,
          DATA_SIZE_G       => 8,
          CLK_PERIOD_G      => (1.0/156.25E+6),
-         SPI_SCLK_PERIOD_G => 1.0E-6)
+         SPI_SCLK_PERIOD_G => 100.0E-6)
       port map (
          axiClk         => axilClk,
          axiRst         => axilRst,

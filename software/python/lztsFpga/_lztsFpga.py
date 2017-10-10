@@ -19,12 +19,14 @@
 #-----------------------------------------------------------------------------
 import pyrogue as pr
 import collections
+
 import surf.axi as axi
-import surf.protocols.pgp as pgp
 import surf.devices.ti as ti
+import surf.devices.micron as micron
+import surf.protocols.pgp as pgp
+import surf.protocols.jesd204b as jesd204b
+import surf.xilinx as xilinx
 import surf
-
-
 
 ################################################################################################
 ##
@@ -38,28 +40,40 @@ class Lzts(pr.Device):
       
       super(self.__class__, self).__init__(**kwargs)
       self.add((
-            axi.AxiVersion(offset=0x00000000),
-            LztsPowerRegisters(name="LztsPowerRegisters",   offset=0x05000000),
-            pgp.Pgp2bAxi(name='Pgp2bAxi',                   offset=0x04000000, expand=False),
-            ti.Ads42Lbx9Config(name='SlowAdcConfig0',       offset=0x06000000, enabled=False, expand=False),
-            ti.Ads42Lbx9Config(name='SlowAdcConfig1',       offset=0x06000200, enabled=False, expand=False),
-            ti.Ads42Lbx9Config(name='SlowAdcConfig2',       offset=0x06000400, enabled=False, expand=False),
-            ti.Ads42Lbx9Config(name='SlowAdcConfig3',       offset=0x06000600, enabled=False, expand=False),
-            ti.Ads42Lbx9Readout(name='SlowAdcReadout0',     offset=0x07000000, enabled=False, expand=False),
-            ti.Ads42Lbx9Readout(name='SlowAdcReadout1',     offset=0x08000000, enabled=False, expand=False),
-            ti.Ads42Lbx9Readout(name='SlowAdcReadout2',     offset=0x09000000, enabled=False, expand=False),
-            ti.Ads42Lbx9Readout(name='SlowAdcReadout3',     offset=0x0A000000, enabled=False, expand=False),
-            SadcBufferWriter(name='SadcBufferWriter0',      offset=0x0B000000, enabled=False, expand=False),
-            SadcBufferWriter(name='SadcBufferWriter1',      offset=0x0C000000, enabled=False, expand=False),
-            SadcBufferWriter(name='SadcBufferWriter2',      offset=0x0D000000, enabled=False, expand=False),
-            SadcBufferWriter(name='SadcBufferWriter3',      offset=0x0E000000, enabled=False, expand=False),
-            SadcBufferWriter(name='SadcBufferWriter4',      offset=0x0F000000, enabled=False, expand=False),
-            SadcBufferWriter(name='SadcBufferWriter5',      offset=0x10000000, enabled=False, expand=False),
-            SadcBufferWriter(name='SadcBufferWriter6',      offset=0x11000000, enabled=False, expand=False),
-            SadcBufferWriter(name='SadcBufferWriter7',      offset=0x12000000, enabled=False, expand=False),
-            SadcBufferReader(name='SadcBufferReader',       offset=0x13000000, enabled=False, expand=False),
-            SadcPatternTester(name='SadcPatternTester',     offset=0x14000000, enabled=False, expand=False),
-            SadcMMCMReg(name='SadcMMCMReg',                 offset=0x15000000, enabled=False, expand=False)))
+            axi.AxiVersion(                                 offset=0x00000000,                  expand=False),
+            xilinx.AxiSysMonUltraScale(                     offset=0x00100000,                  expand=False),
+            micron.AxiMicronN25Q(                           offset=0x00200000,                  expand=False),
+            axi.AxiMemTester(                               offset=0x00300000,                  expand=False),
+            # SadcPLLMReg(name='SadcPLLMReg',               offset=0x00400000,                  expand=False),
+            LztsPowerRegisters(name="LztsPowerRegisters",   offset=0x01000000,                  expand=False),
+            pgp.Pgp2bAxi(name='Pgp2bAxi',                   offset=0x02000000,                  expand=False),
+            ti.Ads42Lbx9Readout(name='SlowAdcReadout0',     offset=0x03000000, enabled=False,   expand=False),
+            ti.Ads42Lbx9Readout(name='SlowAdcReadout1',     offset=0x03100000, enabled=False,   expand=False),
+            ti.Ads42Lbx9Readout(name='SlowAdcReadout2',     offset=0x03200000, enabled=False,   expand=False),
+            ti.Ads42Lbx9Readout(name='SlowAdcReadout3',     offset=0x03300000, enabled=False,   expand=False),
+            ti.Ads42Lbx9Config(name='SlowAdcConfig0',       offset=0x03400000, enabled=False,   expand=False),
+            ti.Ads42Lbx9Config(name='SlowAdcConfig1',       offset=0x03400200, enabled=False,   expand=False),
+            ti.Ads42Lbx9Config(name='SlowAdcConfig2',       offset=0x03400400, enabled=False,   expand=False),
+            ti.Ads42Lbx9Config(name='SlowAdcConfig3',       offset=0x03400600, enabled=False,   expand=False),
+            SadcBufferWriter(name='SadcBufferWriter0',      offset=0x04000000, enabled=False,   expand=False),
+            SadcBufferWriter(name='SadcBufferWriter1',      offset=0x04100000, enabled=False,   expand=False),
+            SadcBufferWriter(name='SadcBufferWriter2',      offset=0x04200000, enabled=False,   expand=False),
+            SadcBufferWriter(name='SadcBufferWriter3',      offset=0x04300000, enabled=False,   expand=False),
+            SadcBufferWriter(name='SadcBufferWriter4',      offset=0x04400000, enabled=False,   expand=False),
+            SadcBufferWriter(name='SadcBufferWriter5',      offset=0x04500000, enabled=False,   expand=False),
+            SadcBufferWriter(name='SadcBufferWriter6',      offset=0x04600000, enabled=False,   expand=False),
+            SadcBufferWriter(name='SadcBufferWriter7',      offset=0x04700000, enabled=False,   expand=False),
+            SadcBufferReader(name='SadcBufferReader',       offset=0x04800000, enabled=False,   expand=False),
+            SadcPatternTester(name='SadcPatternTester',     offset=0x04900000, enabled=False,   expand=False),
+            jesd204b.JesdRx(                                offset=0x05000000, numRxLanes=16,   expand=False),
+            ti.Lmk04828(name='LMK',                         offset=0x05100000,                  expand=False),
+            ti.Ads54J60(name='FastAdcConfig0',              offset=0x05200000, writeOnly=True,  expand=False),
+            ti.Ads54J60(name='FastAdcConfig1',              offset=0x05300000, writeOnly=True,  expand=False),
+            ti.Ads54J60(name='FastAdcConfig2',              offset=0x05400000, writeOnly=True,  expand=False),
+            ti.Ads54J60(name='FastAdcConfig3',              offset=0x05500000, writeOnly=True,  expand=False),
+        ))
+            
+            
       
 
 class LztsPowerRegisters(pr.Device):

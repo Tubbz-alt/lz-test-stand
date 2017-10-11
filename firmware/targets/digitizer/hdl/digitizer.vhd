@@ -154,6 +154,7 @@ architecture top_level of digitizer is
    signal adcRst    : sl;
    signal ddrRstN   : sl;
    signal writerRst : sl;
+   signal lmkRefClk : sl;
 
    signal swTrigger : sl;
    signal pwrLed    : slv(3 downto 0);
@@ -241,6 +242,7 @@ begin
          adcRst             => adcRst,
          ddrRstN            => ddrRstN,
          writerRst          => writerRst,
+         lmkRefClk          => lmkRefClk,
          -- DRR Memory interface ports
          c0_sys_clk_p       => c0_sys_clk_p,
          c0_sys_clk_n       => c0_sys_clk_n,
@@ -402,6 +404,7 @@ begin
          fadcPdn         => fadcPdn,
          fadcReset       => fadcReset,
          -- LMK Ports
+         lmkRefClk       => lmkRefClk,
          lmkRefClkP      => lmkRefClkP,
          lmkRefClkN      => lmkRefClkN,
          lmkCsL          => lmkCsL,

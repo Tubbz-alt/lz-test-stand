@@ -50,18 +50,19 @@ class Lzts(pr.Device):
         #########
         # Devices
         #########
-        self.add(AxiVersion(         name='AxiVersion', offset=0x00000000, expand=False,))      
-        self.add(AxiSysMonUltraScale(name='SysMon',     offset=0x00100000, expand=False,))      
-        self.add(AxiMicronN25Q(      name='MicronN25Q', offset=0x00200000, expand=False,))      
-        self.add(AxiMemTester(       name='MemTester',  offset=0x00300000, expand=False,))      
-        self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False,))      
-        self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False,))      
+        self.add(AxiVersion(         name='AxiVersion', offset=0x00000000, expand=False, hidden=True,))      
+        self.add(AxiSysMonUltraScale(name='SysMon',     offset=0x00100000, expand=False, hidden=True,))      
+        self.add(AxiMicronN25Q(      name='MicronN25Q', offset=0x00200000, expand=False, hidden=True,))      
+        self.add(AxiMemTester(       name='MemTester',  offset=0x00300000, expand=False, hidden=True,))      
+        self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False, hidden=True,))      
+        self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False, hidden=True,))      
         for i in range(4):
             self.add(Ads42Lbx9Readout(
                 name    = ('SlowAdcReadout[%d]'%i),
                 offset  = (0x03000000 + i*0x100000), 
                 expand  = False, 
                 enabled = False,
+                hidden  = True,
             ))
         for i in range(4):
             self.add(Ads42Lbx9Config(
@@ -69,6 +70,7 @@ class Lzts(pr.Device):
                 offset  = (0x03400000 + i*0x200), 
                 expand  = False, 
                 enabled = False,
+                hidden  = True,
             ))  
         for i in range(8):
             self.add(SadcBufferWriter(
@@ -76,37 +78,58 @@ class Lzts(pr.Device):
                 offset  = (0x04000000 + i*0x100000), 
                 expand  = False, 
                 enabled = False,
+                hidden  = True,
             ))              
-        self.add(SadcBufferReader(  name='SadcBufferReader',    offset=0x04800000, enabled=False, expand=False,))      
-        self.add(SadcPatternTester( name='SadcPatternTester',   offset=0x04900000, enabled=False, expand=False,))      
-        self.add(JesdRx(            name='JesdRx',              offset=0x05000000, expand=False,  numRxLanes=16,))      
-        self.add(Lmk04828(          name='LMK',                 offset=0x05100000, expand=False,))      
+        self.add(SadcBufferReader(  name='SadcBufferReader',    offset=0x04800000, enabled=False, expand=False, hidden=True,))      
+        self.add(SadcPatternTester( name='SadcPatternTester',   offset=0x04900000, enabled=False, expand=False, hidden=True,))      
+        self.add(JesdRx(            name='JesdRx',              offset=0x05000000, expand=True,  numRxLanes=16, hidden=False,))      
+        self.add(Lmk04828(          name='LMK',                 offset=0x05100000, expand=False, hidden=False,))      
         for i in range(4):
             self.add(Ads54J60(
                 name      = ('FastAdcConfig[%d]'%i),
                 offset    = (0x05200000 + i*0x100000), 
                 expand    = False, 
-                # writeOnly = True,
             ))
         
         @self.command(description="Initialization for JESD modules",)
         def JesdInit():            
             self.checkBlocks(recurse=True)
             self.LMK.Init()
+            self.LMK.PwrDwnSysRef()            
+            self.checkBlocks(recurse=True)   
             for i in range(4):
                 self.FastAdcConfig[i].Init()
-            self.checkBlocks(recurse=True)   
+                self.checkBlocks(recurse=True)   
 
         @self.command(description  = "JESD Reset") 
         def JesdReset():
-            self.LMK.PwrDwnSysRef()
+            self.LMK.Init()
+            self.LMK.PwrDwnSysRef()   
             self.checkBlocks(recurse=True)
-            self.JesdRx.CmdResetGTs()
+            
+            for i in range(4):
+                self.FastAdcConfig[i].DigRst()
+                self.checkBlocks(recurse=True)             
+                
+            for i in range(3):
+                self.JesdRx.CmdResetGTs()
+                time.sleep(1.0)            
+                self.checkBlocks(recurse=True)             
+                    
             self.checkBlocks(recurse=True)
-            time.sleep(0.5)
+            time.sleep(0.1)
+            
             self.LMK.PwrUpSysRef()
-            time.sleep(0.5)
+            self.checkBlocks(recurse=True)
+            time.sleep(0.1)
+            
+            self.JesdRx.InvertSync.set(1)
+            self.checkBlocks(recurse=True)   
+            time.sleep(0.1)
+            
+            self.JesdRx.InvertSync.set(0)
             self.JesdRx.CmdClearErrors()
+            self.checkBlocks(recurse=True)   
             
     def writeBlocks(self, force=False, recurse=True, variable=None):
         """
@@ -123,7 +146,7 @@ class Lzts(pr.Device):
                     if block.bulkEn:
                         block.backgroundTransaction(rogue.interfaces.memory.Write)
 
-        # Retire any in-flight transactions before starting
+        # Retire any in-flight transactions before starting next sequence
         self._root.checkBlocks(recurse=True)
         
         # Load all the register expect for JESD which have to be loaded after LMK init()
@@ -132,29 +155,28 @@ class Lzts(pr.Device):
         self.MicronN25Q.writeBlocks( force=force, recurse=recurse, variable=variable)
         self.MemTester.writeBlocks(  force=force, recurse=recurse, variable=variable)
         self.PwrReg.writeBlocks(     force=force, recurse=recurse, variable=variable)
-        time.sleep(0.5); # wait for power supplies to boot up
         self.Pgp2bAxi.writeBlocks(   force=force, recurse=recurse, variable=variable)
+        self._root.checkBlocks(recurse=True)           
+        time.sleep(0.1); # wait for power supplies to boot up
+        
         for i in range(4):
             self.SlowAdcReadout[i].writeBlocks(force=force, recurse=recurse, variable=variable)
             self.SlowAdcConfig[i].writeBlocks( force=force, recurse=recurse, variable=variable)
+            
         for i in range(8):
             self.SadcBufferWriter[i].writeBlocks(force=force, recurse=recurse, variable=variable)
+            
         self.SadcBufferReader.writeBlocks(  force=force, recurse=recurse, variable=variable)
         self.SadcPatternTester.writeBlocks( force=force, recurse=recurse, variable=variable)
         self.JesdRx.writeBlocks(            force=force, recurse=recurse, variable=variable)
         self.LMK.writeBlocks(               force=force, recurse=recurse, variable=variable)
+        self._root.checkBlocks(recurse=True)           
         
-        # Initialize the JESD clocking and modules
         self.JesdInit()
         
-        # Load the JESD SPI configurations
         for i in range(4):
             self.FastAdcConfig[i].writeBlocks(force=force, recurse=recurse, variable=variable)        
-        
-        
-        self._root.checkBlocks(recurse=True)        
-        
-        self.readBlocks(recurse=True)
-        self.checkBlocks(recurse=True)        
-        
+            self._root.checkBlocks(recurse=True)    
+            
         self.JesdReset()
+        

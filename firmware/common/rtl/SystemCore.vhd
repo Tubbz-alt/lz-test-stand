@@ -2,7 +2,7 @@
 -- File       : SystemCore.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-02-04
--- Last update: 2017-10-05
+-- Last update: 2017-10-10
 -------------------------------------------------------------------------------
 -- Description: LZ Digitizer Target's Top Level
 -------------------------------------------------------------------------------
@@ -44,6 +44,7 @@ entity SystemCore is
       adcRst             : out   sl;
       ddrRstN            : in    sl;
       writerRst          : out   sl;
+      lmkRefClk          : out   sl;
       -- DDR PHY Ref clk
       c0_sys_clk_p       : in    sl;
       c0_sys_clk_n       : in    sl;
@@ -151,19 +152,22 @@ begin
          INPUT_BUFG_G      => false,
          FB_BUFG_G         => true,
          RST_IN_POLARITY_G => '1',
-         NUM_CLOCKS_G      => 1,
+         NUM_CLOCKS_G      => 2,
          -- MMCM attributes
-         CLKIN_PERIOD_G    => 4.0,
-         DIVCLK_DIVIDE_G   => 1,
-         CLKFBOUT_MULT_G   => 4,
-         CLKOUT0_DIVIDE_G  => 4)
+         CLKIN_PERIOD_G    => 4.0,      -- 250 MHz
+         DIVCLK_DIVIDE_G   => 1,        -- 250 MHz/1
+         CLKFBOUT_MULT_G   => 4,        -- 1 GHz = 250 MHz x 4
+         CLKOUT0_DIVIDE_G  => 4,        -- 250 MHz = 1 GHz /4
+         CLKOUT1_DIVIDE_G  => 100)      -- 10 MHz = 1 GHz /100
       port map(
          -- Clock Input
          clkIn           => clk250ddr,
          -- Clock Outputs
          clkOut(0)       => adcClock,
+         clkOut(1)       => lmkRefClk,
          -- Reset Outputs
          rstOut(0)       => adcReset,
+         rstOut(1)       => open,
          -- AXI-Lite Interface 
          axilClk         => axilClk,
          axilRst         => axilRst,

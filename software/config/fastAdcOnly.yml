@@ -62,12 +62,7 @@ lztsBoard:
       DcDcPhaseMgt1V0: 0x0
       DcDcPhaseMgt1V2: 0x0
       DcDcPhaseMgt1V8: 0x0
-
-      
-      
-      
-      
-    LMK:
+    LMK: # Configurations generated from TI's CodeLoader4 software
       EnableSync: 0xFF
       EnableSysRef: 0x3
       SyncBit: 0x1
@@ -77,28 +72,28 @@ lztsBoard:
       LmkReg_0x0104: 0x22
       LmkReg_0x0105: 0x00
       LmkReg_0x0106: 0x70
-      LmkReg_0x0107: 0x11
+      LmkReg_0x0107: 0x16
       LmkReg_0x0108: 0x63
       LmkReg_0x0109: 0x55
       LmkReg_0x010B: 0x00
       LmkReg_0x010C: 0x22
       LmkReg_0x010D: 0x00
       LmkReg_0x010E: 0x70
-      LmkReg_0x010F: 0x11
+      LmkReg_0x010F: 0x16
       LmkReg_0x0110: 0x63
       LmkReg_0x0111: 0x55
       LmkReg_0x0113: 0x00
       LmkReg_0x0114: 0x22
       LmkReg_0x0115: 0x00
       LmkReg_0x0116: 0x70
-      LmkReg_0x0117: 0x11
+      LmkReg_0x0117: 0x16
       LmkReg_0x0118: 0x63
       LmkReg_0x0119: 0x55
       LmkReg_0x011B: 0x00
       LmkReg_0x011C: 0x22
       LmkReg_0x011D: 0x00
       LmkReg_0x011E: 0x70
-      LmkReg_0x011F: 0x11
+      LmkReg_0x011F: 0x16
       LmkReg_0x0120: 0x6C
       LmkReg_0x0121: 0x55
       LmkReg_0x0123: 0x00
@@ -127,7 +122,7 @@ lztsBoard:
       LmkReg_0x013C: 0x00
       LmkReg_0x013D: 0x08
       LmkReg_0x013E: 0x03
-      LmkReg_0x013F: 0x1E
+      LmkReg_0x013F: 0x02
       LmkReg_0x0140: 0x00
       LmkReg_0x0141: 0x00
       LmkReg_0x0142: 0x00
@@ -135,16 +130,16 @@ lztsBoard:
       LmkReg_0x0144: 0xFF
       LmkReg_0x0145: 0x7F
       LmkReg_0x0146: 0x10
-      LmkReg_0x0147: 0x1F
+      LmkReg_0x0147: 0x1B
       LmkReg_0x0148: 0x1B
       LmkReg_0x0149: 0x1B
-      LmkReg_0x014A: 0x33
+      LmkReg_0x014A: 0x0A
       LmkReg_0x014B: 0x16
       LmkReg_0x014C: 0x00
       LmkReg_0x014D: 0x00
       LmkReg_0x014E: 0x00
       LmkReg_0x014F: 0x7F
-      LmkReg_0x0150: 0x01
+      LmkReg_0x0150: 0x03
       LmkReg_0x0151: 0x02
       LmkReg_0x0152: 0x00
       LmkReg_0x0153: 0x00
@@ -153,16 +148,16 @@ lztsBoard:
       LmkReg_0x0156: 0x7D
       LmkReg_0x0157: 0x00
       LmkReg_0x0158: 0x96
-      LmkReg_0x0159: 0x05
-      LmkReg_0x015A: 0xDC
+      LmkReg_0x0159: 0x06
+      LmkReg_0x015A: 0x00
       LmkReg_0x015B: 0xD4
       LmkReg_0x015C: 0x20
       LmkReg_0x015D: 0x00
       LmkReg_0x015E: 0x00
-      LmkReg_0x015F: 0x13
+      LmkReg_0x015F: 0x0B
       LmkReg_0x0160: 0x00
-      LmkReg_0x0161: 0x04
-      LmkReg_0x0162: 0x88
+      LmkReg_0x0161: 0x80
+      LmkReg_0x0162: 0xA4
       LmkReg_0x0163: 0x00
       LmkReg_0x0164: 0x00
       LmkReg_0x0165: 0x05
@@ -173,8 +168,8 @@ lztsBoard:
       LmkReg_0x017C: 0x15
       LmkReg_0x017D: 0x33
       LmkReg_0x0166: 0x00
-      LmkReg_0x0167: 0x00
-      LmkReg_0x0168: 0x0C
+      LmkReg_0x0167: 0x02
+      LmkReg_0x0168: 0x71
       LmkReg_0x0169: 0x59
       LmkReg_0x016A: 0x20
       LmkReg_0x016B: 0x00
@@ -182,15 +177,6 @@ lztsBoard:
       LmkReg_0x016D: 0x00
       LmkReg_0x016E: 0x13
       LmkReg_0x0173: 0x00
-      
-
-
-
-
-
-
-
-
     FastAdcConfig[:]:
       enable: True
       CH[:]:
@@ -210,7 +196,7 @@ lztsBoard:
         ###################
         # JESD DIGITAL PAGE
         ###################
-        CTRL_K: 0x1         # 1 = Frames per multi frame can be set in FRAMES_PER_MULTI_FRAME
+        CTRL_K: 0x0         # 1 = Frames per multi frame can be set in FRAMES_PER_MULTI_FRAME
         TESTMODE_EN: 0x0    # 0 = Test mode disabled
         FLIP_ADC_DATA: 0x0  # 0 = Normal operation
         LANE_ALIGN: 0x0     # 0 = Normal operation
@@ -227,29 +213,29 @@ lztsBoard:
         LMFC_COUNT_INIT: 0x0      # 0 = Default
         RELEASE_ILANE_SEQ: 0x0    # 0 = Default
         SCRAMBLE_EN: 0x1    # 1 = Scrambling enabled
-        FRAMES_PER_MULTI_FRAME: 0x8
+        FRAMES_PER_MULTI_FRAME: 0xF
         SUBCLASS: 0x1       # 001 = Subclass 1 deterministic latency using the SYSREF signal
         LANE_SHARE: 0x0     # 0 = Normal operation (each channel uses one lane)
         ##################
         # JESD ANALOG PAGE
         ##################
-        SE_EMP_LANE_1: 0x3
-        SE_EMP_LANE_0: 0x3
-        SE_EMP_LANE_2: 0x3
-        SE_EMP_LANE_3: 0x3
+        SE_EMP_LANE_1: 0x7
+        SE_EMP_LANE_0: 0x7
+        SE_EMP_LANE_2: 0x7
+        SE_EMP_LANE_3: 0x7
         JESD_PLL_MODE: 0x2  # 10 = LMFS@4244 (see Table 14 of datasheet)
         FOVR_CHA: 0x0       # 0 = Normal operation
-        JESD_SWING: 0x4     # 0x4 = 960 mVPP (max. swing)
+        JESD_SWING: 0x4
         FOVR_CHA_EN: 0x0    # 0 = Normal operation
     JesdRx:
-      Enable: 0xFFFF
+      Enable: 0xFFFF # 16 channels of JESD
       Polarity: 0x0
       InvertAdcData: 0x00
-      LinkErrMask: 0x3F
-      ScrambleEnable: 0x1
+      LinkErrMask: 0x1F
+      ScrambleEnable: 0x1 # 1 = Scrambling enabled
       ResetGTs: 0x0
       ClearErrors: 0x0
-      InvertSync: 0x1
+      InvertSync: 0x0
       ReplaceEnable: 0x1
-      SubClass: 0x1
-      SysrefDelay: 0x8
+      SubClass: 0x1       # Subclass 1 deterministic latency using the SYSREF signal
+      SysrefDelay: 0x0

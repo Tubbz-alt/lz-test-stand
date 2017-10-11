@@ -53,6 +53,7 @@ entity FastAdcPhy is
       fadcReset       : out   slv(3 downto 0);
       fadcPdn         : out   slv(3 downto 0);
       -- LMK Ports
+      lmkRefClk       : in    sl;
       lmkRefClkP      : out   sl;
       lmkRefClkN      : out   sl;
       lmkCsL          : out   sl;
@@ -151,7 +152,7 @@ begin
          TPD_G        => TPD_G,
          XIL_DEVICE_G => "ULTRASCALE")
       port map (
-         clkIn   => adcClk,
+         clkIn   => lmkRefClk,
          clkOutP => lmkRefClkP,
          clkOutN => lmkRefClkN);
 

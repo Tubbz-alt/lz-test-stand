@@ -195,7 +195,8 @@ begin
          nSync_o         => nSync_o);
 
    s_gtRxReset  <= devRst_i or uOr(s_gtRxUserReset);
-   s_gtTxReset  <= devRst_i;
+   s_gtTxReset  <= s_gtRxReset;
+   -- s_gtTxReset  <= devRst_i;
    s_gtResetAll <= s_gtTxReset or s_gtRxReset;
 
    RX_LANES_GEN : for i in JESD_LANE_C-1 downto 0 generate
@@ -246,7 +247,7 @@ begin
          rxpolarity_in                         => (others => '0'),
          rxusrclk_in                           => s_devClkVec,
          rxusrclk2_in                          => s_devClk2Vec,
-         tx8b10ben_in                          => (others => '1'),
+         tx8b10ben_in                          => (others => '0'),
          txctrl0_in                            => (others => '0'),
          txctrl1_in                            => (others => '0'),
          txctrl2_in                            => (others => '0'),

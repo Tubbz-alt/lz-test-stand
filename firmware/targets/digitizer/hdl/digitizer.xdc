@@ -34,6 +34,9 @@ set_clock_groups -asynchronous \
    -group [get_clocks -include_generated_clocks {adcClk}] \
    -group [get_clocks -include_generated_clocks {axilClk}]
 
+set_clock_groups -asynchronous -group [get_clocks {ddrIntClk0}] -group [get_clocks {ddrClkP}]
+set_clock_groups -asynchronous -group [get_clocks {ddrIntClk1}] -group [get_clocks {ddrClkP}]
+   
 # Lock slow ADC interfaces to clock regions to avoid timing changes that require to re-train the ADC
 # Can comment out temporarily to find better placement if it causes timing closure issues
 set_property CLOCK_REGION X0Y4 [get_cells U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]

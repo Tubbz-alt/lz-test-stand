@@ -151,22 +151,11 @@ LztsBoard = LztsBoard(cmd, dataWriter, srp)
 #enable all needed devices
 LztsBoard.Lzts.LztsPowerRegisters.enable.set(True)
 LztsBoard.Lzts.SadcPatternTester.enable.set(True)
-LztsBoard.Lzts.SlowAdcConfig0.enable.set(True)
-LztsBoard.Lzts.SlowAdcConfig1.enable.set(True)
-LztsBoard.Lzts.SlowAdcConfig2.enable.set(True)
-LztsBoard.Lzts.SlowAdcConfig3.enable.set(True)
-LztsBoard.Lzts.SlowAdcReadout0.enable.set(True)
-LztsBoard.Lzts.SlowAdcReadout1.enable.set(True)
-LztsBoard.Lzts.SlowAdcReadout2.enable.set(True)
-LztsBoard.Lzts.SlowAdcReadout3.enable.set(True)
-LztsBoard.Lzts.SadcBufferWriter0.enable.set(True)
-LztsBoard.Lzts.SadcBufferWriter1.enable.set(True)
-LztsBoard.Lzts.SadcBufferWriter2.enable.set(True)
-LztsBoard.Lzts.SadcBufferWriter3.enable.set(True)
-LztsBoard.Lzts.SadcBufferWriter4.enable.set(True)
-LztsBoard.Lzts.SadcBufferWriter5.enable.set(True)
-LztsBoard.Lzts.SadcBufferWriter6.enable.set(True)
-LztsBoard.Lzts.SadcBufferWriter7.enable.set(True)
+for i in range(4):
+    LztsBoard.Lzts.SlowAdcConfig[i].enable.set(True)
+    LztsBoard.Lzts.SlowAdcReadout[i].enable.set(True)
+for i in range(8):
+    LztsBoard.Lzts.SadcBufferWriter[i].enable.set(True)
 
 # find all delay lane registers
 delayRegs = LztsBoard.Lzts.find(name="DelayAdc*")

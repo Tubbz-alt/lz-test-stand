@@ -1,79 +1,72 @@
 lztsBoard:
-  enable: 'True'
-  forceWrite: 'False'
+  enable: True
+  forceWrite: False
   dataWriter:
-    enable: 'True'
-    dataFile: ''
-    open: 'False'
-    bufferSize: '0'
-    maxFileSize: '0'
+    enable: True
+    dataFile: 
+    open: False
+    bufferSize: 0
+    maxFileSize: 0
   runControl:
-    enable: 'True'
+    enable: True
     runState: Stopped
     runRate: 1 Hz
-    runCount: '0'    
+    runCount: 0    
   Lzts:
-    enable: 'True'
-    LztsPowerRegisters:
-      enable: 'True'
-      EnDcDcAm6V: 'True'
-      EnDcDcAp5V4: 'False'
-      EnDcDcAp3V7: 'True'
-      EnDcDcAp2V3: 'True'
-      EnDcDcAp1V6: 'False'
-      EnLdoSlow: 'True'
-      EnLdoFast: 'False'
-      EnLdoAm5V: 'True'
-      Led0: 'True'
-      Led1: 'False'
-      Led2: 'True'
-      Led3: 'False'
-      SADCRst: '0x0'
-      SADCCtrl1: '0x0'
-      SADCCtrl2: '0x0'
-      SAMPEn: '0xf'
-      FADCPdn: '0xf'
-      DcDcSyncAll: 'False'
-      DcDcHalfClkAp6V: '0x0'
-      DcDcHalfClkAm6V: '0x0'
-      DcDcHalfClkAp5V4: '0x0'
-      DcDcHalfClkAp3V7: '0x0'
-      DcDcHalfClkAp2V3: '0x0'
-      DcDcHalfClkAp1V6: '0x0'
-      DcDcHalfClkDp6V: '0x0'
-      DcDcHalfClkDp3V3: '0x0'
-      DcDcHalfClkDp1V8: '0x0'
-      DcDcHalfClkDp1V2: '0x0'
-      DcDcHalfClkDp0V95: '0x0'
-      DcDcHalfClkMgt1V0: '0x0'
-      DcDcHalfClkMgt1V2: '0x0'
-      DcDcHalfClkMgt1V8: '0x0'
-      DcDcPhaseAp6V: '0x0'
-      DcDcPhaseAm6V: '0x0'
-      DcDcPhaseAp5V4: '0x0'
-      DcDcPhaseAp3V7: '0x0'
-      DcDcPhaseAp2V3: '0x0'
-      DcDcPhaseAp1V6: '0x0'
-      DcDcPhaseDp6V: '0x0'
-      DcDcPhaseDp3V3: '0x0'
-      DcDcPhaseDp1V8: '0x0'
-      DcDcPhaseDp1V2: '0x0'
-      DcDcPhaseDp0V95: '0x0'
-      DcDcPhaseMgt1V0: '0x0'
-      DcDcPhaseMgt1V2: '0x0'
-      DcDcPhaseMgt1V8: '0x0'
-    JesdRx:
-      Enable: 0xFFFF
-      Polarity: 0x0
-      InvertAdcData: 0x00
-      LinkErrMask: 0x3F # Mask Enable the errors that are required to brake the link. bit 5-0: positionErr - s_bufOvf - s_bufUnf - dispErr - decErr - s_alignErr
-      ScrambleEnable: 0x1
-      ResetGTs: 0x0
-      ClearErrors: 0x0
-      InvertSync: Inverted
-      ReplaceEnable: Enabled
-      SubClass: 0x1
-      SysrefDelay: 0x8
+    enable: True
+    PwrReg:
+      enable: True
+      EnDcDcAm6V: True
+      EnDcDcAp5V4: False
+      EnDcDcAp3V7: True
+      EnDcDcAp2V3: True
+      EnDcDcAp1V6: True
+      EnLdoSlow: False
+      EnLdoFast: True
+      EnLdoAm5V: True
+      Led0: True
+      Led1: False
+      Led2: True
+      Led3: False
+      SADCRst: 0x0
+      SADCCtrl1: 0x0
+      SADCCtrl2: 0x0
+      SAMPEn: 0xf
+      FADCPdn: 0xf
+      DcDcSyncAll: False
+      DcDcHalfClkAp6V: 0x0
+      DcDcHalfClkAm6V: 0x0
+      DcDcHalfClkAp5V4: 0x0
+      DcDcHalfClkAp3V7: 0x0
+      DcDcHalfClkAp2V3: 0x0
+      DcDcHalfClkAp1V6: 0x0
+      DcDcHalfClkDp6V: 0x0
+      DcDcHalfClkDp3V3: 0x0
+      DcDcHalfClkDp1V8: 0x0
+      DcDcHalfClkDp1V2: 0x0
+      DcDcHalfClkDp0V95: 0x0
+      DcDcHalfClkMgt1V0: 0x0
+      DcDcHalfClkMgt1V2: 0x0
+      DcDcHalfClkMgt1V8: 0x0
+      DcDcPhaseAp6V: 0x0
+      DcDcPhaseAm6V: 0x0
+      DcDcPhaseAp5V4: 0x0
+      DcDcPhaseAp3V7: 0x0
+      DcDcPhaseAp2V3: 0x0
+      DcDcPhaseAp1V6: 0x0
+      DcDcPhaseDp6V: 0x0
+      DcDcPhaseDp3V3: 0x0
+      DcDcPhaseDp1V8: 0x0
+      DcDcPhaseDp1V2: 0x0
+      DcDcPhaseDp0V95: 0x0
+      DcDcPhaseMgt1V0: 0x0
+      DcDcPhaseMgt1V2: 0x0
+      DcDcPhaseMgt1V8: 0x0
+
+      
+      
+      
+      
     LMK:
       EnableSync: 0xFF
       EnableSysRef: 0x3
@@ -84,35 +77,35 @@ lztsBoard:
       LmkReg_0x0104: 0x22
       LmkReg_0x0105: 0x00
       LmkReg_0x0106: 0x70
-      LmkReg_0x0107: 0x55
+      LmkReg_0x0107: 0x11
       LmkReg_0x0108: 0x63
       LmkReg_0x0109: 0x55
       LmkReg_0x010B: 0x00
       LmkReg_0x010C: 0x22
       LmkReg_0x010D: 0x00
       LmkReg_0x010E: 0x70
-      LmkReg_0x010F: 0x55
+      LmkReg_0x010F: 0x11
       LmkReg_0x0110: 0x63
       LmkReg_0x0111: 0x55
       LmkReg_0x0113: 0x00
       LmkReg_0x0114: 0x22
       LmkReg_0x0115: 0x00
       LmkReg_0x0116: 0x70
-      LmkReg_0x0117: 0x55
+      LmkReg_0x0117: 0x11
       LmkReg_0x0118: 0x63
       LmkReg_0x0119: 0x55
       LmkReg_0x011B: 0x00
       LmkReg_0x011C: 0x22
       LmkReg_0x011D: 0x00
       LmkReg_0x011E: 0x70
-      LmkReg_0x011F: 0x55
+      LmkReg_0x011F: 0x11
       LmkReg_0x0120: 0x6C
       LmkReg_0x0121: 0x55
       LmkReg_0x0123: 0x00
       LmkReg_0x0124: 0x22
       LmkReg_0x0125: 0x00
       LmkReg_0x0126: 0x70
-      LmkReg_0x0127: 0x55
+      LmkReg_0x0127: 0x11
       LmkReg_0x0128: 0x63
       LmkReg_0x0129: 0x55
       LmkReg_0x012B: 0x00
@@ -129,12 +122,12 @@ lztsBoard:
       LmkReg_0x0137: 0x00
       LmkReg_0x0138: 0x20
       LmkReg_0x0139: 0x03
-      LmkReg_0x013A: 0x04
+      LmkReg_0x013A: 0x06
       LmkReg_0x013B: 0x00
       LmkReg_0x013C: 0x00
       LmkReg_0x013D: 0x08
       LmkReg_0x013E: 0x03
-      LmkReg_0x013F: 0x1A
+      LmkReg_0x013F: 0x1E
       LmkReg_0x0140: 0x00
       LmkReg_0x0141: 0x00
       LmkReg_0x0142: 0x00
@@ -143,8 +136,8 @@ lztsBoard:
       LmkReg_0x0145: 0x7F
       LmkReg_0x0146: 0x10
       LmkReg_0x0147: 0x1F
-      LmkReg_0x0148: 0x02
-      LmkReg_0x0149: 0x42
+      LmkReg_0x0148: 0x1B
+      LmkReg_0x0149: 0x1B
       LmkReg_0x014A: 0x33
       LmkReg_0x014B: 0x16
       LmkReg_0x014C: 0x00
@@ -166,9 +159,9 @@ lztsBoard:
       LmkReg_0x015C: 0x20
       LmkReg_0x015D: 0x00
       LmkReg_0x015E: 0x00
-      LmkReg_0x015F: 0x0B
+      LmkReg_0x015F: 0x13
       LmkReg_0x0160: 0x00
-      LmkReg_0x0161: 0x01
+      LmkReg_0x0161: 0x04
       LmkReg_0x0162: 0x88
       LmkReg_0x0163: 0x00
       LmkReg_0x0164: 0x00
@@ -181,7 +174,7 @@ lztsBoard:
       LmkReg_0x017D: 0x33
       LmkReg_0x0166: 0x00
       LmkReg_0x0167: 0x00
-      LmkReg_0x0168: 0x03
+      LmkReg_0x0168: 0x0C
       LmkReg_0x0169: 0x59
       LmkReg_0x016A: 0x20
       LmkReg_0x016B: 0x00
@@ -190,10 +183,73 @@ lztsBoard:
       LmkReg_0x016E: 0x13
       LmkReg_0x0173: 0x00
       
-      
-      
-      
-      
-      
-      
 
+
+
+
+
+
+
+
+    FastAdcConfig[:]:
+      enable: True
+      CH[:]:
+        enable: True
+        ###################
+        # Main Digital Page
+        ###################        
+        DECFIL_EN: 0x0      # 0 = Normal operation, full rate output
+        NYQUIST_ZONE: 0x0   # 000 = 1st Nyquist zone (0 MHz to 500 MHz)
+        FORMAT_SEL: 0x0     # 0 = Twos complement
+        FORMAT_EN: 0x0      # 0 = Default, output is in twos complement format
+        DEC_MOD_EN: 0x0     # 0 = Decimation modes control is disabled
+        CTRL_NYQUIST: 0x0   # 0 = Selection disabled
+        DIG_GAIN_EN: 0x0    # 0 = Digital gain disabled
+        LSB_SEL_EN: 0x0     # 0 = Default
+        LSB_SELECT: 0x0     # 00 = Output is 16-bit data
+        ###################
+        # JESD DIGITAL PAGE
+        ###################
+        CTRL_K: 0x1         # 1 = Frames per multi frame can be set in FRAMES_PER_MULTI_FRAME
+        TESTMODE_EN: 0x0    # 0 = Test mode disabled
+        FLIP_ADC_DATA: 0x0  # 0 = Normal operation
+        LANE_ALIGN: 0x0     # 0 = Normal operation
+        FRAME_ALIGN: 0x0    # 0 = Normal operation
+        TX_LINK_DIS: 0x0    # 0 = Normal operation
+        SYNC_REG: 0x0       # 0 = Normal operation
+        SYNC_REG_EN: 0x0    # 0 = Use the SYNC pin for sync requests
+        JESD_FILTER: 0x0    # 000 = Filter bypass mode (No decimation)
+        JESD_MODE: 0x2      # 010 = LMFS@4244 (see Table 14 of datasheet)
+        LINK_LAYER_TESTMODE: 0x0  # 000 = Normal ADC data
+        LINK_LAYER_RPAT: 0x0      # 0 = Normal operation
+        LMFC_MASK_RESET: 0x0      # 0 = LMFC reset is not masked
+        FORCE_LMFC_COUNT: 0x0     # 0 = Normal operation
+        LMFC_COUNT_INIT: 0x0      # 0 = Default
+        RELEASE_ILANE_SEQ: 0x0    # 0 = Default
+        SCRAMBLE_EN: 0x1    # 1 = Scrambling enabled
+        FRAMES_PER_MULTI_FRAME: 0x8
+        SUBCLASS: 0x1       # 001 = Subclass 1 deterministic latency using the SYSREF signal
+        LANE_SHARE: 0x0     # 0 = Normal operation (each channel uses one lane)
+        ##################
+        # JESD ANALOG PAGE
+        ##################
+        SE_EMP_LANE_1: 0x3
+        SE_EMP_LANE_0: 0x3
+        SE_EMP_LANE_2: 0x3
+        SE_EMP_LANE_3: 0x3
+        JESD_PLL_MODE: 0x2  # 10 = LMFS@4244 (see Table 14 of datasheet)
+        FOVR_CHA: 0x0       # 0 = Normal operation
+        JESD_SWING: 0x4     # 0x4 = 960 mVPP (max. swing)
+        FOVR_CHA_EN: 0x0    # 0 = Normal operation
+    JesdRx:
+      Enable: 0xFFFF
+      Polarity: 0x0
+      InvertAdcData: 0x00
+      LinkErrMask: 0x3F
+      ScrambleEnable: 0x1
+      ResetGTs: 0x0
+      ClearErrors: 0x0
+      InvertSync: 0x1
+      ReplaceEnable: 0x1
+      SubClass: 0x1
+      SysrefDelay: 0x8

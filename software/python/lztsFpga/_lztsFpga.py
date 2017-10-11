@@ -50,19 +50,19 @@ class Lzts(pr.Device):
         #########
         # Devices
         #########
-        self.add(AxiVersion(         name='AxiVersion', offset=0x00000000, expand=False, hidden=True,))      
-        self.add(AxiSysMonUltraScale(name='SysMon',     offset=0x00100000, expand=False, hidden=True,))      
-        self.add(AxiMicronN25Q(      name='MicronN25Q', offset=0x00200000, expand=False, hidden=True,))      
-        self.add(AxiMemTester(       name='MemTester',  offset=0x00300000, expand=False, hidden=True,))      
-        self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False, hidden=True,))      
-        self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False, hidden=True,))      
+        self.add(AxiVersion(         name='AxiVersion', offset=0x00000000, expand=False, hidden=False,))      
+        self.add(AxiSysMonUltraScale(name='SysMon',     offset=0x00100000, expand=False, hidden=False,))      
+        self.add(AxiMicronN25Q(      name='MicronN25Q', offset=0x00200000, expand=False, hidden=False,))      
+        self.add(AxiMemTester(       name='MemTester',  offset=0x00300000, expand=False, hidden=False,))      
+        self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False, hidden=False,))      
+        self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False, hidden=False,))      
         for i in range(4):
             self.add(Ads42Lbx9Readout(
                 name    = ('SlowAdcReadout[%d]'%i),
                 offset  = (0x03000000 + i*0x100000), 
                 expand  = False, 
                 enabled = False,
-                hidden  = True,
+                hidden  = False,
             ))
         for i in range(4):
             self.add(Ads42Lbx9Config(
@@ -70,7 +70,7 @@ class Lzts(pr.Device):
                 offset  = (0x03400000 + i*0x200), 
                 expand  = False, 
                 enabled = False,
-                hidden  = True,
+                hidden  = False,
             ))  
         for i in range(8):
             self.add(SadcBufferWriter(
@@ -78,17 +78,18 @@ class Lzts(pr.Device):
                 offset  = (0x04000000 + i*0x100000), 
                 expand  = False, 
                 enabled = False,
-                hidden  = True,
+                hidden  = False,
             ))              
-        self.add(SadcBufferReader(  name='SadcBufferReader',    offset=0x04800000, enabled=False, expand=False, hidden=True,))      
-        self.add(SadcPatternTester( name='SadcPatternTester',   offset=0x04900000, enabled=False, expand=False, hidden=True,))      
-        self.add(JesdRx(            name='JesdRx',              offset=0x05000000, expand=True,  numRxLanes=16, hidden=False,))      
-        self.add(Lmk04828(          name='LMK',                 offset=0x05100000, expand=False, hidden=False,))      
+        self.add(SadcBufferReader(  name='SadcBufferReader',    offset=0x04800000, enabled=False, expand=False,  hidden=False,))      
+        self.add(SadcPatternTester( name='SadcPatternTester',   offset=0x04900000, enabled=False, expand=False,  hidden=False,))      
+        self.add(JesdRx(            name='JesdRx',              offset=0x05000000, expand=False,  numRxLanes=16, hidden=False,))      
+        self.add(Lmk04828(          name='LMK',                 offset=0x05100000, expand=False,                 hidden=False,))      
         for i in range(4):
             self.add(Ads54J60(
                 name      = ('FastAdcConfig[%d]'%i),
                 offset    = (0x05200000 + i*0x100000), 
                 expand    = False, 
+                hidden    = True,
             ))
         
         @self.command(description="Initialization for JESD modules",)

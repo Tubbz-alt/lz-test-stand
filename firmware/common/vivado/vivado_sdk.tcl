@@ -25,14 +25,25 @@ puts "PrjTclPath: ${PrjTclPath}"
 
 # Generate SDK project
 set SDK_PRJ_RDY false
+set SDK_RETRY_CNT 0
 while { ${SDK_PRJ_RDY} != true } {
-   set src_rc [catch {exec xsdk -batch -source ${PrjTclPath}/vivado_sdk_prj.tcl >@stdout}]       
+   set src_rc [catch {exec xsdk -batch -source ${PrjTclPath}/vivado_sdk_prj.tcl >@stdout}]
    if {$src_rc} {
+      puts "\n********************************************************"
       puts "Retrying to build SDK project"
-      exec rm -rf ${SDK_PRJ}
+      puts ${_RESULT}
+      puts "********************************************************\n"
+      # Increment the counter
+      incr SDK_RETRY_CNT
+      # Check for max retries
+      if { ${SDK_RETRY_CNT} == 10 } {
+         puts "Failed to build the SDK project"
+         # exit -1
+         break
+      }
    } else {
       set SDK_PRJ_RDY true
-   }         
+   }
 }
 
 # Generate .ELF

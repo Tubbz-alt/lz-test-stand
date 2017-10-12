@@ -1,6 +1,9 @@
 # Load RUCKUS environment and library
 source -quiet $::env(RUCKUS_DIR)/vivado_proc.tcl
 
+# Check for version 2017.2 of Vivado (or later)
+if { [VersionCheck 2017.2] < 0 } {exit -1}
+
 # Check if required variables exist
 if { [info exists ::env(BUILD_MIG_CORE)] != 1 } {
    puts "\n\nERROR: BUILD_MIG_CORE is not defined in $::env(PROJ_DIR)/Makefile\n\n"; exit -1

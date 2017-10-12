@@ -8,8 +8,8 @@
 ## the terms contained in the LICENSE.txt file.
 ##############################################################################
 
-set_property IOSTANDARD LVCMOS12 [get_ports {c0_sys_clk_p}]
-set_property IOSTANDARD LVCMOS12 [get_ports {c0_sys_clk_n}]
+set_property IOSTANDARD DIFF_SSTL12 [ get_ports "c0_sys_clk_p" ]
+set_property IOSTANDARD DIFF_SSTL12 [ get_ports "c0_sys_clk_n" ]
 set_property IOSTANDARD LVCMOS12 [get_ports {c0_ddr4_bg[*]}]
 set_property IOSTANDARD LVCMOS12 [get_ports {c0_ddr4_ck_t[*]}]
 set_property IOSTANDARD LVCMOS12 [get_ports {c0_ddr4_ck_c[*]}]

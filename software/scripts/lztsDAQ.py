@@ -30,17 +30,34 @@ import atexit
 import yaml
 import time
 import sys
+import argparse
 import PyQt4.QtGui
 import PyQt4.QtCore
 import lztsFpga as fpga
 import lztsViewer as vi
 
-#############################################
-# Define if the GUI is started (1 starts it)
-START_GUI = True
-START_VIEWER = False
-#############################################
+# Set the argument parser
+parser = argparse.ArgumentParser()
 
+# Add arguments
+parser.add_argument(
+    "--start_gui", 
+    type     = bool,
+    required = False,
+    default  = True,
+    help     = "true to show gui",
+)  
+
+parser.add_argument(
+    "--start_viewer", 
+    type     = bool,
+    required = False,
+    default  = False,
+    help     = "true to show viewer",
+)  
+
+# Get the arguments
+args = parser.parse_args()
 
 # Create the PGP interfaces for ePix camera
 pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,0) # Registers for lzts board
@@ -139,24 +156,21 @@ class LztsBoard(pyrogue.Root):
         
         # Export remote objects
         self.start(pyroGroup='lztsGui')
-
-
-
-
-
+        
 # Create board
 LztsBoard = LztsBoard(cmd, dataWriter, srp)
 
 # Create GUI
-appTop = PyQt4.QtGui.QApplication(sys.argv)
-guiTop = pyrogue.gui.GuiTop(group='lztsGui')
-guiTop.addTree(LztsBoard)
+if (args.start_gui):
+    appTop = PyQt4.QtGui.QApplication(sys.argv)
+    guiTop = pyrogue.gui.GuiTop(group='lztsGui')
+    guiTop.resize(800, 1000)
+    guiTop.addTree(LztsBoard)
 
 ## Viewer gui
-gui = vi.Window()
-pyrogue.streamTap(pgpVc1, gui.eventReaderData)
-
-
+if (args.start_viewer):
+    gui = vi.Window()
+    pyrogue.streamTap(pgpVc1, gui.eventReaderData)
 
 ## Create mesh node (this is for remote control only, no data is shared with this)
 #mNode = pyrogue.mesh.MeshNode('rogueEpix100a',iface='eth0',root=None)
@@ -164,7 +178,7 @@ pyrogue.streamTap(pgpVc1, gui.eventReaderData)
 #mNode.start()
 
 # Run gui
-if (START_GUI):
+if (args.start_gui):
     appTop.exec_()
 
 # Close window and stop polling
@@ -172,5 +186,3 @@ def stop():
     mNode.stop()
     LztsBoard.stop()
     exit()
-
-

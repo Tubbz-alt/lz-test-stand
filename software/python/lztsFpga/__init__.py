@@ -8,3 +8,8 @@
 # contained in the LICENSE.txt file.
 #-----------------------------------------------------------------------------
 from lztsFpga._lztsFpga import *
+from lztsFpga.LztsPowerRegisters import *
+from lztsFpga.MicroblazeLog import *
+from lztsFpga.SadcBufferReader import *
+from lztsFpga.SadcBufferWriter import *
+from lztsFpga.SadcPatternTester import *

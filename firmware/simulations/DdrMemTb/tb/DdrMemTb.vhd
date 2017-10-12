@@ -2,7 +2,7 @@
 -- File       : DdrMemTb.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-07-05
--- Last update: 2017-07-06
+-- Last update: 2017-10-12
 -------------------------------------------------------------------------------
 -- Description: Simulation Testbed for testing the MigCoreWrapper module
 -------------------------------------------------------------------------------
@@ -23,6 +23,7 @@ use ieee.std_logic_arith.all;
 use work.StdRtlPkg.all;
 use work.AxiLitePkg.all;
 use work.AxiPkg.all;
+use work.AppPkg.all;
 
 library unisim;
 use unisim.vcomponents.all;
@@ -36,20 +37,13 @@ architecture testbed of DdrMemTb is
    constant DLY_C         : natural := 16;
    constant SIM_SPEEDUP_C : boolean := true;
 
-   constant AXI_CONFIG_C : AxiConfigType := (
-      ADDR_WIDTH_C => 31,
-      DATA_BYTES_C => 64,
-      ID_BITS_C    => 4,
-      LEN_BITS_C   => 8);
-
-   constant START_ADDR_C : slv(AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '0');
-   constant STOP_ADDR_C  : slv(AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
-
    component Ddr4ModelWrapper
+      generic (
+         DDR_WIDTH_G : integer);
       port (
-         c0_ddr4_dq       : inout slv(63 downto 0);
-         c0_ddr4_dqs_c    : inout slv(7 downto 0);
-         c0_ddr4_dqs_t    : inout slv(7 downto 0);
+         c0_ddr4_dq       : inout slv(DDR_WIDTH_C-1 downto 0);
+         c0_ddr4_dqs_c    : inout slv((DDR_WIDTH_C/8)-1 downto 0);
+         c0_ddr4_dqs_t    : inout slv((DDR_WIDTH_C/8)-1 downto 0);
          c0_ddr4_adr      : in    slv(16 downto 0);
          c0_ddr4_ba       : in    slv(1 downto 0);
          c0_ddr4_bg       : in    slv(0 to 0);
@@ -59,7 +53,7 @@ architecture testbed of DdrMemTb is
          c0_ddr4_ck_c     : in    slv(0 to 0);
          c0_ddr4_cke      : in    slv(0 to 0);
          c0_ddr4_cs_n     : in    slv(0 to 0);
-         c0_ddr4_dm_dbi_n : inout slv(7 downto 0);
+         c0_ddr4_dm_dbi_n : inout slv((DDR_WIDTH_C/8)-1 downto 0);
          c0_ddr4_odt      : in    slv(0 to 0));
    end component;
 
@@ -74,20 +68,20 @@ architecture testbed of DdrMemTb is
    signal ddrClkP : sl := '0';
    signal ddrClkN : sl := '0';
 
-   signal c0_ddr4_dq       : slv(63 downto 0) := (others => '0');
-   signal c0_ddr4_dqs_c    : slv(7 downto 0)  := (others => '0');
-   signal c0_ddr4_dqs_t    : slv(7 downto 0)  := (others => '0');
-   signal c0_ddr4_adr      : slv(16 downto 0) := (others => '0');
-   signal c0_ddr4_ba       : slv(1 downto 0)  := (others => '0');
-   signal c0_ddr4_bg       : slv(0 to 0)      := (others => '0');
-   signal c0_ddr4_reset_n  : sl               := '0';
-   signal c0_ddr4_act_n    : sl               := '0';
-   signal c0_ddr4_ck_t     : slv(0 to 0)      := (others => '0');
-   signal c0_ddr4_ck_c     : slv(0 to 0)      := (others => '0');
-   signal c0_ddr4_cke      : slv(0 to 0)      := (others => '0');
-   signal c0_ddr4_cs_n     : slv(0 to 0)      := (others => '0');
-   signal c0_ddr4_dm_dbi_n : slv(7 downto 0)  := (others => '0');
-   signal c0_ddr4_odt      : slv(0 to 0)      := (others => '0');
+   signal c0_ddr4_dq       : slv(DDR_WIDTH_C-1 downto 0)     := (others => '0');
+   signal c0_ddr4_dqs_c    : slv((DDR_WIDTH_C/8)-1 downto 0) := (others => '0');
+   signal c0_ddr4_dqs_t    : slv((DDR_WIDTH_C/8)-1 downto 0) := (others => '0');
+   signal c0_ddr4_adr      : slv(16 downto 0)                := (others => '0');
+   signal c0_ddr4_ba       : slv(1 downto 0)                 := (others => '0');
+   signal c0_ddr4_bg       : slv(0 to 0)                     := (others => '0');
+   signal c0_ddr4_reset_n  : sl                              := '0';
+   signal c0_ddr4_act_n    : sl                              := '0';
+   signal c0_ddr4_ck_t     : slv(0 to 0)                     := (others => '0');
+   signal c0_ddr4_ck_c     : slv(0 to 0)                     := (others => '0');
+   signal c0_ddr4_cke      : slv(0 to 0)                     := (others => '0');
+   signal c0_ddr4_cs_n     : slv(0 to 0)                     := (others => '0');
+   signal c0_ddr4_dm_dbi_n : slv((DDR_WIDTH_C/8)-1 downto 0) := (others => '0');
+   signal c0_ddr4_odt      : slv(0 to 0)                     := (others => '0');
 
    signal axiClk         : sl := '0';
    signal axiRst         : sl := '0';
@@ -121,8 +115,8 @@ begin
       generic map (
          TPD_G        => TPD_C,
          START_ADDR_G => START_ADDR_C,
-         STOP_ADDR_G  => ite(SIM_SPEEDUP_C, toSlv(32*4096, AXI_CONFIG_C.ADDR_WIDTH_C), STOP_ADDR_C),
-         AXI_CONFIG_G => AXI_CONFIG_C)
+         STOP_ADDR_G  => ite(SIM_SPEEDUP_C, toSlv(32*4096, DDR_AXI_CONFIG_C.ADDR_WIDTH_C), STOP_ADDR_C),
+         AXI_CONFIG_G => DDR_AXI_CONFIG_C)
       port map (
          -- AXI-Lite Interface
          axilClk         => axiClk,
@@ -179,6 +173,8 @@ begin
          calibComplete    => ddrCalDone);
 
    U_ddr4 : Ddr4ModelWrapper
+      generic map (
+         DDR_WIDTH_G => DDR_WIDTH_C)
       port map (
          c0_ddr4_adr      => c0_ddr4_adr,
          c0_ddr4_ba       => c0_ddr4_ba,

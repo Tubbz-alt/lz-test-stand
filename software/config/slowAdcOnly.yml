@@ -90,13 +90,13 @@ lztsBoard:
       Convert: '0x0'
     SadcBufferWriter[:]:
       enable: 'True'
-      Enable: 'False'
+      Enable: 'True'
       IntPreThreshold: '0x0'
       IntPostThreshold: '0x0'
       IntVetoThreshold: '0x0'
       IntPreDelay: '0x0'
       IntPostDelay: '0x0'
-      ExtTrigSize: '0x4000'
+      ExtTrigSize: '0x1000'
     SadcBufferReader:
       enable: 'False'
     SadcPatternTester:

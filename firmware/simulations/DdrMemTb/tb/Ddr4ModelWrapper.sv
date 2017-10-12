@@ -79,27 +79,27 @@ inout in1;
 endmodule
 `endif
 
-module Ddr4ModelWrapper(  
-   inout    [63:0] c0_ddr4_dq,
-   inout    [7:0]  c0_ddr4_dqs_c,
-   inout    [7:0]  c0_ddr4_dqs_t,
-   input    [16:0] c0_ddr4_adr,
-   input    [1:0]  c0_ddr4_ba,
-   input    [0:0]  c0_ddr4_bg,
-   input          c0_ddr4_reset_n,
-   input          c0_ddr4_act_n,
-   input    [0:0]  c0_ddr4_ck_t,
-   input    [0:0]  c0_ddr4_ck_c,
-   input    [0:0]  c0_ddr4_cke,
-   input    [0:0]  c0_ddr4_cs_n,
-   inout    [7:0]  c0_ddr4_dm_dbi_n,
-   input    [0:0]  c0_ddr4_odt
+module Ddr4ModelWrapper #(parameter DDR_WIDTH_G=64) (  
+   inout    [DDR_WIDTH_G-1:0]     c0_ddr4_dq,
+   inout    [(DDR_WIDTH_G/8)-1:0] c0_ddr4_dqs_c,
+   inout    [(DDR_WIDTH_G/8)-1:0] c0_ddr4_dqs_t,
+   input    [16:0]                c0_ddr4_adr,
+   input    [1:0]                 c0_ddr4_ba,
+   input    [0:0]                 c0_ddr4_bg,
+   input                          c0_ddr4_reset_n,
+   input                          c0_ddr4_act_n,
+   input    [0:0]                 c0_ddr4_ck_t,
+   input    [0:0]                 c0_ddr4_ck_c,
+   input    [0:0]                 c0_ddr4_cke,
+   input    [0:0]                 c0_ddr4_cs_n,
+   inout    [(DDR_WIDTH_G/8)-1:0] c0_ddr4_dm_dbi_n,
+   input    [0:0]                 c0_ddr4_odt
 );
 
   localparam ADDR_WIDTH                    = 17;
-  localparam DQ_WIDTH                      = 64;
-  localparam DQS_WIDTH                     = 8;
-  localparam DM_WIDTH                      = 8;
+  localparam DQ_WIDTH                      = DDR_WIDTH_G;
+  localparam DQS_WIDTH                     = (DDR_WIDTH_G/8);
+  localparam DM_WIDTH                      = (DDR_WIDTH_G/8);
   localparam DRAM_WIDTH                    = 16;
   localparam tCK                           = 1000 ; //DDR4 interface clock period in ps
   localparam real SYSCLK_PERIOD            = tCK; 

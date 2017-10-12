@@ -80,9 +80,9 @@ endmodule
 `endif
 
 module Ddr4ModelWrapper(  
-   inout    [63:0] c0_ddr4_dq,
-   inout    [7:0]  c0_ddr4_dqs_c,
-   inout    [7:0]  c0_ddr4_dqs_t,
+   inout    [31:0] c0_ddr4_dq,
+   inout    [3:0]  c0_ddr4_dqs_c,
+   inout    [3:0]  c0_ddr4_dqs_t,
    input    [16:0] c0_ddr4_adr,
    input    [1:0]  c0_ddr4_ba,
    input    [0:0]  c0_ddr4_bg,
@@ -92,14 +92,14 @@ module Ddr4ModelWrapper(
    input    [0:0]  c0_ddr4_ck_c,
    input    [0:0]  c0_ddr4_cke,
    input    [0:0]  c0_ddr4_cs_n,
-   inout    [7:0]  c0_ddr4_dm_dbi_n,
+   inout    [3:0]  c0_ddr4_dm_dbi_n,
    input    [0:0]  c0_ddr4_odt
 );
 
   localparam ADDR_WIDTH                    = 17;
-  localparam DQ_WIDTH                      = 64;
-  localparam DQS_WIDTH                     = 8;
-  localparam DM_WIDTH                      = 8;
+  localparam DQ_WIDTH                      = 32;
+  localparam DQS_WIDTH                     = 4;
+  localparam DM_WIDTH                      = 4;
   localparam DRAM_WIDTH                    = 16;
   localparam tCK                           = 1000 ; //DDR4 interface clock period in ps
   localparam real SYSCLK_PERIOD            = tCK; 

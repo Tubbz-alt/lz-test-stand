@@ -2,7 +2,7 @@
 -- File       : FastAdcPhy.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-02-04
--- Last update: 2017-10-09
+-- Last update: 2017-10-13
 -------------------------------------------------------------------------------
 -- Description: LZ FastAdcPhy Top Level
 -------------------------------------------------------------------------------
@@ -66,6 +66,8 @@ entity FastAdcPhy is
       adcRst          : in    sl;
       adcValid        : out   slv(7 downto 0);
       adcData         : out   Slv64Array(7 downto 0);
+      swTrigger       : in    sl;
+      swArmTrig       : in    sl;
       -- AXI-Lite Interface (axilClk domain)
       axilClk         : in    sl;
       axilRst         : in    sl;
@@ -77,16 +79,20 @@ end FastAdcPhy;
 
 architecture rtl of FastAdcPhy is
 
-   constant NUM_AXI_MASTERS_C : natural := 7;
+   constant NUM_AXI_MASTERS_C : natural := 8;
 
-   constant JESD_INDEX_C    : natural          := 0;
-   constant LMK_INDEX_C     : natural          := 1;
-   constant SPI0_INDEX_C    : natural          := 2;
-   constant SPI1_INDEX_C    : natural          := 3;
-   constant SPI2_INDEX_C    : natural          := 4;
-   constant SPI3_INDEX_C    : natural          := 5;
+   constant JESD_INDEX_C : natural := 0;
+   constant LMK_INDEX_C  : natural := 1;
+   constant SPI0_INDEX_C : natural := 2;
+   constant SPI1_INDEX_C : natural := 3;
+   constant SPI2_INDEX_C : natural := 4;
+   constant SPI3_INDEX_C : natural := 5;
+
    constant GTH_INDEX_C     : natural          := 6;
    constant GTH_BASE_ADDR_C : slv(31 downto 0) := (AXI_BASE_ADDR_G+x"0060_0000");
+
+   constant DBG_INDEX_C     : natural          := 7;
+   constant DBG_BASE_ADDR_C : slv(31 downto 0) := (AXI_BASE_ADDR_G+x"0070_0000");
 
    constant AXI_CONFIG_C   : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, AXI_BASE_ADDR_G, 24, 20);
    signal axilWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
@@ -99,6 +105,12 @@ architecture rtl of FastAdcPhy is
    signal gthWriteSlaves  : AxiLiteWriteSlaveArray(JESD_LANE_C-1 downto 0);
    signal gthReadMasters  : AxiLiteReadMasterArray(JESD_LANE_C-1 downto 0);
    signal gthReadSlaves   : AxiLiteReadSlaveArray(JESD_LANE_C-1 downto 0);
+
+   constant DBG_CONFIG_C  : AxiLiteCrossbarMasterConfigArray(JESD_LANE_C-1 downto 0) := genAxiLiteConfig(JESD_LANE_C, DBG_BASE_ADDR_C, 20, 16);
+   signal dbgWriteMasters : AxiLiteWriteMasterArray(JESD_LANE_C-1 downto 0);
+   signal dbgWriteSlaves  : AxiLiteWriteSlaveArray(JESD_LANE_C-1 downto 0);
+   signal dbgReadMasters  : AxiLiteReadMasterArray(JESD_LANE_C-1 downto 0);
+   signal dbgReadSlaves   : AxiLiteReadSlaveArray(JESD_LANE_C-1 downto 0);
 
    signal drpClk  : slv(JESD_LANE_C-1 downto 0)    := (others => '0');
    signal drpRdy  : slv(JESD_LANE_C-1 downto 0)    := (others => '0');
@@ -126,6 +138,8 @@ architecture rtl of FastAdcPhy is
    signal spiBusy    : sl;
    signal spiBusyVec : slv(3 downto 0);
 
+   signal bufferEnable : sl := '0';
+
 begin
 
    adcRstL <= not(adcRst);
@@ -141,6 +155,11 @@ begin
             adcValid(i) <= rawAdcValids(2*i+1) and rawAdcValids(2*i+0) after TPD_G;
             adcData(i)  <= rawAdcValues(2*i+1) & rawAdcValues(2*i+0)   after TPD_G;
          end loop;
+         if (swArmTrig = '1') then
+            bufferEnable <= '1' after TPD_G;
+         elsif (swTrigger = '1') then
+            bufferEnable <= '0' after TPD_G;
+         end if;
       end if;
    end process;
 
@@ -395,5 +414,55 @@ begin
             drpDo           => drpDo((i*16)+15 downto (i*16)));
 
    end generate GEN_GTH_DRP;
+
+
+   --------------------
+   -- Debug ADC Modules
+   --------------------
+   U_DBG_XBAR : entity work.AxiLiteCrossbar
+      generic map (
+         TPD_G              => TPD_G,
+         DEC_ERROR_RESP_G   => AXI_ERROR_RESP_G,
+         NUM_SLAVE_SLOTS_G  => 1,
+         NUM_MASTER_SLOTS_G => JESD_LANE_C,
+         MASTERS_CONFIG_G   => DBG_CONFIG_C)
+      port map (
+         axiClk              => axilClk,
+         axiClkRst           => axilRst,
+         sAxiWriteMasters(0) => axilWriteMasters(DBG_INDEX_C),
+         sAxiWriteSlaves(0)  => axilWriteSlaves(DBG_INDEX_C),
+         sAxiReadMasters(0)  => axilReadMasters(DBG_INDEX_C),
+         sAxiReadSlaves(0)   => axilReadSlaves(DBG_INDEX_C),
+         mAxiWriteMasters    => dbgWriteMasters,
+         mAxiWriteSlaves     => dbgWriteSlaves,
+         mAxiReadMasters     => dbgReadMasters,
+         mAxiReadSlaves      => dbgReadSlaves);
+
+   GEN_ADC_DEBUG :
+   for i in (JESD_LANE_C-1) downto 0 generate
+      RING_BUFFER : entity work.AxiLiteRingBuffer
+         generic map (
+            TPD_G            => TPD_G,
+            BRAM_EN_G        => true,
+            REG_EN_G         => true,
+            DATA_WIDTH_G     => 32,
+            RAM_ADDR_WIDTH_G => 10,
+            AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+         port map (
+            -- Data to store in ring buffer
+            dataClk         => adcClk,
+            dataRst         => adcRst,
+            dataValid       => rawAdcValids(i),
+            dataValue       => rawAdcValues(i),
+            bufferEnable    => bufferEnable,
+            bufferClear     => swArmTrig,
+            -- AXI-Lite interface for readout
+            axilClk         => axilClk,
+            axilRst         => axilRst,
+            axilReadMaster  => dbgReadMasters(i),
+            axilReadSlave   => dbgReadSlaves(i),
+            axilWriteMaster => dbgWriteMasters(i),
+            axilWriteSlave  => dbgWriteSlaves(i));
+   end generate GEN_ADC_DEBUG;
 
 end rtl;

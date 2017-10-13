@@ -2,7 +2,7 @@
 -- File       : FastAdcBuffer.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-10-04
--- Last update: 2017-10-09
+-- Last update: 2017-10-13
 -------------------------------------------------------------------------------
 -- Description: 
 -------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ entity FastAdcBuffer is
       axisRst         : in  sl;
       axisMaster      : out AxiStreamMasterType;
       axisSlave       : in  AxiStreamSlaveType
-   );
+      );
 end FastAdcBuffer;
 
 architecture mapping of FastAdcBuffer is
@@ -63,12 +63,12 @@ architecture mapping of FastAdcBuffer is
    signal axilWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
    signal axilReadMasters  : AxiLiteReadMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
    signal axilReadSlaves   : AxiLiteReadSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
-   
-   signal axisMasters      : AxiStreamMasterArray(7 downto 0);
-   signal axisSlaves       : AxiStreamSlaveArray(7 downto 0);
+
+   signal axisMasters : AxiStreamMasterArray(7 downto 0);
+   signal axisSlaves  : AxiStreamSlaveArray(7 downto 0);
 
 begin
-   
+
    ---------------------
    -- AXI-Lite Crossbar
    ---------------------
@@ -90,53 +90,51 @@ begin
          mAxiWriteSlaves     => axilWriteSlaves,
          mAxiReadMasters     => axilReadMasters,
          mAxiReadSlaves      => axilReadSlaves);
-   
+
    ---------------------
    -- Fast ADC buffers
    ---------------------
    GEN_VEC : for i in 7 downto 0 generate
-      U_FastAdcChannel: entity work.FastAdcBufferChannel
-      generic map (
-         TPD_G       => TPD_G,
-         CHANNEL_G   => toSlv(i, 8)
-      )
-      port map (
-         -- ADC Clock Domain
-         adcClk            => adcClk,
-         adcRst            => adcRst,
-         adcData           => adcData(i),
-         adcValid          => adcValid(i),
-         gTime             => gTime,
-         extTrigger        => extTrigger,
-         -- AXI-Lite Interface for local registers 
-         axilClk           => axilClk,
-         axilRst           => axilRst,
-         axilReadMaster    => axilReadMasters(i),
-         axilReadSlave     => axilReadSlaves(i),
-         axilWriteMaster   => axilWriteMasters(i),
-         axilWriteSlave    => axilWriteSlaves(i),
-         -- AxiStream output
-         axisClk           => axisClk,
-         axisRst           => axisRst,
-         axisMaster        => axisMasters(i),
-         axisSlave         => axisSlaves(i)
-      );
+      U_FastAdcChannel : entity work.FastAdcBufferChannel
+         generic map (
+            TPD_G     => TPD_G,
+            CHANNEL_G => toSlv(i, 8))
+         port map (
+            -- ADC Clock Domain
+            adcClk          => adcClk,
+            adcRst          => adcRst,
+            adcData         => adcData(i),
+            adcValid        => adcValid(i),
+            gTime           => gTime,
+            extTrigger      => extTrigger,
+            -- AXI-Lite Interface for local registers 
+            axilClk         => axilClk,
+            axilRst         => axilRst,
+            axilReadMaster  => axilReadMasters(i),
+            axilReadSlave   => axilReadSlaves(i),
+            axilWriteMaster => axilWriteMasters(i),
+            axilWriteSlave  => axilWriteSlaves(i),
+            -- AxiStream output
+            axisClk         => axisClk,
+            axisRst         => axisRst,
+            axisMaster      => axisMasters(i),
+            axisSlave       => axisSlaves(i));
    end generate GEN_VEC;
-   
+
    ---------------------
    -- Fast ADC stream mux
    ---------------------
    U_AxiStreamMux : entity work.AxiStreamMux
-   generic map(
-      NUM_SLAVES_G   => 8
-   )
-   port map(
-      axisClk        => axisClk,
-      axisRst        => axisRst,
-      sAxisMasters   => axisMasters,
-      sAxisSlaves    => axisSlaves,
-      mAxisMaster    => axisMaster,
-      mAxisSlave     => axisSlave
-   );
+      generic map(
+         TPD_G         => TPD_G,
+         NUM_SLAVES_G  => 8,
+         PIPE_STAGES_G => 1)
+      port map(
+         axisClk      => axisClk,
+         axisRst      => axisRst,
+         sAxisMasters => axisMasters,
+         sAxisSlaves  => axisSlaves,
+         mAxisMaster  => axisMaster,
+         mAxisSlave   => axisSlave);
 
 end mapping;

@@ -2,7 +2,7 @@
 -- File       : PgpVcMapping.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2015-01-30
--- Last update: 2017-04-26
+-- Last update: 2017-10-13
 -------------------------------------------------------------------------------
 -- Description: 
 -------------------------------------------------------------------------------
@@ -51,8 +51,9 @@ entity PgpVcMapping is
       -- Software trigger interface
       swClk           : in  sl;
       swRst           : in  sl;
-      swTrigOut       : out sl
-   );
+      swTrigOut       : out sl;
+      swArmOut        : out sl
+      );
 end PgpVcMapping;
 
 architecture mapping of PgpVcMapping is
@@ -65,9 +66,9 @@ architecture mapping of PgpVcMapping is
       TKEEP_MODE_C  => TKEEP_NORMAL_C,
       TUSER_BITS_C  => 4,
       TUSER_MODE_C  => TUSER_LAST_C);
-   
-   signal ssiCmd  : SsiCmdMasterType;
-   
+
+   signal ssiCmd : SsiCmdMasterType;
+
 begin
 
    -- VC0 RX/TX, SRPv3 Register Module    
@@ -126,12 +127,12 @@ begin
          mAxisRst    => rst,
          mAxisMaster => txMasters(1),
          mAxisSlave  => txSlaves(1));
-   
-   
+
+
    -- VC1 RX, Command processor
    U_VC1_RX : entity work.SsiCmdMaster
       generic map (
-         AXI_STREAM_CONFIG_G => SSI_PGP2B_CONFIG_C)   
+         AXI_STREAM_CONFIG_G => SSI_PGP2B_CONFIG_C)
       port map (
          -- Streaming Data Interface
          axisClk     => clk,
@@ -143,15 +144,15 @@ begin
          cmdClk      => swClk,
          cmdRst      => swRst,
          cmdMaster   => ssiCmd
-      );     
+         );
    -- Command opCode x00 - SW trigger
    U_TrigPulser : entity work.SsiCmdMasterPulser
       generic map (
+         TPD_G          => TPD_G,
          OUT_POLARITY_G => '1',
-         PULSE_WIDTH_G  => 1
-      )
+         PULSE_WIDTH_G  => 1)
       port map (
-          -- Local command signal
+         -- Local command signal
          cmdSlaveOut => ssiCmd,
          --addressed cmdOpCode
          opCode      => x"00",
@@ -159,9 +160,24 @@ begin
          syncPulse   => swTrigOut,
          -- Local clock and reset
          locClk      => swClk,
-         locRst      => swRst              
-      );
-   
+         locRst      => swRst);
+
+   U_ArmPulser : entity work.SsiCmdMasterPulser
+      generic map (
+         TPD_G          => TPD_G,
+         OUT_POLARITY_G => '1',
+         PULSE_WIDTH_G  => 1)
+      port map (
+         -- Local command signal
+         cmdSlaveOut => ssiCmd,
+         --addressed cmdOpCode
+         opCode      => x"01",
+         -- output pulse to sync module
+         syncPulse   => swArmOut,
+         -- Local clock and reset
+         locClk      => swClk,
+         locRst      => swRst);
+
    -- VC2 TX, MB
    rxCtrl(2) <= AXI_STREAM_CTRL_UNUSED_C;
    U_VC2 : entity work.AxiStreamFifo

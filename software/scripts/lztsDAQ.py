@@ -149,6 +149,7 @@ class LztsBoard(pyrogue.Root):
 
         @self.command()
         def Trigger():
+            cmd.sendCmd(1, 0)
             cmd.sendCmd(0, 0)
         
         self.add(MyRunControl('runControl'))

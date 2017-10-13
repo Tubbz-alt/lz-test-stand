@@ -56,15 +56,6 @@ architecture testbed of DdrBufferTb is
    
    constant PGP_VC_C      : slv(3 downto 0) := "0001";
 
-   constant AXI_CONFIG_C : AxiConfigType := (
-      ADDR_WIDTH_C => 31,
-      DATA_BYTES_C => 64,
-      ID_BITS_C    => 4,
-      LEN_BITS_C   => 8);
-
-   constant START_ADDR_C : slv(AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '0');
-   constant STOP_ADDR_C  : slv(AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
-
    component Ddr4ModelWrapper
       generic (
          DDR_WIDTH_G : integer);
@@ -664,8 +655,8 @@ begin
       generic map (
          TPD_G        => TPD_C,
          START_ADDR_G => START_ADDR_C,
-         STOP_ADDR_G  => ite(SIM_SPEEDUP_C, toSlv(1*4096, AXI_CONFIG_C.ADDR_WIDTH_C), STOP_ADDR_C),
-         AXI_CONFIG_G => AXI_CONFIG_C)
+         STOP_ADDR_G  => ite(SIM_SPEEDUP_C, toSlv(32*4096, DDR_AXI_CONFIG_C.ADDR_WIDTH_C), STOP_ADDR_C),
+         AXI_CONFIG_G => DDR_AXI_CONFIG_C)
       port map (
          -- AXI-Lite Interface
          axilClk         => axiClk,
@@ -680,6 +671,10 @@ begin
          axiClk          => axiClk,
          axiRst          => axiRst,
          start           => ddrCalDone,
+         --axiWriteMaster  => axiWriteMaster,
+         --axiWriteSlave   => axiWriteSlave,
+         --axiReadMaster   => axiReadMaster,
+         --axiReadSlave    => axiReadSlave);
          axiWriteMaster  => axiBistWriteMaster,
          axiWriteSlave   => axiBistWriteSlave,
          axiReadMaster   => axiBistReadMaster,

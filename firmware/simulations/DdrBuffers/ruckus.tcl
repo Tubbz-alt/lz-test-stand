@@ -18,6 +18,9 @@ loadSource -sim_only -dir "$::DIR_PATH/../DdrMemTb/tb/"
 remove_files [get_files {MigCore.dcp}]
 loadIpCore -path "$::env(TOP_DIR)/common/ip/MigCore/MigCore.xci"
 
+remove_files [get_files {AxiInterconnect.dcp}]
+loadIpCore -path "$::env(TOP_DIR)/common/ip/AxiInterconnnect/AxiInterconnect.xci"
+
 # Set the top level synth_1 and sim_1
 set_property top {MigCoreWrapper} [get_filesets sources_1]
 set_property top {DdrBufferTb} [get_filesets sim_1]

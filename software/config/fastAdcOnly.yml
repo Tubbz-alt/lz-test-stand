@@ -186,8 +186,8 @@ lztsBoard:
         ###################        
         DECFIL_EN: 0x0      # 0 = Normal operation, full rate output
         NYQUIST_ZONE: 0x0   # 000 = 1st Nyquist zone (0 MHz to 500 MHz)
-        FORMAT_SEL: 0x0     # 0 = Twos complement
-        FORMAT_EN: 0x0      # 0 = Default, output is in twos complement format
+        FORMAT_SEL: 0x1     # 0 = Twos complement
+        FORMAT_EN: 0x1      # 0 = Default, output is in twos complement format
         DEC_MOD_EN: 0x0     # 0 = Decimation modes control is disabled
         CTRL_NYQUIST: 0x0   # 0 = Selection disabled
         DIG_GAIN_EN: 0x0    # 0 = Digital gain disabled
@@ -212,7 +212,7 @@ lztsBoard:
         FORCE_LMFC_COUNT: 0x0     # 0 = Normal operation
         LMFC_COUNT_INIT: 0x0      # 0 = Default
         RELEASE_ILANE_SEQ: 0x0    # 0 = Default
-        SCRAMBLE_EN: 0x1    # 1 = Scrambling enabled
+        SCRAMBLE_EN: 0x0    # 1 = Scrambling enabled
         FRAMES_PER_MULTI_FRAME: 0xF
         SUBCLASS: 0x1       # 001 = Subclass 1 deterministic latency using the SYSREF signal
         LANE_SHARE: 0x0     # 0 = Normal operation (each channel uses one lane)
@@ -232,10 +232,14 @@ lztsBoard:
       Polarity: 0x0
       InvertAdcData: 0x00
       LinkErrMask: 0x1F
-      ScrambleEnable: 0x1 # 1 = Scrambling enabled
+      ScrambleEnable: 0x0 # 1 = Scrambling enabled
       ResetGTs: 0x0
       ClearErrors: 0x0
       InvertSync: 0x0
       ReplaceEnable: 0x1
       SubClass: 0x1       # Subclass 1 deterministic latency using the SYSREF signal
       SysrefDelay: 0x0
+    FadcBufferChannel[:]:
+      enable: 'True'
+      Enable: 'True'
+      ExtTrigSize: '0x1000'

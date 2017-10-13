@@ -193,7 +193,10 @@ class Window(QtGui.QMainWindow, QObject):
         # converts bytes to array of dwords
         chData = [bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray()]
         for i in range(0, 16):
-            chData[i] = np.frombuffer(self.eventReaderData.channelDataArray[i], dtype='uint16')
+            if (i<8):
+                chData[i] = np.frombuffer(self.eventReaderData.channelDataArray[i], dtype='uint16')
+            else:
+                chData[i] = np.frombuffer(self.eventReaderData.channelDataArray[i], dtype='int16')
             
             # currently header is 12 x 16 bit words (will be more)
             # read header information
@@ -347,7 +350,7 @@ class EventReader(rogue.interfaces.stream.Slave):
                 # sort fast ADC channnels
                 elif ((p[7] & 0x10)>>4 == 0):
                     if (PRINT_VERBOSE): print('Fast ADC channnel: ', (p[4] & 0xFF))
-                    self.channelDataArray[7+(p[4] & 0xFF)][:] = p
+                    self.channelDataArray[8+(p[4] & 0xFF)][:] = p
                 # Emit the signal.
                 self.parent.dataTrigger.emit()
 
@@ -401,7 +404,10 @@ class MplCanvas(FigureCanvas):
             N = len(chData[i])
             if (N > 0 and enabled[i] == True):
                 # sample spacing
-                T = 1.0 / 250000000.0
+                if (i<8):
+                    T = 1.0 / 250000000.0
+                else:
+                    T = 1.0 / 1000000000.0
                 #yf = np.fft.rfft(chData[i]*np.hanning(N))
                 yf = np.fft.rfft(chData[i])
                 #print(np.hanning(N))

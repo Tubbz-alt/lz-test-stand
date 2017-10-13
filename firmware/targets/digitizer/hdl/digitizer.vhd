@@ -140,6 +140,8 @@ architecture top_level of digitizer is
    signal mbTxSlave    : AxiStreamSlaveType;
    signal dataTxMaster : AxiStreamMasterType;
    signal dataTxSlave  : AxiStreamSlaveType;
+   signal axisMasters  : AxiStreamMasterArray(1 downto 0);
+   signal axisSlaves   : AxiStreamSlaveArray(1 downto 0);
 
    signal sAdcData           : Slv16Array(7 downto 0);
    signal axiAdcWriteMasters : AxiWriteMasterArray(7 downto 0);
@@ -367,8 +369,8 @@ begin
          -- AxiStream output (axisClk domain)
          axisClk         => axilClk,
          axisRst         => axilRst,
-         axisMaster      => dataTxMaster,
-         axisSlave       => dataTxSlave,
+         axisMaster      => axisMasters(0),
+         axisSlave       => axisSlaves(0),
          -- AXI-Lite Interface (axilClk domain)
          axilClk         => axilClk,
          axilRst         => axilRst,
@@ -447,6 +449,27 @@ begin
          axilReadMaster  => axilReadMasters(FADC_BUFFER_INDEX_C),
          axilReadSlave   => axilReadSlaves(FADC_BUFFER_INDEX_C),
          axilWriteMaster => axilWriteMasters(FADC_BUFFER_INDEX_C),
-         axilWriteSlave  => axilWriteSlaves(FADC_BUFFER_INDEX_C));
+         axilWriteSlave  => axilWriteSlaves(FADC_BUFFER_INDEX_C),
+         axisClk         => axilClk,
+         axisRst         => axilRst,
+         axisMaster      => axisMasters(1),
+         axisSlave       => axisSlaves(1)
+      );
+   
+   ------------------------
+   -- 1000 MSPS and 250 MSPS data stream mux
+   ------------------------
+   U_AxiStreamMux : entity work.AxiStreamMux
+      generic map(
+         NUM_SLAVES_G   => 2
+      )
+      port map(
+         axisClk        => axilClk,
+         axisRst        => axilRst,
+         sAxisMasters   => axisMasters,
+         sAxisSlaves    => axisSlaves,
+         mAxisMaster    => dataTxMaster,
+         mAxisSlave     => dataTxSlave
+      );
 
 end top_level;

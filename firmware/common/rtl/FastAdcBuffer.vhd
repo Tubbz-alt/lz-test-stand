@@ -44,23 +44,99 @@ entity FastAdcBuffer is
       axilReadMaster  : in  AxiLiteReadMasterType;
       axilReadSlave   : out AxiLiteReadSlaveType;
       axilWriteMaster : in  AxiLiteWriteMasterType;
-      axilWriteSlave  : out AxiLiteWriteSlaveType);
+      axilWriteSlave  : out AxiLiteWriteSlaveType;
+      -- AxiStream output (axisClk domain)
+      axisClk         : in  sl;
+      axisRst         : in  sl;
+      axisMaster      : out AxiStreamMasterType;
+      axisSlave       : in  AxiStreamSlaveType
+   );
 end FastAdcBuffer;
 
 architecture mapping of FastAdcBuffer is
 
-begin
+   constant NUM_AXI_MASTERS_C : natural := 8;
 
-   U_AxiLiteEmpty : entity work.AxiLiteEmpty
+   constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, AXI_BASE_ADDR_G, 24, 20);
+
+   signal axilWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
+   signal axilWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
+   signal axilReadMasters  : AxiLiteReadMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
+   signal axilReadSlaves   : AxiLiteReadSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
+   
+   signal axisMasters      : AxiStreamMasterArray(7 downto 0);
+   signal axisSlaves       : AxiStreamSlaveArray(7 downto 0);
+
+begin
+   
+   ---------------------
+   -- AXI-Lite Crossbar
+   ---------------------
+   U_XBAR : entity work.AxiLiteCrossbar
       generic map (
-         TPD_G            => TPD_G,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+         TPD_G              => TPD_G,
+         DEC_ERROR_RESP_G   => AXI_ERROR_RESP_G,
+         NUM_SLAVE_SLOTS_G  => 1,
+         NUM_MASTER_SLOTS_G => NUM_AXI_MASTERS_C,
+         MASTERS_CONFIG_G   => AXI_CONFIG_C)
       port map (
-         axiClk         => axilClk,
-         axiClkRst      => axilRst,
-         axiReadMaster  => axilReadMaster,
-         axiReadSlave   => axilReadSlave,
-         axiWriteMaster => axilWriteMaster,
-         axiWriteSlave  => axilWriteSlave);
+         axiClk              => axilClk,
+         axiClkRst           => axilRst,
+         sAxiWriteMasters(0) => axilWriteMaster,
+         sAxiWriteSlaves(0)  => axilWriteSlave,
+         sAxiReadMasters(0)  => axilReadMaster,
+         sAxiReadSlaves(0)   => axilReadSlave,
+         mAxiWriteMasters    => axilWriteMasters,
+         mAxiWriteSlaves     => axilWriteSlaves,
+         mAxiReadMasters     => axilReadMasters,
+         mAxiReadSlaves      => axilReadSlaves);
+   
+   ---------------------
+   -- Fast ADC buffers
+   ---------------------
+   GEN_VEC : for i in 7 downto 0 generate
+      U_FastAdcChannel: entity work.FastAdcBufferChannel
+      generic map (
+         TPD_G       => TPD_G,
+         CHANNEL_G   => toSlv(i, 8)
+      )
+      port map (
+         -- ADC Clock Domain
+         adcClk            => adcClk,
+         adcRst            => adcRst,
+         adcData           => adcData(i),
+         adcValid          => adcValid(i),
+         gTime             => gTime,
+         extTrigger        => extTrigger,
+         -- AXI-Lite Interface for local registers 
+         axilClk           => axilClk,
+         axilRst           => axilRst,
+         axilReadMaster    => axilReadMasters(i),
+         axilReadSlave     => axilReadSlaves(i),
+         axilWriteMaster   => axilWriteMasters(i),
+         axilWriteSlave    => axilWriteSlaves(i),
+         -- AxiStream output
+         axisClk           => axisClk,
+         axisRst           => axisRst,
+         axisMaster        => axisMasters(i),
+         axisSlave         => axisSlaves(i)
+      );
+   end generate GEN_VEC;
+   
+   ---------------------
+   -- Fast ADC stream mux
+   ---------------------
+   U_AxiStreamMux : entity work.AxiStreamMux
+   generic map(
+      NUM_SLAVES_G   => 8
+   )
+   port map(
+      axisClk        => axisClk,
+      axisRst        => axisRst,
+      sAxisMasters   => axisMasters,
+      sAxisSlaves    => axisSlaves,
+      mAxisMaster    => axisMaster,
+      mAxisSlave     => axisSlave
+   );
 
 end mapping;

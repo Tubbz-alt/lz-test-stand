@@ -92,6 +92,20 @@ class Lzts(pr.Device):
                 expand    = False, 
                 hidden    = True,
             ))
+            
+        for i in range(16):
+            self.addRemoteVariables(   
+                name      = ('FastAdcDebug[%d]'%i),
+                offset    = (0x05700000 + i*0x100000),
+                bitSize   = 32,
+                bitOffset = 0,
+                base      = pr.UInt,
+                mode      = "RO",
+                number    = 32, #should be 1024 but large number will be GUI slow
+                stride    = 4,
+                hidden    = False,
+            )
+            
         for i in range(8):
             self.add(FadcBufferChannel(
                 name    = ('FadcBufferChannel[%d]'%i),
@@ -102,7 +116,6 @@ class Lzts(pr.Device):
             ))    
         self.sadcDelays = [192,190,169,180,175,174,174,202,192,174,186,182,187,177,170,193,83,86,83,80,83,81,87,90,81,79,80,78,77,81,81,76,86,93,86,89,88,84,79,87,75,81,77,71,82,82,81,73,78,85,78,79,78,80,80,86,82,79,75,81,82,86,91,88]
         self.delayRegs = self.find(name="DelayAdc*")        
-
         
         @self.command(description="Initialization for slow ADC idelayes",)
         def SadcInit():

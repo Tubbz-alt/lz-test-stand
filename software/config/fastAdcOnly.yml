@@ -196,7 +196,7 @@ lztsBoard:
         ###################
         # JESD DIGITAL PAGE
         ###################
-        CTRL_K: 0x0         # 1 = Frames per multi frame can be set in FRAMES_PER_MULTI_FRAME
+        CTRL_K: 0x1         # 1 = Frames per multi frame can be set in FRAMES_PER_MULTI_FRAME
         TESTMODE_EN: 0x0    # 0 = Test mode disabled
         FLIP_ADC_DATA: 0x0  # 0 = Normal operation
         LANE_ALIGN: 0x0     # 0 = Normal operation
@@ -213,7 +213,7 @@ lztsBoard:
         LMFC_COUNT_INIT: 0x0      # 0 = Default
         RELEASE_ILANE_SEQ: 0x0    # 0 = Default
         SCRAMBLE_EN: 0x0    # 1 = Scrambling enabled
-        FRAMES_PER_MULTI_FRAME: 0xF
+        FRAMES_PER_MULTI_FRAME: 0x7
         SUBCLASS: 0x1       # 001 = Subclass 1 deterministic latency using the SYSREF signal
         LANE_SHARE: 0x0     # 0 = Normal operation (each channel uses one lane)
         ##################

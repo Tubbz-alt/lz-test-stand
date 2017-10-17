@@ -14,3 +14,4 @@ from lztsFpga.SadcBufferReader import *
 from lztsFpga.SadcBufferWriter import *
 from lztsFpga.SadcPatternTester import *
 from lztsFpga.FadcBufferChannel import *
+from lztsFpga.FadcDebug import *

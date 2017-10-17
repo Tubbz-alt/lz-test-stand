@@ -167,9 +167,9 @@ begin
    dataValidVec_o  <= s_dataValidVec;
    sampleDataArr_o <= s_sampleDataArr;
 
-   ---------------
-   -- JESD RX core
-   ---------------
+   ------------------------------------
+   -- JESD RX core: LMFS = 4244 per IC
+   ------------------------------------
    U_Jesd204bRx : entity work.Jesd204bRx
       generic map (
          TPD_G            => TPD_G,

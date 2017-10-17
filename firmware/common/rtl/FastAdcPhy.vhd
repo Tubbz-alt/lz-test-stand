@@ -285,7 +285,7 @@ begin
          ADDRESS_SIZE_G    => 15,
          DATA_SIZE_G       => 8,
          CLK_PERIOD_G      => (1.0/156.25E+6),
-         SPI_SCLK_PERIOD_G => 100.0E-6)
+         SPI_SCLK_PERIOD_G => 10.0E-6)
       port map (
          axiClk         => axilClk,
          axiRst         => axilRst,
@@ -317,7 +317,7 @@ begin
             TPD_G             => TPD_G,
             AXI_ERROR_RESP_G  => AXI_ERROR_RESP_G,
             CLK_PERIOD_G      => (1.0/156.25E+6),
-            SPI_SCLK_PERIOD_G => 100.0E-6)
+            SPI_SCLK_PERIOD_G => 10.0E-6)
          port map (
             -- Clock and Reset
             axiClk         => axilClk,

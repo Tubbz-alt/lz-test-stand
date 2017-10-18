@@ -157,9 +157,11 @@ begin
    -- trigger and buffer logic (adcClk domian)
    comb : process (adcRst, axilRst, axiReadSlave, axilReadMaster, axilWriteMaster, txSlave, reg, trig,
       hdrDout, hdrValid, memWrAddr) is
-      variable vreg     : RegType;
-      variable vtrig    : TrigType;
-      variable regCon   : AxiLiteEndPointType;
+      variable vreg        : RegType;
+      variable vtrig       : TrigType;
+      variable regCon      : AxiLiteEndPointType;
+      type wrAddrArray is array (natural range <>) of slv(ADDR_BITS_G downto 0);
+      variable wrAddrOff   : wrAddrArray(7 downto 0);
    begin
       -- Latch the current value
       vreg := reg;
@@ -211,10 +213,14 @@ begin
             vtrig.rdPtrValid(ch) := "00";
          end if;
          
+         wrAddrOff(ch) := memWrAddr(ch)(31) & memWrAddr(ch)(ADDR_BITS_G-1 downto 0);
+         wrAddrOff(ch) := wrAddrOff(ch) + 2**(ADDR_BITS_G-2);
+         
          -- stop the writer channel when full
-         if trig.rdPtr(ch)(31) /= memWrAddr(ch)(31) and trig.rdPtrValid(ch) /= 0 then
-            --if memWrAddr(ch)(ADDR_BITS_G-1 downto 0) + toSlv(4096, ADDR_BITS_G+1) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
-            if memWrAddr(ch)(ADDR_BITS_G-1 downto 0) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
+         --if trig.rdPtr(ch)(31) /= memWrAddr(ch)(31) and trig.rdPtrValid(ch) /= 0 then
+         if trig.rdPtr(ch)(31) /= wrAddrOff(ch)(ADDR_BITS_G) and trig.rdPtrValid(ch) /= 0 then
+            --if memWrAddr(ch)(ADDR_BITS_G-1 downto 0) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
+            if wrAddrOff(ch)(ADDR_BITS_G-1 downto 0) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
                vtrig.memFull(ch) := '1';
             end if;
          end if;

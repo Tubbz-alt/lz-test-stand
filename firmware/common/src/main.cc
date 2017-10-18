@@ -56,9 +56,9 @@ int main() {
    while (1) {
       
       MB_Sleep(1000);
-      Xil_Out32( BUS_OFFSET+0x05000100, 0x5);
+      Xil_Out32( BUS_OFFSET+0x01000100, 0x5);
       MB_Sleep(1000);
-      Xil_Out32( BUS_OFFSET+0x05000100, 0xA);
+      Xil_Out32( BUS_OFFSET+0x01000100, 0xA);
       
    }
    

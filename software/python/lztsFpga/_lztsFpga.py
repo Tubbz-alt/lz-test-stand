@@ -26,6 +26,7 @@ from lztsFpga.SadcBufferReader          import *
 from lztsFpga.SadcBufferWriter          import *
 from lztsFpga.SadcPatternTester         import *
 from lztsFpga.FadcBufferChannel         import *
+from lztsFpga.FadcDebug                 import *
 
 from surf.axi._AxiMemTester             import *
 from surf.axi._AxiVersion               import *
@@ -84,7 +85,9 @@ class Lzts(pr.Device):
         self.add(SadcBufferReader(  name='SadcBufferReader',    offset=0x04800000, enabled=False, expand=False,  hidden=False,))      
         self.add(SadcPatternTester( name='SadcPatternTester',   offset=0x04900000, enabled=False, expand=False,  hidden=False,))      
         self.add(JesdRx(            name='JesdRx',              offset=0x05000000, expand=False,  numRxLanes=16, hidden=False,))      
-        self.add(Lmk04828(          name='LMK',                 offset=0x05100000, expand=False,                 hidden=False,))      
+        self.add(Lmk04828(          name='LMK',                 offset=0x05100000, expand=False,                 hidden=False,))  
+        self.add(FadcDebug(         name='FadcDebug',           offset=0x05700000, expand=False,                 hidden=True,))  
+        
         for i in range(4):
             self.add(Ads54J60(
                 name      = ('FastAdcConfig[%d]'%i),
@@ -92,20 +95,7 @@ class Lzts(pr.Device):
                 expand    = False, 
                 hidden    = True,
             ))
-            
-        for i in range(16):
-            self.addRemoteVariables(   
-                name      = ('FastAdcDebug[%d]'%i),
-                offset    = (0x05700000 + i*0x100000),
-                bitSize   = 32,
-                bitOffset = 0,
-                base      = pr.UInt,
-                mode      = "RO",
-                number    = 32, #should be 1024 but large number will be GUI slow
-                stride    = 4,
-                hidden    = False,
-            )
-            
+                        
         for i in range(8):
             self.add(FadcBufferChannel(
                 name    = ('FadcBufferChannel[%d]'%i),

@@ -144,16 +144,20 @@ begin
 
    adcRstL <= not(adcRst);
 
-   ----------------------------------         
-   -- Combine the JESD lanes together
-   ----------------------------------         
+   ----------------------------------------------------------
+   -- Combine the JESD lanes together for LMFS = 4244
+   -- Note: Refer to Table 11 in datasheet
+   ----------------------------------------------------------
+   -- CH[2*i+0] = DA1/DB1 (A2[15:8] A2[7:0] A3[15:8] A3[7:0])
+   -- CH[2*i+1] = DA2/DB2 (A0[15:8] A0[7:0] A1[15:8] A1[7:0])
+   ----------------------------------------------------------
    process(adcClk)
       variable i : natural;
    begin
       if rising_edge(adcClk) then
          for i in 7 downto 0 loop
-            adcValid(i) <= rawAdcValids(2*i+1) and rawAdcValids(2*i+0) after TPD_G;
-            adcData(i)  <= rawAdcValues(2*i+1) & rawAdcValues(2*i+0)   after TPD_G;
+            adcValid(i) <= rawAdcValids(2*i+0) and rawAdcValids(2*i+1) after TPD_G;
+            adcData(i)  <= rawAdcValues(2*i+0) & rawAdcValues(2*i+1)   after TPD_G;
          end loop;
          if (swArmTrig = '1') then
             bufferEnable <= '1' after TPD_G;

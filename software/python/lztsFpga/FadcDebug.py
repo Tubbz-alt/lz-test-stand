@@ -53,4 +53,5 @@ class FadcDebugBram(pr.Device):
             mode      = "RO",
             number    = 8, #should be 1023 but large number will be GUI slow
             stride    = 4,
+            pollInterval = 1,
         )      

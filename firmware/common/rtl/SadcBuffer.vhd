@@ -111,6 +111,7 @@ begin
             TPD_G         => TPD_G,
             ADDR_BITS_G   => ADDR_BITS_G,
             CHANNEL_G     => toSlv(i, 3)
+         )
          port map (
             -- ADC interface
             adcClk          => adcClk,
@@ -134,7 +135,8 @@ begin
             hdrRd           => hdrRd(i),
             -- Buffer handshake to/from data reader (adcClk)
             memWrAddr       => memWrAddr(i),
-            memFull         => memFull(i));
+            memFull         => memFull(i)
+         );
 
       adcDataTester(i)(31 downto 16) <= (others => '0');
       adcDataTester(i)(15 downto 0)  <= adcData(i);
@@ -147,7 +149,8 @@ begin
    U_Reader : entity work.SadcBufferReader
       generic map (
          TPD_G       => TPD_G,
-         ADDR_BITS_G => ADDR_BITS_G)
+         ADDR_BITS_G => ADDR_BITS_G
+      )
       port map (
          -- ADC Clock Domain
          adcClk          => adcClk,
@@ -173,7 +176,8 @@ begin
          axisClk         => axisClk,
          axisRst         => axisRst,
          axisMaster      => axisMaster,
-         axisSlave       => axisSlave);
+         axisSlave       => axisSlave
+      );
 
    -------------------------------
    -- 250 MSPS ADCs pattern tester

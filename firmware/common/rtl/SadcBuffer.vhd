@@ -110,7 +110,7 @@ begin
          generic map (
             TPD_G         => TPD_G,
             ADDR_BITS_G   => ADDR_BITS_G,
-            ADDR_OFFSET_G => toSlv(i*2**ADDR_BITS_G, 32))
+            CHANNEL_G     => toSlv(i, 3)
          port map (
             -- ADC interface
             adcClk          => adcClk,

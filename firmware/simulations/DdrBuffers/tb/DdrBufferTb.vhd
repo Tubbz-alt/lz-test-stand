@@ -55,6 +55,14 @@ architecture testbed of DdrBufferTb is
    constant SIM_SPEEDUP_C : boolean := true;
    
    constant PGP_VC_C      : slv(3 downto 0) := "0001";
+   
+   constant QUEUE_SIZE_C   : integer := 1024;
+   constant QUEUE_BITS_C   : integer := log2(QUEUE_SIZE_C);
+   shared variable triggerCnt     : IntegerArray(7 downto 0) := (others=>0);
+   type trigPtrArray is array (natural range <>) of slv(QUEUE_BITS_C-1 downto 0);
+   shared variable triggerRdPtr   : trigPtrArray(7 downto 0) := (others=>(others=>'0'));
+   type TrigTimeType is array (7 downto 0, QUEUE_SIZE_C-1 downto 0) of slv(63 downto 0);
+   shared variable triggerTime : TrigTimeType := (others=>(others=>(others=>'0')));
 
    component Ddr4ModelWrapper
       generic (
@@ -142,7 +150,7 @@ architecture testbed of DdrBufferTb is
    signal adcRst        : sl := '1';
    
    signal triggersGood  : Slv32Array(7 downto 0);
-   signal trigTimeVer   : Slv64Array(7 downto 0);
+   --signal trigTimeVer   : Slv64Array(7 downto 0);
    signal trigSampleVer : Slv16Array(7 downto 0);
    signal trigRdVer     : slv(7 downto 0);
 
@@ -181,7 +189,7 @@ begin
       U_SadcBufferWriter : entity work.SadcBufferWriter
       generic map (
          ADDR_BITS_G       => ADDR_BITS_C,
-         ADDR_OFFSET_G     => toSlv(i*2**ADDR_BITS_C, 32)
+         CHANNEL_G         => toSlv(i, 3)
       )
       port map (
          -- ADC interface
@@ -350,16 +358,12 @@ begin
    -----------------------------------------------------------------------
    TR_MEM_GEN: for i in 0 to 7 generate 
       process
-         constant QUEUE_SIZE_C   : integer := 1024;
-         constant QUEUE_BITS_C   : integer := log2(QUEUE_SIZE_C);
-         variable triggerTime    : Slv64Array(QUEUE_SIZE_C-1 downto 0) := (others=>(others=>'0'));
+         --variable triggerTime    : Slv64Array(QUEUE_SIZE_C-1 downto 0) := (others=>(others=>'0'));
          variable triggerSample  : Slv16Array(QUEUE_SIZE_C-1 downto 0) := (others=>(others=>'0'));
-         variable triggerCnt     : integer range 0 to QUEUE_SIZE_C-1 := 0;
-         variable triggerRdPtr   : slv(QUEUE_BITS_C-1 downto 0) := (others=>'0');
          variable triggerWrPtr   : slv(QUEUE_BITS_C-1 downto 0) := (others=>'0');
       begin
          
-         trigTimeVer(i)    <= (others=>'0');
+         --trigTimeVer(i)    <= (others=>'0');
          trigSampleVer(i)  <= (others=>'0');
          
          loop
@@ -370,11 +374,11 @@ begin
             
             -- writing
             if extTrigger(i) = '1' then
-               if triggerCnt < QUEUE_SIZE_C-1 then
-                  triggerTime(conv_integer(triggerWrPtr))   := gTime;
-                  triggerSample(conv_integer(triggerWrPtr)) := adcData;
-                  triggerWrPtr                              := triggerWrPtr + 1;
-                  triggerCnt                                := triggerCnt + 1;
+               if triggerCnt(i) < QUEUE_SIZE_C-1 then
+                  triggerTime(i, conv_integer(triggerWrPtr)) := gTime;
+                  triggerSample(conv_integer(triggerWrPtr))  := adcData;
+                  triggerWrPtr                               := triggerWrPtr + 1;
+                  triggerCnt(i)                              := triggerCnt(i) + 1;
                else
                   report "Too many triggers. Verification FIFO overflow." severity failure;
                end if;
@@ -382,22 +386,21 @@ begin
             
             -- reading
             if trigRdVer(i) = '1' then
-               if triggerCnt > 0 then
-                  triggerRdPtr   := triggerRdPtr + 1;
-                  triggerCnt     := triggerCnt - 1;
+               if triggerCnt(i) > 0 then
+                  triggerRdPtr(i) := triggerRdPtr(i) + 1;
+                  triggerCnt(i)   := triggerCnt(i) - 1;
                else
-                  report "Verification FIFO underflow." severity failure;
+                  report "Timestamp verification queue underflow." severity failure;
                end if;
             end if;
             
-            trigTimeVer(i)    <= triggerTime(conv_integer(triggerRdPtr));
-            trigSampleVer(i)  <= triggerSample(conv_integer(triggerRdPtr));
+            --trigTimeVer(i)    <= triggerTime(conv_integer(triggerRdPtr(i)));
+            trigSampleVer(i)  <= triggerSample(conv_integer(triggerRdPtr(i)));
             
          end loop;
          
       end process;
    end generate;
-   
    
    -----------------------------------------------------------------------
    -- Monitor the output stream (trigger data)
@@ -415,6 +418,8 @@ begin
       variable adcPrevious    : slv(15 downto 0);
       variable adcOffsetVal   : integer;
       variable adcOffsetChk   : boolean;
+      variable lostTriggerCnt : NaturalArray(7 downto 0) := (others=>0);
+      variable goodTriggerCnt     : NaturalArray(7 downto 0) := (others=>0);
    begin
    
       axisSlave.tReady  <= '1';
@@ -443,23 +448,46 @@ begin
                assert axisMaster.tData(3 downto 0) = PGP_VC_C report "Bad PGP VC number" severity failure;
             elsif wordCnt = 1 then     -- header
                trigCh := conv_integer(axisMaster.tData(7 downto 0));
-               if VERBOSE_PRINT then report "Reading channel " & integer'image(trigCh); end if;
                assert trigCh >=0 and trigCh <= 7 report "Bad channel number" severity failure;
             elsif wordCnt = 2 then  -- header
                trigSize := conv_integer(axisMaster.tData(31 downto 0));
-               if VERBOSE_PRINT then report "Trigger size " & integer'image(trigSize); end if;
+               if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": size " & integer'image(trigSize); end if;
             elsif wordCnt = 3 then  -- header
                trigOffset := conv_integer(axisMaster.tData(31 downto 0));
-               if VERBOSE_PRINT then report "Trigger offset " & integer'image(trigOffset); end if;
+               if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) &  ": offset " & integer'image(trigOffset); end if;
             elsif wordCnt = 4 then  -- header
                trigTimeVect(63 downto 32) := axisMaster.tData(31 downto 0);
             elsif wordCnt = 5 then  -- header
                trigTimeVect(31 downto 0) := axisMaster.tData(31 downto 0);
                trigTime := conv_integer(trigTimeVect(31 downto 0));
-               assert trigTimeVer(trigCh) + TRIG_LATENCY_C = trigTime 
-                  report "Bad timestamp. Expected " & integer'image(conv_integer(trigTimeVer(trigCh)(31 downto 0))) & " received " & integer'image(trigTime)
-                  severity failure;
-               if VERBOSE_PRINT then report "Trigger time " & integer'image(trigTime); end if;
+               
+               -- count and remove lost triggers from the trigger verification queue
+               --while trigTimeVer(trigCh) + TRIG_LATENCY_C < trigTime loop
+               while triggerTime(trigCh, conv_integer(triggerRdPtr(trigCh))) + TRIG_LATENCY_C < trigTime loop
+                  
+                  -- report missed timestamps
+                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": missed timestamp " & integer'image(conv_integer(triggerTime(trigCh, conv_integer(triggerRdPtr(trigCh)))(31 downto 0))) severity warning;
+                  
+                  if triggerCnt(trigCh) > 0 then
+                     triggerRdPtr(trigCh) := triggerRdPtr(trigCh) + 1;
+                     triggerCnt(trigCh)   := triggerCnt(trigCh) - 1;
+                     lostTriggerCnt(trigCh) := lostTriggerCnt(trigCh) + 1;
+                  else
+                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": timestamp verification queue underflow." severity failure;
+                  end if;
+                  
+               end loop;
+               
+               -- report received timestamp
+               report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": timestamp " & integer'image(trigTime);
+               
+               --report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": lost triggers " & integer'image(lostTriggerCnt(trigCh));
+               
+               
+               --assert trigTimeVer(trigCh) + TRIG_LATENCY_C = trigTime 
+               --   report "Bad timestamp. Expected " & integer'image(conv_integer(trigTimeVer(trigCh)(31 downto 0))) & " received " & integer'image(trigTime)
+               --   severity warning;
+                  
             -- all other words contain 2 samples
             else
                
@@ -503,7 +531,7 @@ begin
                elsif axisMaster.tKeep(3 downto 0) = "1100" and axisMaster.tLast = '1' then
                   sampleCnt := sampleCnt + 1;
                else
-                  report "Bad tKeep!" severity failure;
+                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad tKeep!" severity failure;
                end if;
                
                -- verify all samples
@@ -512,21 +540,21 @@ begin
                      if axisMaster.tData(15 downto 0) = ADC_DATA_TOP_C or axisMaster.tData(31 downto 16) = ADC_DATA_TOP_C then
                         adcGoingUp := false;
                         adcPrevious := axisMaster.tData(31 downto 16);
-                        if VERBOSE_PRINT then report "Top ADC peak in trigger"; end if;
+                        if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": top ADC peak"; end if;
                      else
                         -- check samples here
-                        assert adcPrevious < axisMaster.tData(15 downto 0) report "Bad ADC values in trigger" severity failure;
-                        assert axisMaster.tData(15 downto 0) < axisMaster.tData(31 downto 16) report "Bad ADC values in trigger" severity failure;
+                        assert adcPrevious < axisMaster.tData(15 downto 0) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad ADC values" severity failure;
+                        assert axisMaster.tData(15 downto 0) < axisMaster.tData(31 downto 16) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad ADC values" severity failure;
                      end if;
                   else
                      if axisMaster.tData(15 downto 0) = ADC_DATA_BOT_C or axisMaster.tData(31 downto 16) = ADC_DATA_BOT_C then
                         adcGoingUp := true;
                         adcPrevious := axisMaster.tData(31 downto 16);
-                        if VERBOSE_PRINT then report "Bottom ADC peak in trigger"; end if;
+                        if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bottom ADC peak"; end if;
                      else
                         -- check samples here
-                        assert adcPrevious > axisMaster.tData(15 downto 0) report "Bad ADC values in trigger" severity failure;
-                        assert axisMaster.tData(15 downto 0) > axisMaster.tData(31 downto 16) report "Bad ADC values in trigger" severity failure;
+                        assert adcPrevious > axisMaster.tData(15 downto 0) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad ADC values" severity failure;
+                        assert axisMaster.tData(15 downto 0) > axisMaster.tData(31 downto 16) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad ADC values" severity failure;
                      end if;
                   end if;
                end if;
@@ -536,11 +564,12 @@ begin
             -- validate and report trigger size at last word
             if axisMaster.tLast = '1' then
                trigRdVer(trigCh)  <= '1';
-               if VERBOSE_PRINT then report "Trigger samples " & integer'image(sampleCnt); end if;
+               if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": samples " & integer'image(sampleCnt); end if;
                assert sampleCnt = trigSize 
-                  report "Channel " & integer'image(trigCh) & " has wrong number of samples. Expected " & integer'image(trigSize) & " received " & integer'image(sampleCnt)
+                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": wrong number of samples. Expected " & integer'image(trigSize) & " received " & integer'image(sampleCnt)
                   severity failure;
                triggersGood(trigCh) <= triggersGood(trigCh) + 1;
+               goodTriggerCnt(trigCh) := goodTriggerCnt(trigCh) + 1;
             else
                trigRdVer  <= (others=>'0');
             end if;

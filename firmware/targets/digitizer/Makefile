@@ -1,7 +1,7 @@
 export GIT_BYPASS = 1
 
 # Define Firmware Version Number
-export PRJ_VERSION = 0x00000019
+export PRJ_VERSION = 0x00000020
 
 # Define the Microblaze source path
 #export SDK_SRC_PATH = $(PROJ_DIR)/../../common/src
@@ -10,7 +10,7 @@ export PRJ_VERSION = 0x00000019
 export BUILD_MB_CORE = 0
 
 # Define if you want to build the DDR MIG core
-export BUILD_MIG_CORE = 0
+export BUILD_MIG_CORE = 1
 
 # Define if this is FSBL PROM address
 export PROM_FSBL = 1

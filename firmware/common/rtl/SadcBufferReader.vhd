@@ -105,6 +105,7 @@ architecture rtl of SadcBufferReader is
       rdHigh         : sl;
       first          : sl;
       last           : sl;
+      trigHdrType    : slv(2 downto 0);
    end record TrigType;
    
    constant TRIG_INIT_C : TrigType := (
@@ -125,7 +126,8 @@ architecture rtl of SadcBufferReader is
       hdrCnt         => 0,
       rdHigh         => '0',
       first          => '0',
-      last           => '0'
+      last           => '0',
+      trigHdrType    => (others => '0')
    );
    
    type RegType is record
@@ -194,36 +196,67 @@ begin
       -- stop reader when wrPtr approaches rdPtr
       ------------------------------------------------
       
-      vtrig.memFull  := (others=>'0');
+      --vtrig.memFull  := (others=>'0');
       vtrig.rdPtrRst := (others=>'0');
       vtrig.hdrRd    := (others=>'0');
       
       for ch in 7 downto 0 loop
+         
+         -- add morgin offset to the write pointer
+         -- 0.25 memory size currently
+         wrAddrOff(ch) := memWrAddr(ch)(31) & memWrAddr(ch)(ADDR_BITS_G-1 downto 0);
+         wrAddrOff(ch) := wrAddrOff(ch) + 2**(ADDR_BITS_G-3);
          
          -- delayed signal to start the FSM after the 1st FIFO word is read
          vtrig.rdPtrValid(ch)(1) := trig.rdPtrValid(ch)(0);
          
          -- store the buffer pointer until it is read out
          if hdrValid(ch) = '1' and trig.rdPtrValid(ch)(0) = '0' then
-            vtrig.rdPtr(ch)      := hdrDout(ch);
+            -- bit 31 is carry flag to roll the buffer
+            vtrig.rdPtr(ch)(31)           := hdrDout(ch)(31);
+            -- store the trigger type
+            vtrig.trigHdrType             := hdrDout(ch)(30 downto 28);
+            -- remove trigger information from the read pointer and resize the address
+            vtrig.rdPtr(ch)(30 downto 0)  := resize(toSlv(ch, 3) & hdrDout(ch)(ADDR_BITS_G-1 downto 0), 31);
             vtrig.rdPtrValid(ch)(0) := '1';
             vtrig.hdrRd(ch)      := '1';
+            
+            -- stop the writer channel when full
+            if vtrig.rdPtr(ch)(31) /= wrAddrOff(ch)(ADDR_BITS_G) then
+               if wrAddrOff(ch)(ADDR_BITS_G-1 downto 0) >= vtrig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
+                  vtrig.memFull(ch) := '1';
+               else
+                  vtrig.memFull(ch) := '0';
+               end if;
+            else
+               vtrig.memFull(ch) := '0';
+            end if;
+            
          elsif trig.rdPtrRst(ch) = '1' then
-            vtrig.rdPtr(ch)      := (others=>'0');
+            -- reset if no other pointer in FIFO
+            -- preset to next address otherwise
+            if hdrValid(ch) = '0' then
+               vtrig.rdPtr(ch)   := (others=>'0');
+               vtrig.memFull(ch) := '0';
+            else
+               -- bit 31 is carry flag to roll the buffer
+               vtrig.rdPtr(ch)(31)           := hdrDout(ch)(31);
+               -- remove trigger information from the read pointer and resize the address
+               vtrig.rdPtr(ch)(30 downto 0)  := resize(toSlv(ch, 3) & hdrDout(ch)(ADDR_BITS_G-1 downto 0), 31);
+            end if;
             vtrig.rdPtrValid(ch) := "00";
          end if;
          
-         wrAddrOff(ch) := memWrAddr(ch)(31) & memWrAddr(ch)(ADDR_BITS_G-1 downto 0);
-         wrAddrOff(ch) := wrAddrOff(ch) + 2**(ADDR_BITS_G-2);
          
-         -- stop the writer channel when full
-         --if trig.rdPtr(ch)(31) /= memWrAddr(ch)(31) and trig.rdPtrValid(ch) /= 0 then
-         if trig.rdPtr(ch)(31) /= wrAddrOff(ch)(ADDR_BITS_G) and trig.rdPtrValid(ch) /= 0 then
-            --if memWrAddr(ch)(ADDR_BITS_G-1 downto 0) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
-            if wrAddrOff(ch)(ADDR_BITS_G-1 downto 0) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
-               vtrig.memFull(ch) := '1';
-            end if;
-         end if;
+         
+         ---- stop the writer channel when full
+         ----if trig.rdPtr(ch)(31) /= memWrAddr(ch)(31) and trig.rdPtrValid(ch) /= 0 then
+         --if trig.rdPtr(ch)(31) /= wrAddrOff(ch)(ADDR_BITS_G) and trig.rdPtrValid(ch) /= 0 then
+         --   --if memWrAddr(ch)(ADDR_BITS_G-1 downto 0) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
+         --   if wrAddrOff(ch)(ADDR_BITS_G-1 downto 0) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
+         --      vtrig.memFull(ch) := '1';
+         --   end if;
+         --end if;
          
       end loop;
       
@@ -304,8 +337,22 @@ begin
                   vtrig.hdrCnt      := 0;
                   -- Set the memory address aligned to 32 bits
                   vtrig.rMaster.araddr := resize(trig.rdPtr(trig.channelSel)(30 downto 2) & "00", vtrig.rMaster.araddr'length);
-                  -- Validate address
-                  vtrig.buffState   := ADDR_S;
+                  -- check if the trigger has data
+                  if trig.trigSize > 0 then
+                     -- Validate address
+                     vtrig.buffState   := ADDR_S;
+                  else
+                     vtrig.txMaster.tLast := '1';
+                     -- reset the read pointer
+                     vtrig.rdPtrRst(trig.channelSel) := '1';
+                     -- move to the next channnel
+                     if trig.channelSel < 7 then
+                        vtrig.channelSel := trig.channelSel + 1;
+                     else
+                        vtrig.channelSel := 0;
+                     end if;
+                     vtrig.buffState   := IDLE_S;
+                  end if;
                end if;
                vtrig.hdrCnt := trig.hdrCnt + 1;
             end if;

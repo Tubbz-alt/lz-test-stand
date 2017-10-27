@@ -165,7 +165,7 @@ LztsBoard = LztsBoard(cmd, dataWriter, srp)
 if (args.start_gui):
     appTop = PyQt4.QtGui.QApplication(sys.argv)
     guiTop = pyrogue.gui.GuiTop(group='lztsGui')
-    guiTop.resize(800, 1000)
+    guiTop.resize(800, 800)
     guiTop.addTree(LztsBoard)
 
 ## Viewer gui

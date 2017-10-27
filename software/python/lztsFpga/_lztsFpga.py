@@ -86,14 +86,14 @@ class Lzts(pr.Device):
         self.add(SadcPatternTester( name='SadcPatternTester',   offset=0x04900000, enabled=False, expand=False,  hidden=False,))      
         self.add(JesdRx(            name='JesdRx',              offset=0x05000000, expand=False,  numRxLanes=16, hidden=False,))      
         self.add(Lmk04828(          name='LMK',                 offset=0x05100000, expand=False,                 hidden=False,))  
-        self.add(FadcDebug(         name='FadcDebug',           offset=0x05700000, expand=False,                 hidden=True,))  
+        self.add(FadcDebug(         name='FadcDebug',           offset=0x05700000, expand=False,                 hidden=False,))  
         
         for i in range(4):
             self.add(Ads54J60(
                 name      = ('FastAdcConfig[%d]'%i),
                 offset    = (0x05200000 + i*0x100000), 
                 expand    = False, 
-                hidden    = True,
+                hidden    = False,
             ))
                         
         for i in range(8):
@@ -111,10 +111,65 @@ class Lzts(pr.Device):
         def SadcInit():
             for i in range(4):
                 self.SlowAdcReadout[i].enable.set(True)
-            self._root.checkBlocks(recurse=True)                
+                self._root.checkBlocks(recurse=True)
+                self.SlowAdcReadout[i].DMode.set(3)
+                self._root.checkBlocks(recurse=True)
+                self.SlowAdcReadout[i].Invert.set(1)
+                self._root.checkBlocks(recurse=True)
+                self.SlowAdcReadout[i].Convert.set(3)
+                self._root.checkBlocks(recurse=True)
             for i in range(64):
                 self.delayRegs[i].set(self.sadcDelays[i])
-            self._root.checkBlocks(recurse=True)    
+            self._root.checkBlocks(recurse=True)
+            if (self.PwrReg.EnDcDcAp3V7.get()==True and self.PwrReg.EnDcDcAp2V3.get()==True and self.PwrReg.EnLdoSlow.get()==True):
+                for i in range(4):
+                    self.SlowAdcConfig[i].enable.set(True)
+                    self._root.checkBlocks(recurse=True)
+                    self.SlowAdcConfig[i].AdcReg_0x0015.set(1)  #Set DDR Mode
+                    self._root.checkBlocks(recurse=True)
+        
+        @self.command(description="Reset slow ADCs",)
+        def SadcReset():
+            self.PwrReg.SADCRst.set(0xF)
+            self._root.checkBlocks(recurse=True)
+            self.PwrReg.SADCRst.set(0x0)
+            self._root.checkBlocks(recurse=True)
+        
+        @self.command(description="Enable slow ADC buffers (for debug)",)
+        def SadcBuffersOn():
+            for i in range(8):
+                self.SadcBufferWriter[i].enable.set(True)
+                self._root.checkBlocks(recurse=True)
+                self.SadcBufferWriter[i].ExtTrigSize.set(0x1000)
+                self._root.checkBlocks(recurse=True)
+                self.SadcBufferWriter[i].Enable.set(True)
+                self._root.checkBlocks(recurse=True)
+        
+        @self.command(description="Disable slow ADC buffers (for debug)",)
+        def SadcBuffersOff():
+            for i in range(8):
+                self.SadcBufferWriter[i].enable.set(True)
+                self._root.checkBlocks(recurse=True)
+                self.SadcBufferWriter[i].Enable.set(False)
+                self._root.checkBlocks(recurse=True)
+        
+        @self.command(description="Enable fast ADC buffers (for debug)",)
+        def FadcBuffersOn():
+            for i in range(8):
+                self.FadcBufferChannel[i].enable.set(True)
+                self._root.checkBlocks(recurse=True)
+                self.FadcBufferChannel[i].ExtTrigSize.set(0x1000)
+                self._root.checkBlocks(recurse=True)
+                self.FadcBufferChannel[i].Enable.set(True)
+                self._root.checkBlocks(recurse=True)
+        
+        @self.command(description="Disable fast ADC buffers (for debug)",)
+        def FadcBuffersOff():
+            for i in range(8):
+                self.FadcBufferChannel[i].enable.set(True)
+                self._root.checkBlocks(recurse=True)
+                self.FadcBufferChannel[i].Enable.set(False)
+                self._root.checkBlocks(recurse=True)
         
         @self.command(description="Initialization for JESD modules",)
         def JesdInit():            
@@ -206,6 +261,7 @@ class Lzts(pr.Device):
             
         self.JesdReset()
         
+        self.SadcReset()
         self.SadcInit()
         
         

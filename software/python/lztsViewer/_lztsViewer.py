@@ -34,6 +34,7 @@ from PyQt4.QtCore import QObject, pyqtSignal
 import numpy as np
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from itertools import count, takewhile
 
 import pdb
 
@@ -126,7 +127,10 @@ class Window(QtGui.QMainWindow, QObject):
         self.FadcCh5 = QtGui.QCheckBox('FADC Ch5')
         self.FadcCh6 = QtGui.QCheckBox('FADC Ch6')
         self.FadcCh7 = QtGui.QCheckBox('FADC Ch7')
-        self.enableFFT = QtGui.QCheckBox('Enable FFT')
+        self.enableNone = QtGui.QRadioButton('Off')
+        self.enableFFT  = QtGui.QRadioButton('FFT')
+        self.enableHist = QtGui.QRadioButton('Histogram')
+        self.enableNone.setChecked(1);
         
         controlFrame = QtGui.QFrame()
         controlFrame.setFrameStyle(QtGui.QFrame.Panel);
@@ -143,21 +147,23 @@ class Window(QtGui.QMainWindow, QObject):
         grid.addWidget(controlFrame,0,0,4,9)
         grid.addWidget(self.SadcCh0, 1, 1)
         grid.addWidget(self.SadcCh1, 1, 2)
-        grid.addWidget(self.SadcCh2, 1, 3)  
+        grid.addWidget(self.SadcCh2, 1, 3)
         grid.addWidget(self.SadcCh3, 1, 4)
         grid.addWidget(self.SadcCh4, 1, 5)
-        grid.addWidget(self.SadcCh5, 1, 6)  
-        grid.addWidget(self.SadcCh6, 1, 7)  
-        grid.addWidget(self.SadcCh7, 1, 8)  
-        grid.addWidget(self.FadcCh0, 2, 1)  
-        grid.addWidget(self.FadcCh1, 2, 2)  
-        grid.addWidget(self.FadcCh2, 2, 3)  
-        grid.addWidget(self.FadcCh3, 2, 4)  
-        grid.addWidget(self.FadcCh4, 2, 5)  
-        grid.addWidget(self.FadcCh5, 2, 6)  
-        grid.addWidget(self.FadcCh6, 2, 7)  
-        grid.addWidget(self.FadcCh7, 2, 8)  
-        grid.addWidget(self.enableFFT, 3, 1)  
+        grid.addWidget(self.SadcCh5, 1, 6)
+        grid.addWidget(self.SadcCh6, 1, 7)
+        grid.addWidget(self.SadcCh7, 1, 8)
+        grid.addWidget(self.FadcCh0, 2, 1)
+        grid.addWidget(self.FadcCh1, 2, 2)
+        grid.addWidget(self.FadcCh2, 2, 3)
+        grid.addWidget(self.FadcCh3, 2, 4)
+        grid.addWidget(self.FadcCh4, 2, 5)
+        grid.addWidget(self.FadcCh5, 2, 6)
+        grid.addWidget(self.FadcCh6, 2, 7)
+        grid.addWidget(self.FadcCh7, 2, 8)
+        grid.addWidget(self.enableNone, 3, 1)
+        grid.addWidget(self.enableFFT,  3, 2)
+        grid.addWidget(self.enableHist, 3, 3)
 
         # line plot 1
         self.lineDisplay1 = MplCanvas(MyTitle = "ADC Samples Display")
@@ -165,7 +171,7 @@ class Window(QtGui.QMainWindow, QObject):
         hSubbox2.addWidget(self.lineDisplay1)
         
         # line plot 2
-        self.lineDisplay2 = MplCanvas(MyTitle = "FFT Display")        
+        self.lineDisplay2 = MplCanvas(MyTitle = "FFT/Histogram Display")        
         hSubbox3 = QHBoxLayout()
         hSubbox3.addWidget(self.lineDisplay2)
         
@@ -193,10 +199,7 @@ class Window(QtGui.QMainWindow, QObject):
         # converts bytes to array of dwords
         chData = [bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray()]
         for i in range(0, 16):
-            if (i<8):
-                chData[i] = np.frombuffer(self.eventReaderData.channelDataArray[i], dtype='uint16')
-            else:
-                chData[i] = np.frombuffer(self.eventReaderData.channelDataArray[i], dtype='int16')
+            chData[i] = np.frombuffer(self.eventReaderData.channelDataArray[i], dtype='uint16')
             
             # currently header is 12 x 16 bit words (will be more)
             # read header information
@@ -261,9 +264,12 @@ class Window(QtGui.QMainWindow, QObject):
         
         
         self.lineDisplay1.update_plot( enabled, chData, colors, labels)
-        if self.enableFFT.isChecked():
-            self.lineDisplay2.update_fft( enabled, chData, colors, labels)
-        
+        if self.enableHist.isChecked():
+            self.lineDisplay2.update_fft( enabled, chData, colors, labels, 1)
+        elif self.enableFFT.isChecked():
+            self.lineDisplay2.update_fft( enabled, chData, colors, labels, 2)
+        else:
+            self.lineDisplay2.update_fft( enabled, chData, colors, labels, 0)
         self.eventReaderData.busy = False
         
         if (PRINT_VERBOSE): print('Display done')
@@ -394,31 +400,42 @@ class MplCanvas(FigureCanvas):
             if (N > 0 and enabled[i] == True):
                 self.axes.plot(chData[i], colors[i], label=labels[i])
                 self.axes.legend() 
-        self.axes.set_title(self.MyTitle)        
+        self.axes.set_title(self.MyTitle)
         self.draw()
 
-    def update_fft(self, enabled, chData, colors, labels):
+    def update_fft(self, enabled, chData, colors, labels, plotSel):
         self.axes.cla()
         for i in range(0, 16):
             # Number of samplepoints
             N = len(chData[i])
             if (N > 0 and enabled[i] == True):
-                # sample spacing
-                if (i<8):
-                    T = 1.0 / 250000000.0
-                else:
-                    T = 1.0 / 1000000000.0
-                #yf = np.fft.rfft(chData[i]*np.hanning(N))
-                yf = np.fft.rfft(chData[i])
-                #print(np.hanning(N))
-                #print(np.hanning(N)*chData[i])
-                yf = np.fft.rfft(chData[i])
-                xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
-                #freq = np.fft.fftfreq(N, d=4e-9)
-                #self.axes.plot(freq[:len(yf)], yf, colors[i], label=labels[i])
-                self.axes.semilogx(xf[1:], np.abs(yf[1:N//2]), colors[i], label=labels[i])
-                self.axes.legend()  
-        self.axes.set_title(self.MyTitle)        
+                if plotSel == 1:
+                    binwidth = 1
+                    rms = np.sqrt(np.mean((chData[i]-np.mean(chData[i]))**2))
+                    #label = labels[i] + ' (RMS ' + str(rms) + ')' 
+                    label = "%s (RMS %.2f)" %(labels[i] ,rms) 
+                    self.axes.hist(chData[i], bins=range(min(chData[i]), max(chData[i]) + binwidth, binwidth), normed=1, facecolor=colors[i], label=label, histtype='bar')
+                    #self.axes.hist(chData[i], bins=list(self.my_frange(start=min(chData[i]), stop=max(chData[i]), step=0.5)), normed=1, facecolor=colors[i], label=labels[i], histtype='stepfilled')
+                    self.axes.legend() 
+                elif plotSel == 2:
+                    # sample spacing
+                    if (i<8):
+                        T = 1.0 / 250000000.0
+                    else:
+                        T = 1.0 / 1000000000.0
+                    yf = np.fft.rfft(chData[i]*np.hanning(N))
+                    #yf = np.fft.rfft(chData[i])
+                    #print(np.hanning(N))
+                    #print(np.hanning(N)*chData[i])
+                    yf = np.fft.rfft(chData[i])
+                    xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
+                    #freq = np.fft.fftfreq(N, d=4e-9)
+                    #self.axes.plot(freq[:len(yf)], yf, colors[i], label=labels[i])
+                    self.axes.semilogx(xf[1:], np.abs(yf[1:N//2]), colors[i], label=labels[i])
+                    self.axes.legend()  
+        self.axes.set_title(self.MyTitle)
         self.draw()
-        
+       
+    def my_frange(self, start, stop, step):
+        return takewhile(lambda x: x< stop, count(start, step))        
     

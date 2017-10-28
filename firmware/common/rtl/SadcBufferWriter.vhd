@@ -52,9 +52,10 @@ entity SadcBufferWriter is
       hdrDout           : out slv(31 downto 0);
       hdrValid          : out sl;
       hdrRd             : in  sl;
-      -- Buffer handshake to/from data reader (adcClk)
-      memWrAddr         : out slv(31 downto 0);
-      memFull           : in  sl := '0'
+      -- Address pointer to data reader (adcClk)
+      addrDout          : out slv(31 downto 0);
+      addrValid         : out sl;
+      addrRd            : in  sl
    );
 end SadcBufferWriter;
 
@@ -71,24 +72,14 @@ architecture rtl of SadcBufferWriter is
    constant AXI_CACHE_C : slv(3 downto 0)     := "1111";
    constant AWLEN_C : slv(7 downto 0) := getAxiLen(AXI_CONFIG_C, 4096);
    
-   constant HDR_SIZE_C        : integer := 5;
+   constant HDR_SIZE_C        : integer := 4;
    constant HDR_ADDR_WIDTH_C  : integer := 9;
-   
-   constant EXT_C          : slv(2 downto 0) := "000";
-   constant INT_C          : slv(2 downto 0) := "001";
-   constant TRUNC_C        : slv(2 downto 0) := "010";
-   constant EMPTY_C        : slv(2 downto 0) := "011";
-   constant VETO_C         : slv(2 downto 0) := "111";
-   constant EXT_BAD_C      : slv(2 downto 0) := "100";
-   constant INT_BAD_C      : slv(2 downto 0) := "101";
-   constant TRUNC_BAD_C    : slv(2 downto 0) := "110";
 
    constant EXT_IND_C      : integer := 0;
    constant INT_IND_C      : integer := 1;
-   constant TRUNC_IND_C    : integer := 2;
-   constant EMPTY_IND_C    : integer := 3;
-   constant VETO_IND_C     : integer := 4;
-   constant BAD_IND_C      : integer := 5;
+   constant EMPTY_IND_C    : integer := 2;
+   constant VETO_IND_C     : integer := 3;
+   constant BAD_IND_C      : integer := 4;
 
    type BuffStateType is (
       IDLE_S,
@@ -109,35 +100,6 @@ architecture rtl of SadcBufferWriter is
       WR_HDR_S
    );
    
-   -- encode trigger type on 3 bits
-   function triggerType (trigVectIn : slv) return slv is
-      variable resultVar : slv(2 downto 0) := "000";
-   begin
-      
-      -- check for external, internal and internal truncated types
-      if trigVectIn(EXT_IND_C) = '1' then
-         resultVar := EXT_C;
-      elsif trigVectIn(INT_IND_C) = '1' then
-         resultVar := INT_C;
-      elsif trigVectIn(TRUNC_IND_C) = '1' then
-         resultVar := TRUNC_C;
-      end if;
-      
-      -- the above types can have missing ADC samples
-      -- mark as bad (EXT_BAD_C, INT_BAD_C, TRUNC_BAD_C)
-      if trigVectIn(BAD_IND_C) = '1' then
-         resultVar(2) := '1';
-      end if;
-      
-      -- if veto or empty bit is set overwrite all above
-      if trigVectIn(EMPTY_IND_C) = '1' then
-         resultVar := EMPTY_C;
-      elsif trigVectIn(VETO_IND_C) = '1' then
-         resultVar := VETO_C;
-      end if;
-      return resultVar;
-   end;
-   
    type TrigType is record
       reset          : slv(15 downto 0);
       extTrigger     : slv(1 downto 0);
@@ -151,16 +113,16 @@ architecture rtl of SadcBufferWriter is
       intPostThresh  : slv(15 downto 0);
       intVetoThresh  : slv(15 downto 0);
       intPostDelay   : slv(15 downto 0);
+      postCnt        : slv(15 downto 0);
       intPreDelay    : slv(15 downto 0);
       actPreDelay    : slv(15 downto 0);
       samplesBuff    : slv(15 downto 0);
       trigLength     : slv(21 downto 0);  -- 22 bits * 4ns ~= 16ms max window
       extTrigSize    : slv(21 downto 0);  -- 22 bits * 4ns ~= 16ms max window
       trigPending    : sl;
-      trigType       : slv(5 downto 0);
+      trigType       : slv(4 downto 0);
       trigAddr       : slv(31 downto 0);
       trigOffset     : slv(31 downto 0);
-      trigSize       : slv(31 downto 0);
       trigState      : TrigStateType;
       buffState      : BuffStateType;
       hdrState       : HdrStateType;
@@ -172,11 +134,16 @@ architecture rtl of SadcBufferWriter is
       hdrFifoCnt     : integer;
       hdrFifoDin     : slv(31 downto 0);
       hdrFifoWr      : sl;
+      addrFifoDin    : slv(31 downto 0);
+      addrFifoWr     : sl;
       burstsInFifo   : slv(7 downto 0);
       bvalidCnt      : slv(7 downto 0);
       lostSamples    : slv(31 downto 0);
       lostTriggers   : slv(31 downto 0);
+      dropIntTrigs   : slv(31 downto 0);
+      trigIntDrop    : sl;
       rstCounters    : sl;
+      memFull        : sl;
    end record TrigType;
 
    constant TRIG_INIT_C : TrigType := (
@@ -192,6 +159,7 @@ architecture rtl of SadcBufferWriter is
       intPostThresh  => (others => '0'),
       intVetoThresh  => (others => '0'),
       intPostDelay   => (others => '0'),
+      postCnt        => (others => '0'),
       intPreDelay    => (others => '0'),
       actPreDelay    => (others => '0'),
       samplesBuff    => (others => '0'),
@@ -201,7 +169,6 @@ architecture rtl of SadcBufferWriter is
       trigType       => (others => '0'),
       trigAddr       => (others => '0'),
       trigOffset     => (others => '0'),
-      trigSize       => (others => '0'),
       trigState      => IDLE_S,
       buffState      => IDLE_S,
       hdrState       => IDLE_S,
@@ -213,11 +180,16 @@ architecture rtl of SadcBufferWriter is
       hdrFifoCnt     => 0,
       hdrFifoDin     => (others => '0'),
       hdrFifoWr      => '0',
+      addrFifoDin    => (others => '0'),
+      addrFifoWr     => '0',
       burstsInFifo   => (others => '0'),
       bvalidCnt      => (others => '0'),
       lostSamples    => (others => '0'),
       lostTriggers   => (others => '0'),
-      rstCounters    => '0'
+      dropIntTrigs   => (others => '0'),
+      trigIntDrop    => '0',
+      rstCounters    => '0',
+      memFull        => '0'
    );
    
    type RegType is record
@@ -235,6 +207,7 @@ architecture rtl of SadcBufferWriter is
       errCount       : slv(31 downto 0);
       lostSamples    : slv(31 downto 0);
       lostTriggers   : slv(31 downto 0);
+      dropIntTrigs   : slv(31 downto 0);
       rstCounters    : sl;
    end record RegType;
 
@@ -253,6 +226,7 @@ architecture rtl of SadcBufferWriter is
       errCount       => (others => '0'),
       lostSamples    => (others => '0'),
       lostTriggers   => (others => '0'),
+      dropIntTrigs   => (others => '0'),
       rstCounters    => '0'
    );
 
@@ -262,12 +236,19 @@ architecture rtl of SadcBufferWriter is
    signal regIn   : RegType;
    
    signal hdrFifoFull   : sl;
+   signal addrFifoFull  : sl;
+   signal rdPtrValid    : sl;
+   signal rdPtrDout     : slv(31 downto 0);
    
-   signal axiDataWr  : slv(127 downto 0);    -- ONLY FOR SIMULATION
+   signal wrAddrSig    : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
+   signal wrPtrSig     : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
+   signal rdPtrSig     : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
+   signal wrAddrCSig   : sl;                             -- for simulation only
+   signal wrPtrCSig    : sl;                             -- for simulation only
+   signal rdPtrCSig    : sl;                             -- for simulation only
+   
    
 begin
-
-   axiDataWr  <= trig.wMaster.wdata(127 downto 0);    -- ONLY FOR SIMULATION
    
    assert ADDR_BITS_G > 16
       report "Defined adress space ADDR_BITS_G can accomodate only " & integer'image((2**ADDR_BITS_G)/4096) & " AXI burst(s) (4kB)"
@@ -276,13 +257,14 @@ begin
    -- register logic (axilClk domain)
    -- trigger and buffer logic (adcClk domian)
    comb : process (adcRst, axilRst, axiWriteSlave, axilReadMaster, axilWriteMaster, reg, trig,
-      adcData, hdrFifoFull, gTime, extTrigger, memFull, adcData) is
+      adcData, hdrFifoFull, addrFifoFull, gTime, extTrigger, adcData, rdPtrValid, rdPtrDout) is
       variable vreg      : RegType;
       variable vtrig     : TrigType;
       variable regCon    : AxiLiteEndPointType;
       variable intTrig   : sl;
       variable extTrig   : sl;
-      
+      variable wrPtr     : slv(ADDR_BITS_G downto 0);
+      variable rdPtr     : slv(ADDR_BITS_G downto 0);
    begin
       -- Latch the current value
       vreg := reg;
@@ -310,6 +292,7 @@ begin
       vreg.errCount        := trig.errCount;
       vreg.lostSamples     := trig.lostSamples;
       vreg.lostTriggers    := trig.lostTriggers;
+      vreg.dropIntTrigs    := trig.dropIntTrigs;
       vtrig.rstCounters    := reg.rstCounters;
       
       vtrig.extTrigger(0)  := extTrigger;
@@ -329,8 +312,9 @@ begin
       axiSlaveRegister (regCon, x"004", 0, vreg.rstCounters);
       axiSlaveRegisterR(regCon, x"008", 0, reg.lostSamples);
       axiSlaveRegisterR(regCon, x"00C", 0, reg.lostTriggers);
-      axiSlaveRegisterR(regCon, x"010", 0, reg.ackCount);
-      axiSlaveRegisterR(regCon, x"014", 0, reg.errCount);
+      axiSlaveRegisterR(regCon, x"010", 0, reg.dropIntTrigs);
+      axiSlaveRegisterR(regCon, x"014", 0, reg.ackCount);
+      axiSlaveRegisterR(regCon, x"018", 0, reg.errCount);
       
       axiSlaveRegister (regCon, x"100", 0, vreg.intPreThresh);
       axiSlaveRegister (regCon, x"104", 0, vreg.intPostThresh);
@@ -372,24 +356,58 @@ begin
       end if;
       
       ------------------------------------------------
+      -- Memory usage tracking and writer stop logic
+      ------------------------------------------------
+      
+      -- read pointer from the FIFO
+      -- FIFO is being emptied by the reader
+      rdPtr := rdPtrDout(31) & rdPtrDout(ADDR_BITS_G-1 downto 0);
+      
+      -- add margin offset to the write pointer
+      -- 0.25 buffer size
+      wrPtr := trig.wrAddress + 2**(ADDR_BITS_G-3);
+      
+      if rdPtrValid = '0' then
+         vtrig.memFull := '0';
+      else
+         if rdPtr(ADDR_BITS_G) /= wrPtr(ADDR_BITS_G) and wrPtr(ADDR_BITS_G-1 downto 0) >= rdPtr(ADDR_BITS_G-1 downto 0) then
+            vtrig.memFull := '1';
+         else
+            vtrig.memFull := '0';
+         end if;
+      end if;
+      
+      wrAddrSig   <= trig.wrAddress(ADDR_BITS_G-1 downto 0);   -- for simulation only
+      wrAddrCSig  <= trig.wrAddress(ADDR_BITS_G);              -- for simulation only
+      wrPtrSig    <= wrPtr(ADDR_BITS_G-1 downto 0);            -- for simulation only
+      wrPtrCSig   <= wrPtr(ADDR_BITS_G);                       -- for simulation only
+      rdPtrSig    <= rdPtr(ADDR_BITS_G-1 downto 0);            -- for simulation only
+      rdPtrCSig   <= rdPtr(ADDR_BITS_G);                       -- for simulation only
+      
+      ------------------------------------------------
       -- Lost data counters
       ------------------------------------------------
       
       -- monitor AXI FIFOs 
       -- must be ready for the ADC data
       -- count lost ADC samples
-      if vtrig.trigPending = '1' and trig.adcBufRdy = '0' then
-         vtrig.lostSamples := trig.lostSamples + 1;
-      elsif trig.rstCounters = '1' then
+      if trig.rstCounters = '1' then
          vtrig.lostSamples := (others=>'0');
+      elsif trig.trigPending = '1' and trig.adcBufRdy = '0' then
+         vtrig.lostSamples := trig.lostSamples + 1;
       end if;
       -- count lost triggers
-      if trig.trigState = WR_TRIG_S and (extTrig = '1' or intTrig = '1') then
-         vtrig.lostTriggers := trig.lostTriggers + 1;
-      elsif trig.rstCounters = '1' then
+      if trig.rstCounters = '1' then
          vtrig.lostTriggers := (others=>'0');
+      elsif trig.trigState = WR_TRIG_S and (extTrig = '1' or intTrig = '1') then
+         vtrig.lostTriggers := trig.lostTriggers + 1;
       end if;
-      
+      -- count dropped internal triggers
+      if trig.rstCounters = '1' then
+         vtrig.dropIntTrigs := (others=>'0');
+      elsif trig.trigIntDrop = '1' then
+         vtrig.dropIntTrigs := trig.dropIntTrigs + 1;
+      end if;
       
       ------------------------------------------------
       -- AXI write buffer transactions
@@ -431,13 +449,12 @@ begin
             vtrig.adcBufRdy := '0';
             
             -- Stop writing to memory when memFull but after trigger writing is finished
-            if (memFull = '0' or trig.trigPending = '1') then
+            if (trig.memFull = '0' or trig.trigPending = '1') then
                
                -- Check if ready to make memory request
                if (vtrig.wMaster.awvalid = '0') then
                   vtrig.adcBufRdy := '1';
                   -- Set the memory address
-                  --vtrig.wMaster.awaddr := resize(ADDR_OFFSET_G, vtrig.wMaster.awaddr'length)  + trig.wrAddress(ADDR_BITS_G-1 downto 0);
                   vtrig.wMaster.awaddr := resize((CHANNEL_G & trig.wrAddress(ADDR_BITS_G-1 downto 0)), vtrig.wMaster.awaddr'length);
                   -- Set the burst length
                   vtrig.wMaster.awlen := AWLEN_C;
@@ -528,28 +545,33 @@ begin
       -- handshake between two state machines
       vtrig.hdrWrite := '0';
       
+      -- clear address FIFO write strobe
+      vtrig.addrFifoWr := '0';
+      
       case trig.trigState is
          
          when IDLE_S =>
             -- clear trigger flags
             vtrig.trigType := (others=>'0');
+            vtrig.postCnt  := (others=>'0');
             vtrig.trigPending := '0';
+            vtrig.trigIntDrop := '0';
             -- only disable trigger, never the buffer
             if (trig.reset = 0 and trig.enable = '1' and trig.buffState /= IDLE_S) then
                
                -- track the time and sample address for all trigger sources
                vtrig.gTime       := gTime;
-               --vtrig.trigAddr := trig.preAddress(ADDR_BITS_G) & (ADDR_OFFSET_G(30 downto 0) + trig.preAddress(ADDR_BITS_G-1 downto 0));
-               vtrig.trigAddr := trig.preAddress(ADDR_BITS_G) & "000" & resize(trig.wrAddress(ADDR_BITS_G-1 downto 0), 28);
+               vtrig.addrFifoDin := trig.preAddress(ADDR_BITS_G) & resize((CHANNEL_G & trig.preAddress(ADDR_BITS_G-1 downto 0)), 31);
                -- both sources share the preDelay setting
-               vtrig.trigOffset  := resize(trig.actPreDelay, 32);
+               vtrig.trigOffset := resize(trig.actPreDelay, 32);
+               vtrig.trigLength := resize(trig.actPreDelay, 22);
                
                -- external trigger rising edge and size set to greater than 0
                if extTrig = '1' then
-                  vtrig.trigSize             := resize(trig.extTrigSize, 32);
                   vtrig.trigType(EXT_IND_C)  := '1';
-               -- internal trigger pre threshold crossed
-               -- ignore pre threshold set to 0
+                  -- write memory address to the FIFO
+                  vtrig.addrFifoWr  := '1';
+               -- internal trigger pre threshold crossed (ignore pre threshold set to 0)
                elsif intTrig = '1' then
                   vtrig.trigType(INT_IND_C)  := '1';
                end if;
@@ -557,10 +579,12 @@ begin
                -- change state if any trigger type occured
                if extTrig = '1' or intTrig = '1' then
                   -- create empty trigger if not enough memory space
-                  if memFull = '1' then
+                  if trig.memFull = '1' then
                      vtrig.trigType(EMPTY_IND_C) := '1';
-                     vtrig.trigSize  := (others=>'0');
-                     vtrig.trigState := WR_TRIG_S;
+                     vtrig.trigOffset := (others=>'0');
+                     vtrig.trigLength := (others=>'0');
+                     vtrig.addrFifoWr := '0';
+                     vtrig.trigState  := WR_TRIG_S;
                   else
                      vtrig.trigPending := '1';
                      vtrig.trigState := TRIG_ARM_S;
@@ -568,7 +592,7 @@ begin
                end if;
                
             end if;
-            vtrig.trigLength := resize(trig.actPreDelay, 22);
+            
          
          
          when TRIG_ARM_S =>
@@ -585,24 +609,31 @@ begin
             -- wait for all data to be in the AXI FIFO
             if trig.trigType(INT_IND_C) = '1' then
                
-               -- wait for post threshold or veto threshold or max trigger size
+               -- post threshold detected
                if adcData <= trig.intPostThresh then
-                  vtrig.trigLength  := (others=>'0');
-                  vtrig.trigSize    := resize(trig.trigLength + trig.intPostDelay, 32);
+                  -- write memory address to the FIFO
+                  vtrig.addrFifoWr  := '1';
+                  -- wait for post data
                   vtrig.trigState   := INT_POST_S;
+               -- veto threshold detected
                elsif adcData >= trig.intVetoThresh then
                   vtrig.trigType(VETO_IND_C) := '1';
-                  vtrig.trigSize             := (others=>'0');
+                  vtrig.trigLength := (others=>'0');
+                  vtrig.trigOffset := (others=>'0');
                   if trig.intSaveVeto = '1' then
                      vtrig.trigState := WR_TRIG_S;
                   else
                      vtrig.trigPending := '0';
                      vtrig.trigState := IDLE_S;
                   end if;
+               -- no veto and no post threshold until maximum buffer is reached
+               -- drop the trigger and count
                elsif (trig.trigLength + trig.intPostDelay) = 2**trig.trigLength'length-1 then
-                  vtrig.trigType(TRUNC_IND_C) := '1';
-                  vtrig.trigSize    := resize(trig.trigLength + trig.intPostDelay, 32);
-                  vtrig.trigState   := WR_TRIG_S;
+                  vtrig.trigLength  := (others=>'0');
+                  vtrig.trigOffset  := (others=>'0');
+                  vtrig.trigIntDrop := '1';
+                  vtrig.trigPending := '0';
+                  vtrig.trigState   := IDLE_S;
                end if;
             
             else
@@ -617,12 +648,16 @@ begin
          when INT_POST_S =>
             -- count post samples written to the FIFO
             if trig.adcBufRdy = '1' then
-               vtrig.trigLength := trig.trigLength + 1;
+               if trig.postCnt < trig.intPostDelay and trig.trigLength < 2**trig.trigLength'length-1 then
+                  vtrig.trigLength := trig.trigLength + 1;
+                  vtrig.postCnt := trig.postCnt + 1;
+               else
+                  vtrig.postCnt := (others=>'0');
+                  -- start writing header information FIFO
+                  vtrig.trigState   := WR_TRIG_S;
+               end if;
             else
                vtrig.trigType(BAD_IND_C) := '1';
-            end if;
-            if trig.trigLength >= trig.intPostDelay then
-               vtrig.trigState   := WR_TRIG_S;
             end if;
          
          -- wait until previous header information is 
@@ -632,12 +667,10 @@ begin
          when WR_TRIG_S =>
             if trig.hdrState = IDLE_S then
                -- register header information
-               vtrig.hdrData(0)                 := trig.trigAddr;             -- preAddress
-               vtrig.hdrData(0)(30 downto 28)   := triggerType(trig.trigType);   -- insert encoded trigger type bits
-               vtrig.hdrData(1)                 := trig.trigSize;
-               vtrig.hdrData(2)                 := trig.trigOffset;
-               vtrig.hdrData(3)                 := trig.gTime(63 downto 32);
-               vtrig.hdrData(4)                 := trig.gTime(31 downto 0);
+               vtrig.hdrData(0) := trig.trigType & "00000" & trig.trigLength;
+               vtrig.hdrData(1) := trig.trigOffset;
+               vtrig.hdrData(2) := trig.gTime(63 downto 32);
+               vtrig.hdrData(3) := trig.gTime(31 downto 0);
                -- wake up the header FSM
                vtrig.hdrWrite := '1';
                -- accept new triggers
@@ -673,9 +706,10 @@ begin
          when IDLE_S =>
             vtrig.hdrFifoCnt := 0;
             vtrig.hdrFifoWr := '0';
-            if (vtrig.hdrWrite = '1') then
+            if (trig.hdrWrite = '1') then
                
-               if trig.trigType(EMPTY_IND_C) = '1' or trig.trigType(VETO_IND_C) = '1' then
+               --if trig.trigType(EMPTY_IND_C) = '1' or trig.trigType(VETO_IND_C) = '1' then   -- should be from hdrData copy !
+               if trig.hdrData(0)(EMPTY_IND_C+27) = '1' or trig.hdrData(0)(VETO_IND_C+27) = '1' then
                   vtrig.hdrState    := WR_HDR_S;
                else
                   vtrig.bvalidCnt   := trig.burstsInFifo;
@@ -729,8 +763,6 @@ begin
       axiWriteMaster <= trig.wMaster;
       axilWriteSlave <= reg.axilWriteSlave;
       axilReadSlave  <= reg.axilReadSlave;
-      --memWrAddr      <= trig.wrAddress(ADDR_BITS_G) & (ADDR_OFFSET_G(30 downto 0) + trig.wrAddress(ADDR_BITS_G-1 downto 0));
-      memWrAddr      <= trig.wrAddress(ADDR_BITS_G) & resize((CHANNEL_G & trig.wrAddress(ADDR_BITS_G-1 downto 0)), 31);
       
    end process comb;
 
@@ -770,5 +802,31 @@ begin
       dout              => hdrDout,
       valid             => hdrValid
    );
+   
+   ----------------------------------------------------------------------
+   -- Address information FIFO
+   ----------------------------------------------------------------------
+   
+   U_AdrFifo : entity work.Fifo 
+   generic map (
+      DATA_WIDTH_G      => 32,
+      ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
+      FWFT_EN_G         => true,
+      GEN_SYNC_FIFO_G   => true
+   )
+   port map ( 
+      rst               => trig.reset(0),
+      wr_clk            => adcClk,
+      wr_en             => trig.addrFifoWr,
+      din               => trig.addrFifoDin,
+      full              => addrFifoFull,
+      rd_clk            => adcClk,
+      rd_en             => addrRd,
+      dout              => rdPtrDout,
+      valid             => rdPtrValid
+   );
+   
+   addrDout    <= rdPtrDout;
+   addrValid   <= rdPtrValid;
 
 end rtl;

@@ -52,9 +52,10 @@ entity SadcBufferReader is
       hdrDout           : in  Slv32Array(7 downto 0);
       hdrValid          : in  slv(7 downto 0);
       hdrRd             : out slv(7 downto 0);
-      -- Buffer handshake to/from data writers (adcClk domain)
-      memWrAddr         : in  Slv32Array(7 downto 0);
-      memFull           : out slv(7 downto 0);
+      -- Address information from data writers (adcClk domain)
+      addrDout          : in  Slv32Array(7 downto 0);
+      addrValid         : in  slv(7 downto 0);
+      addrRd            : out slv(7 downto 0);
       -- AxiStream output (axisClk domain)
       axisClk           : in  sl;
       axisRst           : in  sl;
@@ -89,17 +90,15 @@ architecture rtl of SadcBufferReader is
    type TrigType is record
       reset          : slv(15 downto 0);
       hdrRd          : slv(7 downto 0);
-      trigSize       : slv(31 downto 0);
+      addrRd         : slv(7 downto 0);
       hdrDout        : slv(15 downto 0);
+      trigSize       : slv(21 downto 0);
+      trigType       : slv(4 downto 0);
       rdSize         : slv(8 downto 0);
-      memFull        : slv(7 downto 0);
       buffState      : BuffStateType;
       rMaster        : AxiReadMasterType;
       channelSel     : integer;
       smplCnt        : Slv32Array(7 downto 0);
-      rdPtr          : Slv32Array(7 downto 0);
-      rdPtrValid     : Slv2Array(7 downto 0);
-      rdPtrRst       : slv(7 downto 0);
       txMaster       : AxiStreamMasterType;
       hdrCnt         : integer;
       rdHigh         : sl;
@@ -111,17 +110,15 @@ architecture rtl of SadcBufferReader is
    constant TRIG_INIT_C : TrigType := (
       reset          => x"0001",
       hdrRd          => (others => '0'),
-      trigSize       => (others => '0'),
+      addrRd         => (others => '0'),
       hdrDout        => (others => '0'),
+      trigSize       => (others => '0'),
+      trigType       => (others => '0'),
       rdSize         => (others => '0'),
-      memFull        => (others => '0'),
       buffState      => IDLE_S,
       rMaster        => axiReadMasterInit(AXI_CONFIG_C, AXI_BURST_C, AXI_CACHE_C),
       channelSel     => 0,
       smplCnt        => (others => (others => '0')),
-      rdPtr          => (others => (others => '0')),
-      rdPtrValid     => (others => (others => '0')),
-      rdPtrRst       => (others => '0'),
       txMaster       => AXI_STREAM_MASTER_INIT_C,
       hdrCnt         => 0,
       rdHigh         => '0',
@@ -158,7 +155,7 @@ begin
    -- register logic (axilClk domain)
    -- trigger and buffer logic (adcClk domian)
    comb : process (adcRst, axilRst, axiReadSlave, axilReadMaster, axilWriteMaster, txSlave, reg, trig,
-      hdrDout, hdrValid, memWrAddr) is
+      hdrDout, hdrValid, addrDout) is
       variable vreg        : RegType;
       variable vtrig       : TrigType;
       variable regCon      : AxiLiteEndPointType;
@@ -193,74 +190,6 @@ begin
       axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
       
       ------------------------------------------------
-      -- stop reader when wrPtr approaches rdPtr
-      ------------------------------------------------
-      
-      --vtrig.memFull  := (others=>'0');
-      vtrig.rdPtrRst := (others=>'0');
-      vtrig.hdrRd    := (others=>'0');
-      
-      for ch in 7 downto 0 loop
-         
-         -- add morgin offset to the write pointer
-         -- 0.25 memory size currently
-         wrAddrOff(ch) := memWrAddr(ch)(31) & memWrAddr(ch)(ADDR_BITS_G-1 downto 0);
-         wrAddrOff(ch) := wrAddrOff(ch) + 2**(ADDR_BITS_G-3);
-         
-         -- delayed signal to start the FSM after the 1st FIFO word is read
-         vtrig.rdPtrValid(ch)(1) := trig.rdPtrValid(ch)(0);
-         
-         -- store the buffer pointer until it is read out
-         if hdrValid(ch) = '1' and trig.rdPtrValid(ch)(0) = '0' then
-            -- bit 31 is carry flag to roll the buffer
-            vtrig.rdPtr(ch)(31)           := hdrDout(ch)(31);
-            -- store the trigger type
-            vtrig.trigHdrType             := hdrDout(ch)(30 downto 28);
-            -- remove trigger information from the read pointer and resize the address
-            vtrig.rdPtr(ch)(30 downto 0)  := resize(toSlv(ch, 3) & hdrDout(ch)(ADDR_BITS_G-1 downto 0), 31);
-            vtrig.rdPtrValid(ch)(0) := '1';
-            vtrig.hdrRd(ch)      := '1';
-            
-            -- stop the writer channel when full
-            if vtrig.rdPtr(ch)(31) /= wrAddrOff(ch)(ADDR_BITS_G) then
-               if wrAddrOff(ch)(ADDR_BITS_G-1 downto 0) >= vtrig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
-                  vtrig.memFull(ch) := '1';
-               else
-                  vtrig.memFull(ch) := '0';
-               end if;
-            else
-               vtrig.memFull(ch) := '0';
-            end if;
-            
-         elsif trig.rdPtrRst(ch) = '1' then
-            -- reset if no other pointer in FIFO
-            -- preset to next address otherwise
-            if hdrValid(ch) = '0' then
-               vtrig.rdPtr(ch)   := (others=>'0');
-               vtrig.memFull(ch) := '0';
-            else
-               -- bit 31 is carry flag to roll the buffer
-               vtrig.rdPtr(ch)(31)           := hdrDout(ch)(31);
-               -- remove trigger information from the read pointer and resize the address
-               vtrig.rdPtr(ch)(30 downto 0)  := resize(toSlv(ch, 3) & hdrDout(ch)(ADDR_BITS_G-1 downto 0), 31);
-            end if;
-            vtrig.rdPtrValid(ch) := "00";
-         end if;
-         
-         
-         
-         ---- stop the writer channel when full
-         ----if trig.rdPtr(ch)(31) /= memWrAddr(ch)(31) and trig.rdPtrValid(ch) /= 0 then
-         --if trig.rdPtr(ch)(31) /= wrAddrOff(ch)(ADDR_BITS_G) and trig.rdPtrValid(ch) /= 0 then
-         --   --if memWrAddr(ch)(ADDR_BITS_G-1 downto 0) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
-         --   if wrAddrOff(ch)(ADDR_BITS_G-1 downto 0) >= trig.rdPtr(ch)(ADDR_BITS_G-1 downto 0) then
-         --      vtrig.memFull(ch) := '1';
-         --   end if;
-         --end if;
-         
-      end loop;
-      
-      ------------------------------------------------
       -- AXI read buffer transactions
       ------------------------------------------------
       
@@ -283,12 +212,16 @@ begin
       -- Buffer read state machine
       ----------------------------------------------------------------------
       
+      vtrig.hdrRd    := (others=>'0');
+      vtrig.addrRd   := (others=>'0');
+      
       case trig.buffState is
       
          when IDLE_S =>
             if trig.reset = 0 then
-               if trig.rdPtrValid(trig.channelSel)(1) = '1' then
-                  vtrig.trigSize    := hdrDout(trig.channelSel);   -- store trigSize
+               if hdrValid(trig.channelSel) = '1' then
+                  vtrig.trigSize    := hdrDout(trig.channelSel)(21 downto 0);    -- store trigSize
+                  vtrig.trigType    := hdrDout(trig.channelSel)(31 downto 27);   -- store trigType
                   vtrig.buffState   := HDR_S;
                elsif trig.channelSel < 7 then
                   vtrig.channelSel := trig.channelSel + 1;
@@ -336,15 +269,13 @@ begin
                   vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- gTime
                   vtrig.hdrCnt      := 0;
                   -- Set the memory address aligned to 32 bits
-                  vtrig.rMaster.araddr := resize(trig.rdPtr(trig.channelSel)(30 downto 2) & "00", vtrig.rMaster.araddr'length);
+                  vtrig.rMaster.araddr := resize(addrDout(trig.channelSel)(30 downto 2) & "00", vtrig.rMaster.araddr'length);
                   -- check if the trigger has data
                   if trig.trigSize > 0 then
                      -- Validate address
                      vtrig.buffState   := ADDR_S;
                   else
                      vtrig.txMaster.tLast := '1';
-                     -- reset the read pointer
-                     vtrig.rdPtrRst(trig.channelSel) := '1';
                      -- move to the next channnel
                      if trig.channelSel < 7 then
                         vtrig.channelSel := trig.channelSel + 1;
@@ -411,7 +342,7 @@ begin
                end if;
                
                -- if address is not 32 bit aligned must skip first and last sample in a burst (single or many)
-               if (trig.rdPtr(trig.channelSel)(1 downto 0) /= 0) then
+               if (addrDout(trig.channelSel)(1 downto 0) /= 0) then
                   if (trig.first = '1' and trig.rdHigh = '0') then
                      -- stream not valid
                      vtrig.txMaster.tValid := '0';
@@ -443,8 +374,8 @@ begin
                   -- last in axi stream
                   vtrig.txMaster.tLast := '1';
                   vtrig.txMaster.tValid := '1';
-                  -- reset the read pointer
-                  vtrig.rdPtrRst(trig.channelSel) := '1';
+                  -- move the read pointer
+                  vtrig.addrRd(trig.channelSel) := '1';
                   -- move to the next channnel
                   if trig.channelSel < 7 then
                      vtrig.channelSel := trig.channelSel + 1;
@@ -477,8 +408,8 @@ begin
       axiReadMaster  <= trig.rMaster;
       axilWriteSlave <= reg.axilWriteSlave;
       axilReadSlave  <= reg.axilReadSlave;
-      memFull        <= trig.memFull;
       hdrRd          <= trig.hdrRd;
+      addrRd         <= trig.addrRd;
       
    end process comb;
 

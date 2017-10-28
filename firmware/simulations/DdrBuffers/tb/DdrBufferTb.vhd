@@ -140,8 +140,9 @@ architecture testbed of DdrBufferTb is
    signal hdrDout       : Slv32Array(7 downto 0);
    signal hdrValid      : slv(7 downto 0);
    signal hdrRd         : slv(7 downto 0);
-   signal memWrAddr     : Slv32Array(7 downto 0);
-   signal memFull       : slv(7 downto 0);
+   signal addrDout      : Slv32Array(7 downto 0);
+   signal addrValid     : slv(7 downto 0);
+   signal addrRd        : slv(7 downto 0);
    signal axisClk       : sl := '0';
    signal axisRst       : sl := '1';
    signal axisMaster    : AxiStreamMasterType;
@@ -212,9 +213,10 @@ begin
          hdrDout           => hdrDout(i),
          hdrValid          => hdrValid(i),
          hdrRd             => hdrRd(i),
-         -- Buffer handshake to/from data reader (adcClk)
-         memWrAddr         => memWrAddr(i),
-         memFull           => memFull(i)
+         -- Address information to data reader (adcClk)
+         addrDout          => addrDout(i),
+         addrValid         => addrValid(i),
+         addrRd            => addrRd(i)
       );
    end generate;
    
@@ -244,9 +246,10 @@ begin
       hdrDout           => hdrDout,
       hdrValid          => hdrValid,
       hdrRd             => hdrRd,
-      -- Buffer handshake to/from data writers (adcClk)
-      memWrAddr         => memWrAddr,
-      memFull           => memFull,
+      -- Address information from data writers (adcClk)
+      addrDout          => addrDout,
+      addrValid         => addrValid,
+      addrRd            => addrRd,
       -- AxiStream output
       axisClk           => axisClk,
       axisRst           => axisRst,
@@ -450,7 +453,7 @@ begin
                trigCh := conv_integer(axisMaster.tData(7 downto 0));
                assert trigCh >=0 and trigCh <= 7 report "Bad channel number" severity failure;
             elsif wordCnt = 2 then  -- header
-               trigSize := conv_integer(axisMaster.tData(31 downto 0));
+               trigSize := conv_integer(axisMaster.tData(21 downto 0));
                if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": size " & integer'image(trigSize); end if;
             elsif wordCnt = 3 then  -- header
                trigOffset := conv_integer(axisMaster.tData(31 downto 0));

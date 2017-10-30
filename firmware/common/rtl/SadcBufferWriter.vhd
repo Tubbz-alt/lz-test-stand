@@ -691,7 +691,6 @@ begin
       
       ----------------------------------------------------------------------
       -- Header state machine
-      -- read trigger size from address FIFO
       -- wait until the whole trigger is in the DDR memory
       -- store header information and let know the reader when the trigger is ready
       ----------------------------------------------------------------------

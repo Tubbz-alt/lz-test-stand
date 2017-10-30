@@ -246,9 +246,15 @@ architecture rtl of SadcBufferWriter is
    signal wrAddrCSig   : sl;                             -- for simulation only
    signal wrPtrCSig    : sl;                             -- for simulation only
    signal rdPtrCSig    : sl;                             -- for simulation only
+   signal wData        : slv(127 downto 0);              -- for simulation only
+   signal wValid       : sl;                             -- for simulation only
    
    
 begin
+   
+   
+   wData  <= trig.wMaster.wdata(127 downto 0);
+   wValid <= trig.wMaster.wvalid;
    
    assert ADDR_BITS_G > 16
       report "Defined adress space ADDR_BITS_G can accomodate only " & integer'image((2**ADDR_BITS_G)/4096) & " AXI burst(s) (4kB)"

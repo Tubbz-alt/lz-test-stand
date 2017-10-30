@@ -68,12 +68,12 @@ architecture mapping of SadcBuffer is
    signal axilReadMasters  : AxiLiteReadMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
    signal axilReadSlaves   : AxiLiteReadSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
 
-   signal hdrDout  : Slv32Array(7 downto 0);
-   signal hdrValid : slv(7 downto 0);
-   signal hdrRd    : slv(7 downto 0);
-
-   signal memWrAddr : Slv32Array(7 downto 0);
-   signal memFull   : slv(7 downto 0);
+   signal hdrDout    : Slv32Array(7 downto 0);
+   signal hdrValid   : slv(7 downto 0);
+   signal hdrRd      : slv(7 downto 0);
+   signal addrDout   : Slv32Array(7 downto 0);
+   signal addrValid  : slv(7 downto 0);
+   signal addrRd     : slv(7 downto 0);
 
    signal adcDataTester : Slv32Array(7 downto 0);
 
@@ -133,9 +133,10 @@ begin
             hdrDout         => hdrDout(i),
             hdrValid        => hdrValid(i),
             hdrRd           => hdrRd(i),
-            -- Buffer handshake to/from data reader (adcClk)
-            memWrAddr       => memWrAddr(i),
-            memFull         => memFull(i)
+            -- Address information to data reader (adcClk)
+            addrDout        => addrDout(i),
+            addrValid       => addrValid(i),
+            addrRd          => addrRd(i)
          );
 
       adcDataTester(i)(31 downto 16) <= (others => '0');
@@ -169,9 +170,10 @@ begin
          hdrDout         => hdrDout,
          hdrValid        => hdrValid,
          hdrRd           => hdrRd,
-         -- Buffer handshake to/from data writers (adcClk domain)
-         memWrAddr       => memWrAddr,
-         memFull         => memFull,
+         -- Address information from data writers (adcClk)
+         addrDout        => addrDout,
+         addrValid       => addrValid,
+         addrRd          => addrRd,
          -- AxiStream output (axisClk domain)
          axisClk         => axisClk,
          axisRst         => axisRst,

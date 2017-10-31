@@ -43,7 +43,7 @@ architecture testbed of DdrBufferTb is
    constant ADDR_BITS_C : integer := 18;
    
    -- define ADC swing
-   constant ADC_DATA_TOP_C : slv(15 downto 0) := toSlv(1000,16);
+   constant ADC_DATA_TOP_C : slv(15 downto 0) := toSlv(65000,16);
    constant ADC_DATA_BOT_C : slv(15 downto 0) := toSlv(100,16);
    
    -- expected clock cycles latency in between the trigger and its capture
@@ -546,8 +546,10 @@ begin
                         if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": top ADC peak"; end if;
                      else
                         -- check samples here
-                        assert adcPrevious < axisMaster.tData(15 downto 0) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad ADC values" severity failure;
+                        assert adcPrevious = axisMaster.tData(15 downto 0)-1 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad ADC values" severity failure;
                         assert axisMaster.tData(15 downto 0) < axisMaster.tData(31 downto 16) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad ADC values" severity failure;
+                        -- update previous
+                        adcPrevious := axisMaster.tData(31 downto 16);
                      end if;
                   else
                      if axisMaster.tData(15 downto 0) = ADC_DATA_BOT_C or axisMaster.tData(31 downto 16) = ADC_DATA_BOT_C then
@@ -556,8 +558,10 @@ begin
                         if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bottom ADC peak"; end if;
                      else
                         -- check samples here
-                        assert adcPrevious > axisMaster.tData(15 downto 0) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad ADC values" severity failure;
+                        assert adcPrevious = axisMaster.tData(15 downto 0)+1 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad ADC values" severity failure;
                         assert axisMaster.tData(15 downto 0) > axisMaster.tData(31 downto 16) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) & ": bad ADC values" severity failure;
+                        -- update previous
+                        adcPrevious := axisMaster.tData(31 downto 16);
                      end if;
                   end if;
                end if;

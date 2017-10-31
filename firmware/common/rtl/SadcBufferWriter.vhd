@@ -468,6 +468,9 @@ begin
                   vtrig.wMaster.awvalid := '1';
                   -- Next state
                   vtrig.buffState := MOVE_S;
+                  -- save ADC data and move write address
+                  vtrig.wMaster.wdata(15 downto 0) := adcData;
+                  vtrig.wrAddress   := trig.wrAddress + 2;
                   -- count available samples
                   if trig.samplesBuff /= 2**trig.samplesBuff'length-1 then
                      vtrig.samplesBuff := trig.samplesBuff + 1;

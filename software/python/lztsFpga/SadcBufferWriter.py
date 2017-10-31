@@ -39,15 +39,19 @@ class SadcBufferWriter(pr.Device):
       #Setup registers & variables
       
       self.add((pr.RemoteVariable(name='Enable',      description='Enable',      offset=0x00000000, bitSize=1,  bitOffset=0,  base=pr.Bool, mode='RW')))
-      self.add((pr.RemoteVariable(name='Overflow',    description='Overflow',    offset=0x00000004, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RO')))
-      self.add((pr.RemoteVariable(name='AcqCount',    description='AcqCount',    offset=0x00000008, bitSize=32, bitOffset=0,  base=pr.UInt, mode='RO')))
-      self.add((pr.RemoteVariable(name='ErrCount',    description='ErrCount',    offset=0x0000000C, bitSize=32, bitOffset=0,  base=pr.UInt, mode='RO')))
+      self.add((pr.RemoteVariable(name='RstCounters', description='RstCounters', offset=0x00000004, bitSize=1,  bitOffset=0,  base=pr.Bool, mode='RW')))
+      self.add((pr.RemoteVariable(name='LostSamples', description='LostSamples', offset=0x00000008, bitSize=32, bitOffset=0,  base=pr.UInt, mode='RO')))
+      self.add((pr.RemoteVariable(name='LostTriggers',description='LostTriggers',offset=0x0000000C, bitSize=32, bitOffset=0,  base=pr.UInt, mode='RO')))
+      self.add((pr.RemoteVariable(name='DropTriggers',description='DropTriggers',offset=0x00000010, bitSize=32, bitOffset=0,  base=pr.UInt, mode='RO')))
+      self.add((pr.RemoteVariable(name='AcqCount',    description='AcqCount',    offset=0x00000014, bitSize=32, bitOffset=0,  base=pr.UInt, mode='RO')))
+      self.add((pr.RemoteVariable(name='ErrCount',    description='ErrCount',    offset=0x00000018, bitSize=32, bitOffset=0,  base=pr.UInt, mode='RO')))
       
       self.add((pr.RemoteVariable(name='IntPreThreshold',      description='IntPreThreshold',      offset=0x00000100, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RW')))
       self.add((pr.RemoteVariable(name='IntPostThreshold',     description='IntPostThreshold',     offset=0x00000104, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RW')))
       self.add((pr.RemoteVariable(name='IntVetoThreshold',     description='IntVetoThreshold',     offset=0x00000108, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RW')))
       self.add((pr.RemoteVariable(name='IntPreDelay',          description='IntPreDelay',          offset=0x0000010C, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RW')))
       self.add((pr.RemoteVariable(name='IntPostDelay',         description='IntPostDelay',         offset=0x00000110, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RW')))
+      self.add((pr.RemoteVariable(name='IntSaveVeto',          description='IntSaveVeto',          offset=0x00000114, bitSize=1,  bitOffset=0,  base=pr.Bool, mode='RW')))
       self.add((pr.RemoteVariable(name='ExtTrigSize',          description='ExtTrigSize',          offset=0x00000200, bitSize=22, bitOffset=0,  base=pr.UInt, mode='RW')))
       
       #####################################

@@ -148,6 +148,9 @@ architecture rtl of SadcBufferReader is
    
    signal axiDataRd  : slv(31 downto 0);    -- ONLY FOR SIMULATION
    
+   attribute keep : string;
+   attribute keep of trig : signal is "true";
+   
 begin
 
    axiDataRd  <= axiReadSlave.rdata(31 downto 0);    -- ONLY FOR SIMULATION
@@ -159,8 +162,7 @@ begin
       variable vreg        : RegType;
       variable vtrig       : TrigType;
       variable regCon      : AxiLiteEndPointType;
-      type wrAddrArray is array (natural range <>) of slv(ADDR_BITS_G downto 0);
-      variable wrAddrOff   : wrAddrArray(7 downto 0);
+      variable rdAddrEnd   : slv(9 downto 0);
    begin
       -- Latch the current value
       vreg := reg;
@@ -295,13 +297,20 @@ begin
                
                vtrig.rdSize := (others=>'0');
                
-               -- Set the burst length
+               -- Set the burst length               
                if trig.trigSize <= conv_integer(ARLEN_C)*2+1 then
                   -- trigger size divided by 2 as there are two samples in one read
                   vtrig.rMaster.arlen := trig.trigSize(8 downto 1);
                else
                   vtrig.rMaster.arlen := ARLEN_C;
                end if;
+               
+               -- correct ARLEN when burst exceeds the buffer
+               rdAddrEnd := (2**10-1) - trig.rMaster.araddr(9 downto 0);
+               if (((2**ADDR_BITS_G-1) - trig.rMaster.araddr(ADDR_BITS_G-1 downto 0) <= conv_integer(ARLEN_C)*4+1) and (vtrig.rMaster.arlen > rdAddrEnd(9 downto 2))) then
+                  vtrig.rMaster.arlen := rdAddrEnd(9 downto 2);
+               end if;
+               
                -- Set the flag
                vtrig.rMaster.arvalid := '1';
                -- Next state
@@ -310,7 +319,6 @@ begin
             vtrig.rdHigh := '0';
             vtrig.first := '1';
             vtrig.last := '0';
-            
          
          when MOVE_S =>
             

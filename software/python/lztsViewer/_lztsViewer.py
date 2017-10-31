@@ -206,7 +206,7 @@ class Window(QtGui.QMainWindow, QObject):
             trigSamples = 0
             trigOffset = 0
             if len(chData[i]) >= 11:
-               trigSamples = (chData[i][5] << 16) | chData[i][4]
+               trigSamples = ((chData[i][5] << 16) | chData[i][4])&0x3fffff
                trigOffset = (chData[i][7] << 16) | chData[i][6]
                print('Trigger size is %d samples' %(trigSamples))
                print('Trigger offset is %d samples' %(trigOffset))

@@ -729,12 +729,11 @@ begin
          
          -- make sure that all trigger bursts are in the memory
          when WAIT_TRIG_INMEM_S =>
-            if axiWriteSlave.bvalid = '1' then
-               if trig.bvalidCnt = 0 then
-                  vtrig.hdrState := WR_HDR_S;
-               else
-                  vtrig.bvalidCnt := trig.bvalidCnt - 1;
-               end if;
+            if axiWriteSlave.bvalid = '1' and trig.bvalidCnt > 0 then
+               vtrig.bvalidCnt := trig.bvalidCnt - 1;
+            end if;
+            if trig.bvalidCnt = 0 then
+               vtrig.hdrState := WR_HDR_S;
             end if;
          
          -- write header information to the FIFO

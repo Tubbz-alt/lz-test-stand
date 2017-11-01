@@ -73,6 +73,8 @@ architecture rtl of SadcBufferReader is
       LEN_BITS_C   => 8
    );
    
+   constant MAX_EMPTY_C : integer             := 1000;
+   
    constant AXI_BURST_C : slv(1 downto 0)     := "01";
    constant AXI_CACHE_C : slv(3 downto 0)     := "1111";
    constant ARLEN_C : slv(7 downto 0) := getAxiLen(AXI_CONFIG_C, 1024);
@@ -107,6 +109,7 @@ architecture rtl of SadcBufferReader is
       last           : sl;
       trigHdrType    : slv(2 downto 0);
       dataHigh       : slv(15 downto 0);
+      emptyCnt       : integer range 0 to MAX_EMPTY_C;
    end record TrigType;
    
    constant TRIG_INIT_C : TrigType := (
@@ -127,7 +130,8 @@ architecture rtl of SadcBufferReader is
       first          => '0',
       last           => '0',
       trigHdrType    => (others => '0'),
-      dataHigh       => (others => '0')
+      dataHigh       => (others => '0'),
+      emptyCnt       => 0
    );
    
    type RegType is record
@@ -277,15 +281,21 @@ begin
                   vtrig.rMaster.araddr := resize(addrDout(trig.channelSel)(30 downto 2) & "00", vtrig.rMaster.araddr'length);
                   -- check if the trigger has data
                   if trig.trigSize > 0 then
+                     vtrig.emptyCnt    := 0;
                      -- Validate address
                      vtrig.buffState   := ADDR_S;
                   else
+                     vtrig.emptyCnt    := trig.emptyCnt + 1;
                      vtrig.txMaster.tLast := '1';
-                     -- move to the next channnel
-                     if trig.channelSel < 7 then
-                        vtrig.channelSel := trig.channelSel + 1;
-                     else
-                        vtrig.channelSel := 0;
+                     if trig.emptyCnt >= MAX_EMPTY_C then
+                        vtrig.emptyCnt    := 0;
+                        -- move to the next channnel
+                        -- channelSel must increment here because hdrValid(trig.channelSel) remained '1'
+                        if trig.channelSel < 7 then
+                           vtrig.channelSel := trig.channelSel + 1;
+                        else
+                           vtrig.channelSel := 0;
+                        end if;
                      end if;
                      vtrig.buffState   := IDLE_S;
                   end if;

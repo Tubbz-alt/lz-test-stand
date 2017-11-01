@@ -415,11 +415,11 @@ begin
       
       loop
          
-         wait for 500 us;
+         wait for 50 us;
          
          wait until falling_edge(axisClk);
          
-         axisSlave.tReady <= not axisSlave.tReady;
+         --axisSlave.tReady <= not axisSlave.tReady;
          
       end loop;
       

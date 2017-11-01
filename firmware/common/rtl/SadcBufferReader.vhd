@@ -29,7 +29,7 @@ use work.SsiPkg.all;
 entity SadcBufferReader is
    generic (
       TPD_G             : time                     := 1 ns;
-      ADDR_BITS_G       : integer range 12 to 31   := 14;
+      ADDR_BITS_G       : integer range 12 to 27   := 14;
       AXI_ERROR_RESP_G  : slv(1 downto 0)          := AXI_RESP_DECERR_C;
       PGP_LANE_G        : slv(3 downto 0)          := "0000";
       PGP_VC_G          : slv(3 downto 0)          := "0001"
@@ -84,7 +84,8 @@ architecture rtl of SadcBufferReader is
       IDLE_S,
       HDR_S,
       ADDR_S,
-      MOVE_S
+      MOVE_S,
+      BLOWOFF_S
    );
    
    type TrigType is record
@@ -105,6 +106,7 @@ architecture rtl of SadcBufferReader is
       first          : sl;
       last           : sl;
       trigHdrType    : slv(2 downto 0);
+      dataHigh       : slv(15 downto 0);
    end record TrigType;
    
    constant TRIG_INIT_C : TrigType := (
@@ -124,7 +126,8 @@ architecture rtl of SadcBufferReader is
       rdHigh         => '0',
       first          => '0',
       last           => '0',
-      trigHdrType    => (others => '0')
+      trigHdrType    => (others => '0'),
+      dataHigh       => (others => '0')
    );
    
    type RegType is record
@@ -146,14 +149,14 @@ architecture rtl of SadcBufferReader is
    
    signal txSlave : AxiStreamSlaveType;
    
-   signal axiDataRd  : slv(31 downto 0);    -- ONLY FOR SIMULATION
+   --signal axiDataRd  : slv(31 downto 0);    -- ONLY FOR SIMULATION
    
-   attribute keep : string;
-   attribute keep of trig : signal is "true";
+   --attribute keep : string;
+   --attribute keep of trig : signal is "true";
    
 begin
 
-   axiDataRd  <= axiReadSlave.rdata(31 downto 0);    -- ONLY FOR SIMULATION
+   --axiDataRd  <= axiReadSlave.rdata(31 downto 0);    -- ONLY FOR SIMULATION
    
    -- register logic (axilClk domain)
    -- trigger and buffer logic (adcClk domian)
@@ -231,7 +234,7 @@ begin
                   vtrig.channelSel := 0;
                end if;
                vtrig.hdrCnt := 0;
-            end if;            
+            end if;
          
          when HDR_S =>
             if vtrig.txMaster.tValid = '0' then
@@ -339,6 +342,7 @@ begin
                vtrig.rdHigh := not trig.rdHigh;
                if trig.rdHigh = '0' then
                   vtrig.txMaster.tData(15 downto 0) := axiReadSlave.rdata(15 downto 0);
+                  vtrig.dataHigh                    := axiReadSlave.rdata(31 downto 16);
                   -- Accept the data 
                   vtrig.rdSize := trig.rdSize + 1;
                   -- move addrress and make sure that it rolls at the end of the buffer space
@@ -346,7 +350,7 @@ begin
                   -- acknowledge data readout
                   vtrig.rMaster.rready := '1';
                else
-                  vtrig.txMaster.tData(15 downto 0) := axiReadSlave.rdata(31 downto 16);
+                  vtrig.txMaster.tData(15 downto 0) := trig.dataHigh;
                end if;
                
                -- if address is not 32 bit aligned must skip first and last sample in a burst (single or many)
@@ -390,9 +394,22 @@ begin
                   else
                      vtrig.channelSel := 0;
                   end if;
-                  vtrig.buffState := IDLE_S;
+                  if axiReadSlave.rlast = '1' then
+                     vtrig.buffState := IDLE_S;
+                  else
+                     vtrig.buffState := BLOWOFF_S;
+                  end if;
                end if;
                
+            end if;
+         
+         when BLOWOFF_S =>
+            -- Blowoff the data 
+            vtrig.rMaster.rready := '1';
+            -- Check for last transfer
+            if (axiReadSlave.rvalid = '1') and (axiReadSlave.rlast = '1') then
+               -- Next states
+               vtrig.buffState := IDLE_S;
             end if;
          
          when others =>

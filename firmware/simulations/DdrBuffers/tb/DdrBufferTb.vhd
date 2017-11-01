@@ -406,6 +406,25 @@ begin
    end generate;
    
    -----------------------------------------------------------------------
+   -- backpressure the output stream
+   -----------------------------------------------------------------------
+   process
+   begin
+      
+      axisSlave.tReady  <= '1';
+      
+      loop
+         
+         wait for 500 us;
+         
+         wait until falling_edge(axisClk);
+         
+         axisSlave.tReady <= not axisSlave.tReady;
+         
+      end loop;
+      
+   end process;
+   -----------------------------------------------------------------------
    -- Monitor the output stream (trigger data)
    -----------------------------------------------------------------------
    process
@@ -425,7 +444,7 @@ begin
       variable goodTriggerCnt     : NaturalArray(7 downto 0) := (others=>0);
    begin
    
-      axisSlave.tReady  <= '1';
+      
       trigRdVer         <= (others=>'0');
       triggersGood      <= (others=>(others=>'0'));
       
@@ -434,7 +453,7 @@ begin
          --wait until axisMaster.tValid = '1';
          wait until rising_edge(axisClk);
          
-         if axisMaster.tValid = '1' then
+         if axisMaster.tValid = '1' and axisSlave.tReady = '1' then
             -- reset counter if start of packet
             if axisMaster.tUser(1 downto 0) = "10" then
                wordCnt     := 0;

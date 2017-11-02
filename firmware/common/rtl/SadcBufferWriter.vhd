@@ -836,5 +836,76 @@ begin
    
    addrDout    <= rdPtrDout;
    addrValid   <= rdPtrValid;
+   
+   
+   -------------------------------------------------------------------
+   ---- DSP comparators
+   -------------------------------------------------------------------
+   --
+   --U_ADC_Cmp: entity work.DspComparator
+   --generic map (
+   --   USE_DSP_G      => "yes",
+   --   PIPE_STAGES_G  => 0,
+   --   WIDTH_G        => 17
+   --)
+   --port map (
+   --   clk               => adcClk,
+   --   rst               => adcRst,
+   --   ain(16)           => '0',
+   --   ain(15 downto 0)  => adcData,
+   --   bin(16)           => '0',
+   --   bin(15 downto 0)  => trig.intPreThresh,
+   --   -- greater than or equal to (a >= b)
+   --   gtEq              => adcDataCmp
+   --);
+   --
+   --U_PreT_Cmp: entity work.DspComparator
+   --generic map (
+   --   USE_DSP_G      => "yes",
+   --   PIPE_STAGES_G  => 0,
+   --   WIDTH_G        => 17
+   --)
+   --port map (
+   --   clk               => adcClk,
+   --   rst               => adcRst,
+   --   ain               => (others=>'0'),
+   --   bin(16)           => '0',
+   --   bin(15 downto 0)  => trig.intPreThresh,
+   --   -- equal                    (a =  b)
+   --   eq                => preThrCmp
+   --);
+   --
+   --U_ExtS_Cmp: entity work.DspComparator
+   --generic map (
+   --   USE_DSP_G      => "yes",
+   --   PIPE_STAGES_G  => 0,
+   --   WIDTH_G        => 23
+   --)
+   --port map (
+   --   clk               => adcClk,
+   --   rst               => adcRst,
+   --   ain               => (others=>'0'),
+   --   bin(22)           => '0',
+   --   bin(21 downto 0)  => trig.extTrigSize,
+   --   -- equal                    (a =  b)
+   --   eq                => extSizeCmp
+   --);
+   --
+   --U_Tl_Cmp0: entity work.DspComparator
+   --generic map (
+   --   USE_DSP_G      => "yes",
+   --   PIPE_STAGES_G  => 0,
+   --   WIDTH_G        => 23
+   --)
+   --port map (
+   --   clk               => adcClk,
+   --   rst               => adcRst,
+   --   ain(22)           => '0',
+   --   ain(21 downto 0)  => trig.trigLength,
+   --   bin(22)           => '0',
+   --   bin(21 downto 0)  => trig.extTrigSize,
+   --   -- greater than or equal to (a >= b)
+   --   gtEq              => trigLenCmp0
+   --);
 
 end rtl;

@@ -110,6 +110,7 @@ architecture rtl of SadcBufferReader is
       trigHdrType    : slv(2 downto 0);
       dataHigh       : slv(15 downto 0);
       emptyCnt       : integer range 0 to MAX_EMPTY_C;
+      addrDout       : slv(31 downto 0);
    end record TrigType;
    
    constant TRIG_INIT_C : TrigType := (
@@ -131,7 +132,8 @@ architecture rtl of SadcBufferReader is
       last           => '0',
       trigHdrType    => (others => '0'),
       dataHigh       => (others => '0'),
-      emptyCnt       => 0
+      emptyCnt       => 0,
+      addrDout       => (others => '0')
    );
    
    type RegType is record
@@ -176,7 +178,8 @@ begin
       vtrig := trig;
       
       -- keep reset for several clock cycles
-      vtrig.reset := trig.reset(14 downto 0) & '0';
+      vtrig.reset    := trig.reset(14 downto 0) & '0';
+      vtrig.addrDout := addrDout(trig.channelSel);
       
       ------------------------------------------------
       -- cross domian sync
@@ -278,7 +281,7 @@ begin
                   vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- gTime
                   vtrig.hdrCnt      := 0;
                   -- Set the memory address aligned to 32 bits
-                  vtrig.rMaster.araddr := resize(addrDout(trig.channelSel)(30 downto 2) & "00", vtrig.rMaster.araddr'length);
+                  vtrig.rMaster.araddr := resize(trig.addrDout(30 downto 2) & "00", vtrig.rMaster.araddr'length);
                   -- check if the trigger has data
                   if trig.trigSize > 0 then
                      vtrig.emptyCnt    := 0;
@@ -364,7 +367,7 @@ begin
                end if;
                
                -- if address is not 32 bit aligned must skip first and last sample in a burst (single or many)
-               if (addrDout(trig.channelSel)(1 downto 0) /= 0) then
+               if (trig.addrDout(1 downto 0) /= 0) then
                   if (trig.first = '1' and trig.rdHigh = '0') then
                      -- stream not valid
                      vtrig.txMaster.tValid := '0';

@@ -37,6 +37,8 @@ class LztsPowerRegisters(pr.Device):
       
       
       #Setup registers & variables
+      self.add((pr.RemoteVariable(name='SysRst',     description='SysRst',     offset=0x00000008, bitSize=1, bitOffset=0,  base=pr.Bool, mode='RW')))
+      
       self.add((
          pr.RemoteVariable(name='EnDcDcAm6V',   description='PowerEnAll', offset=0x00000000, bitSize=1, bitOffset=0,  base=pr.Bool, mode='RW'),
          pr.RemoteVariable(name='EnDcDcAp5V4',  description='PowerEnAll', offset=0x00000000, bitSize=1, bitOffset=1,  base=pr.Bool, mode='RW'),

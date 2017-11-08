@@ -23,6 +23,7 @@
 
 import sys
 import os
+import math
 import rogue.utilities
 import rogue.utilities.fileio
 import rogue.interfaces.stream
@@ -53,7 +54,7 @@ class Window(QtGui.QMainWindow, QObject):
     
     ## Define a new signal called 'trigger' that has no arguments.
     dataTrigger = pyqtSignal()
-    processDataFrameTrigger = pyqtSignal()
+    #processDataFrameTrigger = pyqtSignal()
 
 
     def __init__(self):
@@ -84,11 +85,12 @@ class Window(QtGui.QMainWindow, QObject):
         # rogue interconection  #
         # Create the objects            
         self.eventReaderData = EventReader(self)
+        self.enabled = [False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False]
         
         # Connect the trigger signal to a slot.
         # the different threads send messages to synchronize their tasks
         self.dataTrigger.connect(self.displayDataFromReader)
-        self.processDataFrameTrigger.connect(self.eventReaderData._processFrame)
+        #self.processDataFrameTrigger.connect(self.eventReaderData._processFrame)
         
         # display the window on the screen after all items have been added 
         self.show()
@@ -204,18 +206,15 @@ class Window(QtGui.QMainWindow, QObject):
             # currently header is 12 x 16 bit words (will be more)
             # read header information
             trigSamples = 0
-            trigOffset = 0
             if len(chData[i]) >= 11:
                trigSamples = ((chData[i][5] << 16) | chData[i][4])&0x3fffff
-               trigOffset = (chData[i][7] << 16) | chData[i][6]
-               print('Trigger size is %d samples' %(trigSamples))
-               print('Trigger offset is %d samples' %(trigOffset))
+               
                #print(len(chData[i][12:]))
             
             # check how many samples in the trigger
             # the packet can be padded with extra zeros (2 bytes)
             if trigSamples < len(chData[i][12:]):
-               chData[i] = chData[i][12:trigSamples]
+               chData[i] = chData[i][12:12+trigSamples]
             else:
                chData[i] = chData[i][12:]
             
@@ -224,10 +223,10 @@ class Window(QtGui.QMainWindow, QObject):
             
         
         
-        enabled = [self.SadcCh0.isChecked(), self.SadcCh1.isChecked(), self.SadcCh2.isChecked(), self.SadcCh3.isChecked(), 
-                   self.SadcCh4.isChecked(), self.SadcCh5.isChecked(), self.SadcCh6.isChecked(), self.SadcCh7.isChecked(),
-                   self.FadcCh0.isChecked(), self.FadcCh1.isChecked(), self.FadcCh2.isChecked(), self.FadcCh3.isChecked(), 
-                   self.FadcCh4.isChecked(), self.FadcCh5.isChecked(), self.FadcCh6.isChecked(), self.FadcCh7.isChecked()]
+        self.enabled = [self.SadcCh0.isChecked(), self.SadcCh1.isChecked(), self.SadcCh2.isChecked(), self.SadcCh3.isChecked(), 
+                        self.SadcCh4.isChecked(), self.SadcCh5.isChecked(), self.SadcCh6.isChecked(), self.SadcCh7.isChecked(),
+                        self.FadcCh0.isChecked(), self.FadcCh1.isChecked(), self.FadcCh2.isChecked(), self.FadcCh3.isChecked(), 
+                        self.FadcCh4.isChecked(), self.FadcCh5.isChecked(), self.FadcCh6.isChecked(), self.FadcCh7.isChecked()]
         colors = ['xkcd:blue',    
                   'xkcd:brown',   
                   'xkcd:black',   
@@ -263,13 +262,13 @@ class Window(QtGui.QMainWindow, QObject):
                   "FADC Channel 7"]
         
         
-        self.lineDisplay1.update_plot( enabled, chData, colors, labels)
+        self.lineDisplay1.update_plot( self.enabled, chData, colors, labels)
         if self.enableHist.isChecked():
-            self.lineDisplay2.update_fft( enabled, chData, colors, labels, 1)
+            self.lineDisplay2.update_fft( self.enabled, chData, colors, labels, 1)
         elif self.enableFFT.isChecked():
-            self.lineDisplay2.update_fft( enabled, chData, colors, labels, 2)
+            self.lineDisplay2.update_fft( self.enabled, chData, colors, labels, 2)
         else:
-            self.lineDisplay2.update_fft( enabled, chData, colors, labels, 0)
+            self.lineDisplay2.update_fft( self.enabled, chData, colors, labels, 0)
         self.eventReaderData.busy = False
         
         if (PRINT_VERBOSE): print('Display done')
@@ -286,12 +285,12 @@ class EventReader(rogue.interfaces.stream.Slave):
         rogue.interfaces.stream.Slave.__init__(self)
         super(EventReader, self).__init__()
         self.enable = True
-        self.numAcceptedFrames = 0
-        self.numProcessFrames  = 0
+        self.chReceived = [False]*16
+        self.enabledCh = [False]*16
         self.lastFrame = rogue.interfaces.stream.Frame
-        self.frameDataArray = [bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray()]
         self.channelDataArray = [bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray()]
         self.parent = parent
+        self.lastTime = 0
         #############################
         # define the data type IDs
         #############################
@@ -308,58 +307,60 @@ class EventReader(rogue.interfaces.stream.Slave):
     # access the screen.
     def _acceptFrame(self,frame):
         
+        
+        self.enabledCh = [self.parent.SadcCh0.isChecked(), self.parent.SadcCh1.isChecked(), self.parent.SadcCh2.isChecked(), self.parent.SadcCh3.isChecked(), 
+                          self.parent.SadcCh4.isChecked(), self.parent.SadcCh5.isChecked(), self.parent.SadcCh6.isChecked(), self.parent.SadcCh7.isChecked(),
+                          self.parent.FadcCh0.isChecked(), self.parent.FadcCh1.isChecked(), self.parent.FadcCh2.isChecked(), self.parent.FadcCh3.isChecked(), 
+                          self.parent.FadcCh4.isChecked(), self.parent.FadcCh5.isChecked(), self.parent.FadcCh6.isChecked(), self.parent.FadcCh7.isChecked()]
+        
+        
         self.lastFrame = frame
         # reads entire frame
         p = bytearray(self.lastFrame.getPayload())
         self.lastFrame.read(p,0)
-        if (PRINT_VERBOSE): print('_accepted p[',self.numAcceptedFrames, ']: ', p[0:4])
-        if (PRINT_VERBOSE): print('_accepted p[',self.numAcceptedFrames, ']: ', p[4:8])
-        if (PRINT_VERBOSE): print('_accepted p[',self.numAcceptedFrames, ']: ', p[8:12])
-        if (PRINT_VERBOSE): print('_accepted p[',self.numAcceptedFrames, ']: ', p[12:16])
-        self.frameDataArray[self.numAcceptedFrames%16][:] = p#bytearray(self.lastFrame.getPayload())
-        self.numAcceptedFrames += 1
-
         VcNum =  p[0] & 0xF
-        if (self.busy): 
-            self.busyTimeout = self.busyTimeout + 1
-            print("Event Reader Busy: " +  str(self.busyTimeout))
-            if self.busyTimeout == 10:
-                self.busy = False
-        else:
-            self.busyTimeout = 0
-
-        if ((VcNum == self.VIEW_DATA_CHANNEL_ID) and (not self.busy)):
-            self.parent.processDataFrameTrigger.emit()
-
-
-    def _processFrame(self):
-
-        index = self.numProcessFrames%16
-        self.numProcessFrames += 1
-        if ((self.enable) and (not self.busy)):
-            self.busy = True
+        if (VcNum == self.VIEW_DATA_CHANNEL_ID):
             
-            # reads payload only
-            p = self.frameDataArray[index] 
-            # reads entire frame
-            VcNum =  p[0] & 0xF
-            if (PRINT_VERBOSE): print('-------- Frame ',self.numAcceptedFrames,'Channel flags',self.lastFrame.getFlags(), ' Vc Num:' , VcNum)
+            # print basic info
+            trigSamples = 0
+            trigOffset = 0
+            trigTime = 0
+            if len(p) >= 22:
+                dataConv = np.frombuffer(p, dtype='uint16', count=22)
+                trigSamples = ((dataConv[5] << 16) | dataConv[4])&0x3fffff
+                trigOffset = (dataConv[7] << 16) | dataConv[6]
+                trigTime = (dataConv[9] << 48) | (dataConv[8] << 32) | (dataConv[11] << 16) | dataConv[10]
+                print('Trigger size is %d samples' %(trigSamples))
+                print('Trigger offset is %d samples' %(trigOffset))
+                print('Trigger time is %f' %(trigTime/250000000.0))
             
-            #during stream chNumId is not assigned so these ifs cannot be used to distiguish the frames
-            if (VcNum == self.VIEW_DATA_CHANNEL_ID) :
-                #view data
-                if (PRINT_VERBOSE): print('Num. data readout: ', len(p))
-                # sort slow ADC channnels
+            #view data
+            if (PRINT_VERBOSE): print('Num. data readout: ', len(p))
+            # sort ADC channnels
+            # copy data only when display is not busy
+            if self.busy == False:
+                chIndex = 0
                 if ((p[7] & 0x10)>>4 == 1):
                     if (PRINT_VERBOSE): print('Slow ADC channnel: ', (p[4] & 0xFF))
-                    self.channelDataArray[(p[4] & 0xFF)][:] = p
+                    chIndex = (p[4] & 0xFF)
+                    self.channelDataArray[chIndex][:] = p
                 # sort fast ADC channnels
                 elif ((p[7] & 0x10)>>4 == 0):
                     if (PRINT_VERBOSE): print('Fast ADC channnel: ', (p[4] & 0xFF))
-                    self.channelDataArray[8+(p[4] & 0xFF)][:] = p
-                # Emit the signal.
-                self.parent.dataTrigger.emit()
-
+                    chIndex = 8+(p[4] & 0xFF)
+                    self.channelDataArray[chIndex][:] = p
+                self.chReceived[chIndex] = True
+                testAllData = np.array_equal(np.logical_or(np.logical_not(self.enabledCh), np.logical_and(self.chReceived, self.enabledCh)), [True]*16)
+                # Emit the signal but no more often than every 0.5s
+                # do not emit unless data for all enabled channels arrived
+                if (self.lastTime == 0 or (trigTime-self.lastTime>int(math.ceil(0.5/0.000000004)))) and testAllData == True:
+                    self.parent.dataTrigger.emit()
+                    self.chReceived = [False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False]
+                    self.busy = True
+                    self.lastTime = trigTime
+            #busy timeout (5 seconds)
+            elif (trigTime-self.lastTime) > int(math.ceil(5/0.000000004)):
+                self.busy = False
 
 ################################################################################
 ################################################################################

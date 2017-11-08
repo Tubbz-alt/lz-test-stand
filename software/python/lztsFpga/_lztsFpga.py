@@ -86,7 +86,7 @@ class Lzts(pr.Device):
         self.add(SadcPatternTester( name='SadcPatternTester',   offset=0x04900000, enabled=False, expand=False,  hidden=False,))      
         self.add(JesdRx(            name='JesdRx',              offset=0x05000000, expand=False,  numRxLanes=16, hidden=False,))      
         self.add(Lmk04828(          name='LMK',                 offset=0x05100000, expand=False,                 hidden=False,))  
-        self.add(FadcDebug(         name='FadcDebug',           offset=0x05700000, expand=False,                 hidden=False,))  
+        self.add(FadcDebug(         name='FadcDebug',           offset=0x05700000, enabled=False, expand=False,  hidden=False,))  
         
         for i in range(4):
             self.add(Ads54J60(

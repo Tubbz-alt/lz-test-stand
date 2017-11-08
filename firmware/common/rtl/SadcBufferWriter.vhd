@@ -238,21 +238,26 @@ architecture rtl of SadcBufferWriter is
    signal rdPtrValid    : sl;
    signal rdPtrDout     : slv(31 downto 0);
    
-   --signal wrAddrSig    : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
-   --signal wrPtrSig     : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
-   --signal rdPtrSig     : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
-   --signal wrAddrCSig   : sl;                             -- for simulation only
-   --signal wrPtrCSig    : sl;                             -- for simulation only
-   --signal rdPtrCSig    : sl;                             -- for simulation only
-   --signal wData        : slv(127 downto 0);              -- for simulation only
-   --signal wValid       : sl;                             -- for simulation only
+   signal wrAddrSig    : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
+   signal wrPtrSig     : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
+   signal rdPtrSig     : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
+   signal wrAddrCSig   : sl;                             -- for simulation only
+   signal wrPtrCSig    : sl;                             -- for simulation only
+   signal rdPtrCSig    : sl;                             -- for simulation only
+   signal wData        : slv(127 downto 0);              -- for simulation only
+   signal wValid       : sl;                             -- for simulation only
    
+   attribute keep : string;
+   attribute keep of trig : signal is "true";
+   attribute keep of rdPtrValid : signal is "true";
+   attribute keep of rdPtrDout : signal is "true";
+   attribute keep of hdrFifoFull : signal is "true";
    
 begin
    
    
-   --wData  <= trig.wMaster.wdata(127 downto 0);
-   --wValid <= trig.wMaster.wvalid;
+   wData  <= trig.wMaster.wdata(127 downto 0);
+   wValid <= trig.wMaster.wvalid;
    
    assert ADDR_BITS_G > 16
       report "Defined adress space ADDR_BITS_G can accomodate only " & integer'image((2**ADDR_BITS_G)/4096) & " AXI burst(s) (4kB)"
@@ -384,12 +389,12 @@ begin
          end if;
       end if;
       
-      --wrAddrSig   <= trig.wrAddress(ADDR_BITS_G-1 downto 0);   -- for simulation only
-      --wrAddrCSig  <= trig.wrAddress(ADDR_BITS_G);              -- for simulation only
-      --wrPtrSig    <= wrPtr(ADDR_BITS_G-1 downto 0);            -- for simulation only
-      --wrPtrCSig   <= wrPtr(ADDR_BITS_G);                       -- for simulation only
-      --rdPtrSig    <= rdPtr(ADDR_BITS_G-1 downto 0);            -- for simulation only
-      --rdPtrCSig   <= rdPtr(ADDR_BITS_G);                       -- for simulation only
+      wrAddrSig   <= trig.wrAddress(ADDR_BITS_G-1 downto 0);   -- for simulation only
+      wrAddrCSig  <= trig.wrAddress(ADDR_BITS_G);              -- for simulation only
+      wrPtrSig    <= wrPtr(ADDR_BITS_G-1 downto 0);            -- for simulation only
+      wrPtrCSig   <= wrPtr(ADDR_BITS_G);                       -- for simulation only
+      rdPtrSig    <= rdPtr(ADDR_BITS_G-1 downto 0);            -- for simulation only
+      rdPtrCSig   <= rdPtr(ADDR_BITS_G);                       -- for simulation only
       
       ------------------------------------------------
       -- Lost data counters

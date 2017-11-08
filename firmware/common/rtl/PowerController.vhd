@@ -37,6 +37,7 @@ entity PowerController is
       sAxilReadMaster  : in  AxiLiteReadMasterType;
       sAxilReadSlave   : out AxiLiteReadSlaveType;
       -- System Ports
+      sysRst           : out sl;
       leds             : out slv(3 downto 0);
       pwrCtrlIn        : in  PwrCtrlInType;
       pwrCtrlOut       : out PwrCtrlOutType;
@@ -76,6 +77,8 @@ architecture RTL of PowerController is
       syncPhase       : Slv32Array(13 downto 0);
       syncOut         : slv(13 downto 0);
       ddrRstN         : sl;
+      sysRstShift     : slv(7 downto 0);
+      sysRst          : sl;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
@@ -97,7 +100,9 @@ architecture RTL of PowerController is
       syncHalfClk     => (others => (others => '0')),
       syncPhase       => (others => (others => '0')),
       syncOut         => (others => '0'),
-      ddrRstN         => '1'
+      ddrRstN         => '1',
+      sysRstShift     => (others => '0'),
+      sysRst          => '0'
       );
 
    signal r   : RegType := REG_INIT_C;
@@ -177,6 +182,7 @@ begin
 
       axiSlaveRegister (regCon, x"000", 0, v.powerEnAll);
       axiSlaveRegisterR(regCon, x"004", 0, r.powerOkAll);
+      axiSlaveRegister (regCon, x"008", 0, v.sysRstShift(0));
 
       axiSlaveRegister (regCon, x"100", 0, v.leds);
 
@@ -226,6 +232,14 @@ begin
             v.syncOut(i) := '0';
          end if;
       end loop;
+      
+      -- software reset logic
+      v.sysRstShift := r.sysRstShift(6 downto 0) & '0';
+      if r.sysRstShift /= 0 then
+         v.sysRst := '1';
+      else
+         v.sysRst := '0';
+      end if;
 
       if (axilRst = '1') then
          v := REG_INIT_C;
@@ -243,6 +257,7 @@ begin
       fadcPdn   <= r.fadcPdn;
       fadcReset <= r.fadcReset;
       ddrRstN   <= r.ddrRstN;
+      sysRst    <= r.sysRst;
 
    end process comb;
 

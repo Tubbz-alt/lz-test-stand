@@ -76,6 +76,14 @@ architecture mapping of SadcBuffer is
    signal addrRd     : slv(7 downto 0);
 
    signal adcDataTester : Slv32Array(7 downto 0);
+   
+   attribute keep : string;
+   attribute keep of hdrDout : signal is "true";
+   attribute keep of hdrValid : signal is "true";
+   attribute keep of hdrRd : signal is "true";
+   attribute keep of addrDout : signal is "true";
+   attribute keep of addrValid : signal is "true";
+   attribute keep of addrRd : signal is "true";
 
 begin
 

@@ -155,14 +155,16 @@ architecture rtl of SadcBufferReader is
    
    signal txSlave : AxiStreamSlaveType;
    
-   --signal axiDataRd  : slv(31 downto 0);    -- ONLY FOR SIMULATION
-   
-   --attribute keep : string;
-   --attribute keep of trig : signal is "true";
+   signal axiDataRd  : slv(31 downto 0);    -- ONLY FOR SIMULATION
+   signal rValid     : sl;
+   attribute keep : string;
+   attribute keep of trig : signal is "true";
+   attribute keep of rValid : signal is "true";
    
 begin
 
-   --axiDataRd  <= axiReadSlave.rdata(31 downto 0);    -- ONLY FOR SIMULATION
+   axiDataRd  <= axiReadSlave.rdata(31 downto 0);    -- ONLY FOR SIMULATION
+   rValid <= axiReadSlave.rvalid;
    
    -- register logic (axilClk domain)
    -- trigger and buffer logic (adcClk domian)
@@ -244,7 +246,7 @@ begin
             end if;
          
          when HDR_S =>
-            if vtrig.txMaster.tValid = '0' then
+            if vtrig.txMaster.tValid = '0' and hdrValid(trig.channelSel) = '1' then
                vtrig.txMaster.tValid := '1';
                if trig.hdrCnt = 0 then
                   ssiSetUserSof(SLAVE_AXI_CONFIG_C, vtrig.txMaster, '1');
@@ -338,6 +340,10 @@ begin
          
          when MOVE_S =>
             
+            if trig.rdSize = conv_integer(trig.rMaster.arlen) + 1 then
+               vtrig.last := '1';
+            end if;
+            
             -- Check if ready to move data
             if (vtrig.txMaster.tValid = '0') and (axiReadSlave.rvalid = '1') then
                
@@ -347,9 +353,6 @@ begin
                vtrig.smplCnt(trig.channelSel) := trig.smplCnt(trig.channelSel) + 1;
                
                vtrig.first := '0';
-               if trig.rdSize = conv_integer(trig.rMaster.arlen) + 1 then
-                  vtrig.last := '1';
-               end if;
                
                -- switch in between lower and higher sample
                vtrig.rdHigh := not trig.rdHigh;
@@ -386,34 +389,34 @@ begin
                   end if;
                end if;
                
-               -- if all words in a burst are read move to next address state
-               if vtrig.last = '1' then
-                  vtrig.buffState := ADDR_S;
+            end if;
+            
+            -- if all words in a burst are read move to next address state
+            if vtrig.last = '1' then
+               vtrig.buffState := ADDR_S;
+            end if;
+            
+            -- unless all samples in trigger are read
+            -- then move to idle state
+            if vtrig.trigSize = 0 then
+               -- repeat axi rready for the last in axi stream
+               vtrig.rMaster.rready := '1';
+               -- last in axi stream
+               vtrig.txMaster.tLast := '1';
+               vtrig.txMaster.tValid := '1';
+               -- move the read pointer
+               vtrig.addrRd(trig.channelSel) := '1';
+               -- move to the next channnel
+               if trig.channelSel < 7 then
+                  vtrig.channelSel := trig.channelSel + 1;
+               else
+                  vtrig.channelSel := 0;
                end if;
-               
-               -- unless all samples in trigger are read
-               -- then move to idle state
-               if vtrig.trigSize = 0 then
-                  -- repeat axi rready for the last in axi stream
-                  vtrig.rMaster.rready := '1';
-                  -- last in axi stream
-                  vtrig.txMaster.tLast := '1';
-                  vtrig.txMaster.tValid := '1';
-                  -- move the read pointer
-                  vtrig.addrRd(trig.channelSel) := '1';
-                  -- move to the next channnel
-                  if trig.channelSel < 7 then
-                     vtrig.channelSel := trig.channelSel + 1;
-                  else
-                     vtrig.channelSel := 0;
-                  end if;
-                  if axiReadSlave.rlast = '1' then
-                     vtrig.buffState := IDLE_S;
-                  else
-                     vtrig.buffState := BLOWOFF_S;
-                  end if;
+               if axiReadSlave.rlast = '1' then
+                  vtrig.buffState := IDLE_S;
+               else
+                  vtrig.buffState := BLOWOFF_S;
                end if;
-               
             end if;
          
          when BLOWOFF_S =>

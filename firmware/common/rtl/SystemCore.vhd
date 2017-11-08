@@ -43,7 +43,7 @@ entity SystemCore is
       adcClk             : out   sl;
       adcRst             : out   sl;
       ddrRstN            : in    sl;
-      writerRst          : out   sl;
+      ddrRstOut          : out   sl;
       lmkRefClk          : out   sl;
       -- DDR PHY Ref clk
       c0_sys_clk_p       : in    sl;
@@ -133,7 +133,7 @@ architecture top_level of SystemCore is
    signal calibComplete : sl;
    signal memReady      : sl;
    signal memFailed     : sl;
-   signal writerReset   : sl;
+   signal ddrReset      : sl;
    signal clk250ddr     : sl;
    signal adcClock      : sl;
    signal adcReset      : sl;
@@ -454,13 +454,13 @@ begin
    begin
       if rising_edge(adcClock) then
          if adcReset = '1' then
-            writerReset <= '1' after TPD_G;
+            ddrReset <= '1' after TPD_G;
          elsif memReady = '1' and memFailed = '0' then
-            writerReset <= '0' after TPD_G;
+            ddrReset <= '0' after TPD_G;
          end if;
       end if;
    end process memRst;
 
-   writerRst <= writerReset;
+   ddrRstOut <= ddrReset;
 
 end top_level;

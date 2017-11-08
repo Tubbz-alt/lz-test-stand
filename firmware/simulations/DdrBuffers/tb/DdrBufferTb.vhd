@@ -353,7 +353,7 @@ begin
       
       loop
          
-         wait for 10 us;    -- 100kHz will overflow with 1050 samples per trigger
+         wait for 1 us;    -- 100kHz will overflow with 1050 samples per trigger
          --wait for 25 us;      -- 40kHz should not overflow with 514 samples per trigger
          
          uniform(seed1, seed2, rand);   -- generate random number 0.0 to 1.0
@@ -435,7 +435,7 @@ begin
          
          wait until falling_edge(axisClk);
          
-         --axisSlave.tReady <= not axisSlave.tReady;
+         axisSlave.tReady <= not axisSlave.tReady;
          
       end loop;
       
@@ -571,9 +571,9 @@ begin
                
                -- discover data direction in first word
                if wordCnt = 6 then
-                  if axisMaster.tData(15 downto 0) = ADC_DATA_BOT_C then
+                  if axisMaster.tData(15 downto 0) = ADC_DATA_BOT_C or axisMaster.tData(31 downto 16) = ADC_DATA_BOT_C then
                      adcGoingUp := true;
-                  elsif axisMaster.tData(15 downto 0) = ADC_DATA_TOP_C then
+                  elsif axisMaster.tData(15 downto 0) = ADC_DATA_TOP_C or axisMaster.tData(31 downto 16) = ADC_DATA_TOP_C then
                      adcGoingUp := false;
                   elsif axisMaster.tData(31 downto 16) > axisMaster.tData(15 downto 0) then
                      adcGoingUp := true;

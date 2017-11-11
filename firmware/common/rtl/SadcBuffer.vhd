@@ -71,6 +71,7 @@ architecture mapping of SadcBuffer is
    signal hdrDout    : Slv32Array(7 downto 0);
    signal hdrValid   : slv(7 downto 0);
    signal hdrRd      : slv(7 downto 0);
+   signal hdrRdLast  : slv(7 downto 0);
    signal addrDout   : Slv32Array(7 downto 0);
    signal addrValid  : slv(7 downto 0);
    signal addrRd     : slv(7 downto 0);
@@ -141,6 +142,7 @@ begin
             hdrDout         => hdrDout(i),
             hdrValid        => hdrValid(i),
             hdrRd           => hdrRd(i),
+            hdrRdLast       => hdrRdLast(i),
             -- Address information to data reader (adcClk)
             addrDout        => addrDout(i),
             addrValid       => addrValid(i),
@@ -178,6 +180,7 @@ begin
          hdrDout         => hdrDout,
          hdrValid        => hdrValid,
          hdrRd           => hdrRd,
+         hdrRdLast       => hdrRdLast,
          -- Address information from data writers (adcClk)
          addrDout        => addrDout,
          addrValid       => addrValid,

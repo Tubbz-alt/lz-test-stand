@@ -52,6 +52,7 @@ entity SadcBufferReader is
       hdrDout           : in  Slv32Array(7 downto 0);
       hdrValid          : in  slv(7 downto 0);
       hdrRd             : out slv(7 downto 0);
+      hdrRdLast         : out slv(7 downto 0);
       -- Address information from data writers (adcClk domain)
       addrDout          : in  Slv32Array(7 downto 0);
       addrValid         : in  slv(7 downto 0);
@@ -93,6 +94,7 @@ architecture rtl of SadcBufferReader is
    type TrigType is record
       reset          : slv(15 downto 0);
       hdrRd          : slv(7 downto 0);
+      hdrRdLast      : slv(7 downto 0);
       addrRd         : slv(7 downto 0);
       hdrDout        : slv(15 downto 0);
       trigSize       : slv(21 downto 0);
@@ -116,6 +118,7 @@ architecture rtl of SadcBufferReader is
    constant TRIG_INIT_C : TrigType := (
       reset          => x"0001",
       hdrRd          => (others => '0'),
+      hdrRdLast      => (others => '0'),
       addrRd         => (others => '0'),
       hdrDout        => (others => '0'),
       trigSize       => (others => '0'),
@@ -226,8 +229,9 @@ begin
       -- Buffer read state machine
       ----------------------------------------------------------------------
       
-      vtrig.hdrRd    := (others=>'0');
-      vtrig.addrRd   := (others=>'0');
+      vtrig.hdrRd     := (others=>'0');
+      vtrig.hdrRdLast := (others=>'0');
+      vtrig.addrRd    := (others=>'0');
       
       case trig.buffState is
       
@@ -278,7 +282,8 @@ begin
                elsif trig.hdrCnt = 10 then
                   vtrig.hdrDout                     := hdrDout(trig.channelSel)(31 downto 16);
                   vtrig.txMaster.tData(15 downto 0) := hdrDout(trig.channelSel)(15 downto 0);   -- gTime
-                  vtrig.hdrRd(trig.channelSel) := '1';
+                  vtrig.hdrRd(trig.channelSel)      := '1';
+                  vtrig.hdrRdLast(trig.channelSel)  := '1';
                else
                   vtrig.txMaster.tData(15 downto 0) := trig.hdrDout;                            -- gTime
                   vtrig.hdrCnt      := 0;
@@ -450,6 +455,7 @@ begin
       axilWriteSlave <= reg.axilWriteSlave;
       axilReadSlave  <= reg.axilReadSlave;
       hdrRd          <= trig.hdrRd;
+      hdrRdLast      <= trig.hdrRdLast;
       addrRd         <= trig.addrRd;
       
    end process comb;

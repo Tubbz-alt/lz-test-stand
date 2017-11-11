@@ -52,6 +52,7 @@ entity SadcBufferWriter is
       hdrDout           : out slv(31 downto 0);
       hdrValid          : out sl;
       hdrRd             : in  sl;
+      hdrRdLast         : in  sl;
       -- Address pointer to data reader (adcClk)
       addrDout          : out slv(31 downto 0);
       addrValid         : out sl;
@@ -74,6 +75,7 @@ architecture rtl of SadcBufferWriter is
    
    constant HDR_SIZE_C        : integer := 4;
    constant HDR_ADDR_WIDTH_C  : integer := 9;
+   constant MAX_TRIG_C        : integer := (2**HDR_ADDR_WIDTH_C)/(HDR_SIZE_C*4) - 2;
 
    constant EXT_IND_C      : integer := 0;
    constant INT_IND_C      : integer := 1;
@@ -96,7 +98,7 @@ architecture rtl of SadcBufferWriter is
    
    type HdrStateType is (
       IDLE_S,
-      WAIT_TRIG_INMEM_S,
+      TRIG_RD_S,
       WR_HDR_S
    );
    
@@ -122,11 +124,13 @@ architecture rtl of SadcBufferWriter is
       trigPending    : sl;
       trigType       : slv(4 downto 0);
       trigOffset     : slv(31 downto 0);
+      trigFifoWr     : sl;
+      trigFifoDin    : slv(31 downto 0);
+      trigRd         : sl;
+      trigFifoCnt    : integer;
       trigState      : TrigStateType;
       buffState      : BuffStateType;
       hdrState       : HdrStateType;
-      hdrData        : Slv32Array(HDR_SIZE_C-1 downto 0);
-      hdrWrite       : sl;
       wMaster        : AxiWriteMasterType;
       ackCount       : slv(31 downto 0);
       errCount       : slv(31 downto 0);
@@ -135,14 +139,22 @@ architecture rtl of SadcBufferWriter is
       hdrFifoWr      : sl;
       addrFifoDin    : slv(31 downto 0);
       addrFifoWr     : sl;
-      burstsInFifo   : slv(7 downto 0);
-      bvalidCnt      : slv(7 downto 0);
       lostSamples    : slv(31 downto 0);
       lostTriggers   : slv(31 downto 0);
       dropIntTrigs   : slv(31 downto 0);
       trigIntDrop    : sl;
       rstCounters    : sl;
       memFull        : sl;
+      burstIdIn      : slv(7 downto 0);
+      burstIdInBuf   : slv(7 downto 0);
+      burstIdOut     : slv(7 downto 0);
+      burstFifoWr    : sl;
+      burstFifoRd    : sl;
+      burstFifoDin   : slv(8 downto 0);
+      trigCnt        : integer range 0 to MAX_TRIG_C;
+      trigAFull      : sl;
+      trigWrLast     : sl;
+      trigInMem      : sl;
    end record TrigType;
 
    constant TRIG_INIT_C : TrigType := (
@@ -167,11 +179,13 @@ architecture rtl of SadcBufferWriter is
       trigPending    => '0',
       trigType       => (others => '0'),
       trigOffset     => (others => '0'),
+      trigFifoWr     => '0',
+      trigFifoDin    => (others => '0'),
+      trigRd         => '0',
+      trigFifoCnt    => 0,
       trigState      => IDLE_S,
       buffState      => IDLE_S,
       hdrState       => IDLE_S,
-      hdrData        => (others=>(others=>'0')),
-      hdrWrite       => '0',
       wMaster        => axiWriteMasterInit(AXI_CONFIG_C, '1', AXI_BURST_C, AXI_CACHE_C),
       ackCount       => (others => '0'),
       errCount       => (others => '0'),
@@ -180,14 +194,22 @@ architecture rtl of SadcBufferWriter is
       hdrFifoWr      => '0',
       addrFifoDin    => (others => '0'),
       addrFifoWr     => '0',
-      burstsInFifo   => (others => '0'),
-      bvalidCnt      => (others => '0'),
       lostSamples    => (others => '0'),
       lostTriggers   => (others => '0'),
       dropIntTrigs   => (others => '0'),
       trigIntDrop    => '0',
       rstCounters    => '0',
-      memFull        => '0'
+      memFull        => '0',
+      burstIdIn      => (others => '0'),
+      burstIdInBuf   => (others => '0'),
+      burstIdOut     => (others => '0'),
+      burstFifoWr    => '0',
+      burstFifoRd    => '0',
+      burstFifoDin   => (others => '0'),
+      trigCnt        => 0,
+      trigAFull      => '0',
+      trigWrLast     => '0',
+      trigInMem      => '0'
    );
    
    type RegType is record
@@ -233,10 +255,18 @@ architecture rtl of SadcBufferWriter is
    signal reg     : RegType   := REG_INIT_C;
    signal regIn   : RegType;
    
-   signal hdrFifoFull   : sl;
    signal addrFifoFull  : sl;
+   signal hdrFifoFull   : sl;
+   signal hdrValidInt   : sl;
+   signal burstValid    : sl;
+   signal burstFifoFull : sl;
+   signal burstFifoDout : slv(8 downto 0);
+   signal trigDout      : slv(31 downto 0);
+   signal trigValid     : sl;
+   signal trigFifoFull  : sl;
+   signal trigValidInt  : sl;
    signal rdPtrValid    : sl;
-   signal rdPtrDout     : slv(31 downto 0);
+   signal rdPtrDout     : slv(31 downto 0);   
    
    signal wrAddrSig    : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
    signal wrPtrSig     : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
@@ -261,12 +291,23 @@ begin
    
    assert ADDR_BITS_G > 16
       report "Defined adress space ADDR_BITS_G can accomodate only " & integer'image((2**ADDR_BITS_G)/4096) & " AXI burst(s) (4kB)"
-      severity warning;
+      severity warning;   
+   
+   -- simulation check
+   assert hdrFifoFull = 'U' or hdrFifoFull = '0' or hdrValidInt = '0'
+      report "Header FIFO is full"
+      severity failure;
+   
+   -- simulation check
+   assert trigFifoFull = 'U' or trigFifoFull = '0' or trigValidInt = '0'
+      report "Trigger FIFO is full"
+      severity failure;
    
    -- register logic (axilClk domain)
    -- trigger and buffer logic (adcClk domian)
-   comb : process (adcRst, axilRst, axiWriteSlave, axilReadMaster, axilWriteMaster, reg, trig,
-      adcData, hdrFifoFull, addrFifoFull, gTime, extTrigger, adcData, rdPtrValid, rdPtrDout) is
+   comb : process (adcRst, axilRst, axiWriteSlave, axilReadMaster, axilWriteMaster, reg, trig, adcData,
+      trigDout, trigValid, hdrFifoFull, addrFifoFull, burstFifoFull, burstFifoDout, burstValid,
+      gTime, extTrigger, adcData, rdPtrValid, rdPtrDout, hdrRdLast) is
       variable vreg      : RegType;
       variable vtrig     : TrigType;
       variable regCon    : AxiLiteEndPointType;
@@ -557,11 +598,26 @@ begin
       -- register the trigger information
       ----------------------------------------------------------------------
       
-      -- handshake between two state machines
-      vtrig.hdrWrite := '0';
+      -- count trigger in the FIFOs (trigger FIFO and header FIFO combined)
+      if trig.trigWrLast = '1' and hdrRdLast = '1' then
+         vtrig.trigCnt := trig.trigCnt;
+      elsif trig.trigWrLast = '1' then
+         vtrig.trigCnt := trig.trigCnt + 1;
+      elsif hdrRdLast = '1' then
+         vtrig.trigCnt := trig.trigCnt - 1;
+      end if;
+      if trig.trigCnt >= MAX_TRIG_C then
+         vtrig.trigAFull := '1';
+      else
+         vtrig.trigAFull := '0';
+      end if;
       
-      -- clear address FIFO write strobe
-      vtrig.addrFifoWr := '0';
+      -- clear strobes
+      vtrig.addrFifoWr  := '0';
+      vtrig.trigWrLast  := '0';
+      vtrig.trigFifoWr  := '0';
+      vtrig.burstFifoWr := '0';
+      vtrig.trigIntDrop := '0';
       
       case trig.trigState is
          
@@ -570,7 +626,7 @@ begin
             vtrig.trigType := (others=>'0');
             vtrig.postCnt  := (others=>'0');
             vtrig.trigPending := '0';
-            vtrig.trigIntDrop := '0';
+            vtrig.trigInMem   := '0';
             -- only disable trigger, never the buffer
             if (trig.reset = 0 and trig.enable = '1' and trig.buffState /= IDLE_S) then
                
@@ -607,8 +663,6 @@ begin
                end if;
                
             end if;
-            
-         
          
          when TRIG_ARM_S =>
             
@@ -636,10 +690,11 @@ begin
                   vtrig.trigLength := (others=>'0');
                   vtrig.trigOffset := (others=>'0');
                   if trig.intSaveVeto = '1' then
-                     vtrig.trigState := WR_TRIG_S;
-                  else
+                     vtrig.trigState   := WR_TRIG_S;
                      vtrig.trigPending := '0';
+                  else
                      vtrig.trigState := IDLE_S;
+                     vtrig.trigPending := '0';
                   end if;
                -- no veto and no post threshold until maximum buffer is reached
                -- drop the trigger and count
@@ -647,14 +702,16 @@ begin
                   vtrig.trigLength  := (others=>'0');
                   vtrig.trigOffset  := (others=>'0');
                   vtrig.trigIntDrop := '1';
-                  vtrig.trigPending := '0';
                   vtrig.trigState   := IDLE_S;
+                  vtrig.trigPending := '0';
                end if;
             
             else
                -- wait for external trigger to be in the AXI FIFO
                if trig.trigLength >= trig.extTrigSize then
-                  vtrig.trigState   := WR_TRIG_S;
+                  vtrig.trigState    := WR_TRIG_S;
+                  vtrig.burstIdInBuf := trig.burstIdIn;
+                  vtrig.trigPending  := '0';
                end if;
                
             end if;
@@ -669,28 +726,49 @@ begin
                else
                   vtrig.postCnt := (others=>'0');
                   -- start writing header information FIFO
-                  vtrig.trigState   := WR_TRIG_S;
+                  vtrig.trigState    := WR_TRIG_S;
+                  vtrig.burstIdInBuf := trig.burstIdIn;
+                  vtrig.trigPending  := '0';
                end if;
             else
                vtrig.trigType(BAD_IND_C) := '1';
             end if;
          
-         -- wait until previous header information is 
-         -- stored by the header FSM
+         -- write trigger information into FIFO
          -- lostTriggers will count if new triggers occur while
          -- waiting in this state
          when WR_TRIG_S =>
-            if trig.hdrState = IDLE_S then
-               -- register header information
-               vtrig.hdrData(0) := trig.trigType & "00000" & trig.trigLength;
-               vtrig.hdrData(1) := trig.trigOffset;
-               vtrig.hdrData(2) := trig.gTime(63 downto 32);
-               vtrig.hdrData(3) := trig.gTime(31 downto 0);
-               -- wake up the header FSM
-               vtrig.hdrWrite := '1';
-               -- accept new triggers
-               vtrig.trigState := IDLE_S;
-               vtrig.trigPending := '0';
+            -- check if there is space for one more trigger
+            if trig.trigAFull = '0' and burstFifoFull = '0' then
+               vtrig.trigFifoCnt  := trig.trigFifoCnt + 1;
+               vtrig.trigFifoWr   := '1';
+               if trig.trigFifoCnt = 0 then
+                  vtrig.trigFifoDin   := trig.trigType & "00000" & trig.trigLength;
+               elsif trig.trigFifoCnt = 1 then
+                  vtrig.trigFifoDin := trig.trigOffset;
+               elsif trig.trigFifoCnt = 2 then
+                  vtrig.trigFifoDin := trig.gTime(63 downto 32);
+               else
+                  vtrig.trigFifoDin := trig.gTime(31 downto 0);
+                  vtrig.trigFifoCnt := 0;
+                  vtrig.trigState   := IDLE_S;
+                  vtrig.trigWrLast  := '1';
+                  vtrig.burstFifoWr := '1';
+                  vtrig.burstFifoDin(7 downto 0) := trig.burstIdInBuf;
+               end if;
+            end if;
+            
+            -- while waiting for the triggers to be read out
+            -- monitor if the out burst ID has passed
+            if trig.burstIdInBuf = (trig.burstIdOut - 1) then
+               vtrig.trigInMem := '1';
+            end if;
+            
+            -- set 8th bit of the burst FIFO if the header FSM should not wait for the burst out ID
+            if trig.trigType(EMPTY_IND_C) = '1' or trig.trigType(VETO_IND_C) = '1' or vtrig.trigInMem = '1' then
+               vtrig.burstFifoDin(8) := '1';
+            else
+               vtrig.burstFifoDin(8) := '0';
             end if;
          
          when others =>
@@ -704,55 +782,55 @@ begin
       -- store header information and let know the reader when the trigger is ready
       ----------------------------------------------------------------------
       
-      -- keep track of how many bursts is currently in AXI FIFO
+      -- AXI FIFO Input burst ID
       if trig.wMaster.awvalid = '1' and axiWriteSlave.awready = '1' then 
-         vtrig.burstsInFifo := trig.burstsInFifo + 1;
+         vtrig.burstIdIn := trig.burstIdIn + 1;
       end if;
-      -- decrease the counter as data is written into the DDR
-      if axiWriteSlave.bvalid = '1' and trig.burstsInFifo /= 0 then
-         vtrig.burstsInFifo := trig.burstsInFifo - 1;
+      -- AXI FIFO Output burst ID
+      if axiWriteSlave.bvalid = '1' then
+         vtrig.burstIdOut := trig.burstIdOut + 1;
       end if;
       
+      -- clear strobes
+      vtrig.hdrFifoWr   := '0';
+      vtrig.burstFifoRd := '0';
+      vtrig.trigRd      := '0';
       
       case trig.hdrState is
          
-         -- wait for trigger state machine
+         -- wait for the trigger
+         -- only this state should be waiting
+         -- rest of the FSM is moving data immediately
          when IDLE_S =>
-            vtrig.hdrFifoCnt := 0;
-            vtrig.hdrFifoWr := '0';
-            if (trig.hdrWrite = '1') then
-               
-               --if trig.trigType(EMPTY_IND_C) = '1' or trig.trigType(VETO_IND_C) = '1' then   -- should be from hdrData copy !
-               if trig.hdrData(0)(EMPTY_IND_C+27) = '1' or trig.hdrData(0)(VETO_IND_C+27) = '1' then
-                  vtrig.hdrState    := WR_HDR_S;
-               else
-                  vtrig.bvalidCnt   := trig.burstsInFifo;
-                  vtrig.hdrState    := WAIT_TRIG_INMEM_S;
-               end if;
-               
+            vtrig.hdrFifoCnt  := 0;
+            -- do not pass header information to the reader until:
+            -- last burst ID of the trigger is in the memory OR
+            -- empty trigger OR
+            -- veto trigger
+            if burstValid = '1' and (burstFifoDout(7 downto 0) = (trig.burstIdOut - 1) or burstFifoDout(8) = '1') then
+               vtrig.burstFifoRd := '1';
+               vtrig.hdrState := TRIG_RD_S;
             end if;
          
-         -- make sure that all trigger bursts are in the memory
-         when WAIT_TRIG_INMEM_S =>
-            if axiWriteSlave.bvalid = '1' and trig.bvalidCnt > 0 then
-               vtrig.bvalidCnt := trig.bvalidCnt - 1;
-            end if;
-            if trig.bvalidCnt = 0 then
+         -- the hdrFifoFull = '1' should not happen
+         -- trigAFull is to prevent it
+         when TRIG_RD_S =>
+            if hdrFifoFull = '0' and trigValid = '1' then
+               vtrig.trigRd   := '1';
                vtrig.hdrState := WR_HDR_S;
             end if;
          
          -- write header information to the FIFO
          when WR_HDR_S =>
-            if hdrFifoFull = '0' then
+            if hdrFifoFull = '0' and trigValid = '1' then
                vtrig.hdrFifoCnt  := trig.hdrFifoCnt + 1;
-               vtrig.hdrFifoWr   := '1';
-               vtrig.hdrFifoDin  := trig.hdrData(trig.hdrFifoCnt);
-               
+               vtrig.hdrFifoWr  := '1';
+               vtrig.trigRd     := '1';
+               vtrig.hdrFifoDin := trigDout;
                if trig.hdrFifoCnt >= (HDR_SIZE_C-1) then
+                  vtrig.trigRd     := '0';
                   vtrig.hdrState   := IDLE_S;
                end if;
-            else
-               vtrig.hdrFifoWr := '0';
             end if;
          
          when others =>
@@ -794,6 +872,32 @@ begin
    end process seqT;
    
    ----------------------------------------------------------------------
+   -- Trigger information FIFO
+   ----------------------------------------------------------------------
+   
+   U_TrigFifo : entity work.Fifo 
+   generic map (
+      DATA_WIDTH_G      => 32,
+      ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
+      FWFT_EN_G         => true,
+      GEN_SYNC_FIFO_G   => true,
+      FULL_THRES_G      => 2**HDR_ADDR_WIDTH_C-HDR_SIZE_C-8
+   )
+   port map ( 
+      rst               => trig.reset(0),
+      wr_clk            => adcClk,
+      wr_en             => trig.trigFifoWr,
+      din               => trig.trigFifoDin,
+      full              => trigFifoFull,
+      rd_clk            => adcClk,
+      rd_en             => trig.trigRd,
+      dout              => trigDout,
+      valid             => trigValidInt
+   );
+   
+   trigValid <= trigValidInt;
+   
+   ----------------------------------------------------------------------
    -- Header information FIFO
    ----------------------------------------------------------------------
    
@@ -813,8 +917,10 @@ begin
       rd_clk            => adcClk,
       rd_en             => hdrRd,
       dout              => hdrDout,
-      valid             => hdrValid
+      valid             => hdrValidInt
    );
+   
+   hdrValid <= hdrValidInt;
    
    ----------------------------------------------------------------------
    -- Address information FIFO
@@ -842,75 +948,27 @@ begin
    addrDout    <= rdPtrDout;
    addrValid   <= rdPtrValid;
    
+   ----------------------------------------------------------------------
+   -- Burst ID  information FIFO
+   ----------------------------------------------------------------------
    
-   -------------------------------------------------------------------
-   ---- DSP comparators
-   -------------------------------------------------------------------
-   --
-   --U_ADC_Cmp: entity work.DspComparator
-   --generic map (
-   --   USE_DSP_G      => "yes",
-   --   PIPE_STAGES_G  => 0,
-   --   WIDTH_G        => 17
-   --)
-   --port map (
-   --   clk               => adcClk,
-   --   rst               => adcRst,
-   --   ain(16)           => '0',
-   --   ain(15 downto 0)  => adcData,
-   --   bin(16)           => '0',
-   --   bin(15 downto 0)  => trig.intPreThresh,
-   --   -- greater than or equal to (a >= b)
-   --   gtEq              => adcDataCmp
-   --);
-   --
-   --U_PreT_Cmp: entity work.DspComparator
-   --generic map (
-   --   USE_DSP_G      => "yes",
-   --   PIPE_STAGES_G  => 0,
-   --   WIDTH_G        => 17
-   --)
-   --port map (
-   --   clk               => adcClk,
-   --   rst               => adcRst,
-   --   ain               => (others=>'0'),
-   --   bin(16)           => '0',
-   --   bin(15 downto 0)  => trig.intPreThresh,
-   --   -- equal                    (a =  b)
-   --   eq                => preThrCmp
-   --);
-   --
-   --U_ExtS_Cmp: entity work.DspComparator
-   --generic map (
-   --   USE_DSP_G      => "yes",
-   --   PIPE_STAGES_G  => 0,
-   --   WIDTH_G        => 23
-   --)
-   --port map (
-   --   clk               => adcClk,
-   --   rst               => adcRst,
-   --   ain               => (others=>'0'),
-   --   bin(22)           => '0',
-   --   bin(21 downto 0)  => trig.extTrigSize,
-   --   -- equal                    (a =  b)
-   --   eq                => extSizeCmp
-   --);
-   --
-   --U_Tl_Cmp0: entity work.DspComparator
-   --generic map (
-   --   USE_DSP_G      => "yes",
-   --   PIPE_STAGES_G  => 0,
-   --   WIDTH_G        => 23
-   --)
-   --port map (
-   --   clk               => adcClk,
-   --   rst               => adcRst,
-   --   ain(22)           => '0',
-   --   ain(21 downto 0)  => trig.trigLength,
-   --   bin(22)           => '0',
-   --   bin(21 downto 0)  => trig.extTrigSize,
-   --   -- greater than or equal to (a >= b)
-   --   gtEq              => trigLenCmp0
-   --);
-
+   U_BurstFifo : entity work.Fifo 
+   generic map (
+      DATA_WIDTH_G      => 9,
+      ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
+      FWFT_EN_G         => true,
+      GEN_SYNC_FIFO_G   => true
+   )
+   port map ( 
+      rst               => trig.reset(0),
+      wr_clk            => adcClk,
+      wr_en             => trig.burstFifoWr,
+      din               => trig.burstFifoDin,
+      full              => burstFifoFull,
+      rd_clk            => adcClk,
+      rd_en             => trig.burstFifoRd,
+      dout              => burstFifoDout,
+      valid             => burstValid
+   );   
+   
 end rtl;

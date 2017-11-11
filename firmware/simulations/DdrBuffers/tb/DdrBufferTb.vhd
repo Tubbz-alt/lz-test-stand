@@ -57,7 +57,7 @@ architecture testbed of DdrBufferTb is
    
    constant PGP_VC_C      : slv(3 downto 0) := "0001";
    
-   constant QUEUE_SIZE_C   : integer := 1024;
+   constant QUEUE_SIZE_C   : integer := 1024*1024;
    constant QUEUE_BITS_C   : integer := log2(QUEUE_SIZE_C);
    shared variable triggerCnt     : IntegerArray(7 downto 0) := (others=>0);
    type trigPtrArray is array (natural range <>) of slv(QUEUE_BITS_C-1 downto 0);
@@ -144,6 +144,7 @@ architecture testbed of DdrBufferTb is
    signal hdrDout       : Slv32Array(7 downto 0);
    signal hdrValid      : slv(7 downto 0);
    signal hdrRd         : slv(7 downto 0);
+   signal hdrRdLast     : slv(7 downto 0);
    signal addrDout      : Slv32Array(7 downto 0);
    signal addrValid     : slv(7 downto 0);
    signal addrRd        : slv(7 downto 0);
@@ -226,6 +227,7 @@ begin
          hdrDout           => hdrDout(i),
          hdrValid          => hdrValid(i),
          hdrRd             => hdrRd(i),
+         hdrRdLast         => hdrRdLast(i),
          -- Address information to data reader (adcClk)
          addrDout          => addrDout(i),
          addrValid         => addrValid(i),
@@ -259,6 +261,7 @@ begin
       hdrDout           => hdrDout,
       hdrValid          => hdrValid,
       hdrRd             => hdrRd,
+      hdrRdLast         => hdrRdLast,
       -- Address information from data writers (adcClk)
       addrDout          => addrDout,
       addrValid         => addrValid,
@@ -353,8 +356,9 @@ begin
       
       loop
          
-         wait for 1 us;    -- 100kHz will overflow with 1050 samples per trigger
-         --wait for 25 us;      -- 40kHz should not overflow with 514 samples per trigger
+         --wait for 1 us;    -- 1MHz
+         wait for 10 us;    -- 100kHz 
+         --wait for 25 us;      -- 40kHz 
          
          uniform(seed1, seed2, rand);   -- generate random number 0.0 to 1.0
          trigJitter := integer(rand*24);
@@ -435,7 +439,7 @@ begin
          
          wait until falling_edge(axisClk);
          
-         axisSlave.tReady <= not axisSlave.tReady;
+         --axisSlave.tReady <= not axisSlave.tReady;
          
       end loop;
       

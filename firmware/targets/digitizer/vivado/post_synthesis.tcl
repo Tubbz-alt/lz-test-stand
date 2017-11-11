@@ -15,7 +15,7 @@ source -quiet $::env(RUCKUS_DIR)/vivado_env_var.tcl
 source -quiet $::env(RUCKUS_DIR)/vivado_proc.tcl
 
 # Bypass the debug chipscope generation
-return
+#return
 
 ############################
 ## Open the synthesis design
@@ -40,34 +40,69 @@ set_property C_DATA_DEPTH 1024 [get_debug_cores ${ilaName}]
 #################################
 ## Set the clock for the ILA core
 #################################
-SetDebugCoreClk ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/devClk_i}
+#SetDebugCoreClk ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/devClk_i}
+SetDebugCoreClk ${ilaName} {adcClk}
 
 #######################
 ## Set the debug Probes
 #######################
 
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/syncFSM_INST/r[state][*]}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/r[jesdGtRx][data][*]}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/r[jesdGtRx][dataK][*]}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/chariskRx_i[*]}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/dataRx_i[*]}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/r[position][*]}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/r[dataRxD1][*]}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/r[chariskRxD1][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/trig[trigState][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/trig[buffState][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/trig[hdrState][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[1].U_Writer/trig[trigState][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[1].U_Writer/trig[buffState][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[1].U_Writer/trig[hdrState][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[6].U_Writer/trig[trigState][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[6].U_Writer/trig[buffState][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[6].U_Writer/trig[hdrState][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/trig[memFull]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/trig[hdrFifoCnt][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/trig[wrAddress][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/trig[trigState][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/trig[buffState][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/trig[hdrState][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/trig[trigLength][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/trig[trigOffset][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/trig[hdrFifoDin][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/trig[hdrFifoWr]}
+ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[7].U_Writer/hdrFifoFull}
+ConfigProbe ${ilaName} {U_SadcBuffer/hdrDout[7][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/hdrValid[7]}
+ConfigProbe ${ilaName} {U_SadcBuffer/hdrRd[7]}
+ConfigProbe ${ilaName} {U_SadcBuffer/addrDout[7][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/addrValid[7]}
+ConfigProbe ${ilaName} {U_SadcBuffer/addrRd[7]}
+ConfigProbe ${ilaName} {U_SadcBuffer/U_Reader/trig[buffState][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/U_Reader/trig[rMaster][arlen][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/U_Reader/trig[rdSize][*]}
+ConfigProbe ${ilaName} {U_SadcBuffer/U_Reader/trig[trigSize][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/U_Reader/trig[txMaster][tValid]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/U_Reader/rValid}
 
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/r[dataAlignedD1][*]}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/r[charAlignedD1][*]}
 
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/lmfc_i}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/s_bufRe}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/s_bufRst}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/s_bufUnf}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/s_bufWe}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/s_readBuff}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/sysRef_i}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/syncFSM_INST/s_kDetected}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/syncFSM_INST/s_kStable}
-ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/alignFrame_i}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/syncFSM_INST/r[state][*]}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/r[jesdGtRx][data][*]}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/r[jesdGtRx][dataK][*]}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/chariskRx_i[*]}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/dataRx_i[*]}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/r[position][*]}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/r[dataRxD1][*]}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/r[chariskRxD1][*]}
+#
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/r[dataAlignedD1][*]}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/r[charAlignedD1][*]}
+#
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/lmfc_i}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/s_bufRe}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/s_bufRst}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/s_bufUnf}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/s_bufWe}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/s_readBuff}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/sysRef_i}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/syncFSM_INST/s_kDetected}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/syncFSM_INST/s_kStable}
+#ConfigProbe ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/alignFrRepCh_INST/alignFrame_i}
 
 ##########################
 ## Write the port map file

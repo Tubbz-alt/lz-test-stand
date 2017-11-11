@@ -325,8 +325,8 @@ class EventReader(rogue.interfaces.stream.Slave):
             trigSamples = 0
             trigOffset = 0
             trigTime = 0
-            if len(p) >= 22:
-                dataConv = np.frombuffer(p, dtype='uint16', count=22)
+            if len(p) >= 24:
+                dataConv = np.frombuffer(p, dtype='uint16', count=12)
                 trigSamples = ((dataConv[5] << 16) | dataConv[4])&0x3fffff
                 trigOffset = (dataConv[7] << 16) | dataConv[6]
                 trigTime = (dataConv[9] << 48) | (dataConv[8] << 32) | (dataConv[11] << 16) | dataConv[10]
@@ -336,7 +336,7 @@ class EventReader(rogue.interfaces.stream.Slave):
             
             #view data
             if (PRINT_VERBOSE): print('Num. data readout: ', len(p))
-            # sort ADC channnels
+            # sort ADC channels
             # copy data only when display is not busy
             if self.busy == False:
                 chIndex = 0
@@ -344,7 +344,7 @@ class EventReader(rogue.interfaces.stream.Slave):
                     if (PRINT_VERBOSE): print('Slow ADC channnel: ', (p[4] & 0xFF))
                     chIndex = (p[4] & 0xFF)
                     self.channelDataArray[chIndex][:] = p
-                # sort fast ADC channnels
+                # sort fast ADC channels
                 elif ((p[7] & 0x10)>>4 == 0):
                     if (PRINT_VERBOSE): print('Fast ADC channnel: ', (p[4] & 0xFF))
                     chIndex = 8+(p[4] & 0xFF)

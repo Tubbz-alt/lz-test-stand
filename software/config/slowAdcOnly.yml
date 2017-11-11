@@ -278,7 +278,7 @@ lztsBoard:
       AdcReg_0x001F: '0xff'
       AdcReg_0x0020: '0x0'
     SadcBufferWriter[0]:
-      enable: 'False'
+      enable: 'True'
       Enable: 'False'
       RstCounters: 'False'
       IntPreThreshold: '0x0'
@@ -287,9 +287,9 @@ lztsBoard:
       IntPreDelay: '0x0'
       IntPostDelay: '0x0'
       IntSaveVeto: 'False'
-      ExtTrigSize: '0x0'
+      ExtTrigSize: '0x1000'
     SadcBufferWriter[1]:
-      enable: 'False'
+      enable: 'True'
       Enable: 'False'
       RstCounters: 'False'
       IntPreThreshold: '0x0'
@@ -298,9 +298,9 @@ lztsBoard:
       IntPreDelay: '0x0'
       IntPostDelay: '0x0'
       IntSaveVeto: 'False'
-      ExtTrigSize: '0x0'
+      ExtTrigSize: '0x1000'
     SadcBufferWriter[2]:
-      enable: 'False'
+      enable: 'True'
       Enable: 'False'
       RstCounters: 'False'
       IntPreThreshold: '0x0'
@@ -309,9 +309,9 @@ lztsBoard:
       IntPreDelay: '0x0'
       IntPostDelay: '0x0'
       IntSaveVeto: 'False'
-      ExtTrigSize: '0x0'
+      ExtTrigSize: '0x1000'
     SadcBufferWriter[3]:
-      enable: 'False'
+      enable: 'True'
       Enable: 'False'
       RstCounters: 'False'
       IntPreThreshold: '0x0'
@@ -320,9 +320,9 @@ lztsBoard:
       IntPreDelay: '0x0'
       IntPostDelay: '0x0'
       IntSaveVeto: 'False'
-      ExtTrigSize: '0x0'
+      ExtTrigSize: '0x1000'
     SadcBufferWriter[4]:
-      enable: 'False'
+      enable: 'True'
       Enable: 'False'
       RstCounters: 'False'
       IntPreThreshold: '0x0'
@@ -331,9 +331,9 @@ lztsBoard:
       IntPreDelay: '0x0'
       IntPostDelay: '0x0'
       IntSaveVeto: 'False'
-      ExtTrigSize: '0x0'
+      ExtTrigSize: '0x1000'
     SadcBufferWriter[5]:
-      enable: 'False'
+      enable: 'True'
       Enable: 'False'
       RstCounters: 'False'
       IntPreThreshold: '0x0'
@@ -342,29 +342,29 @@ lztsBoard:
       IntPreDelay: '0x0'
       IntPostDelay: '0x0'
       IntSaveVeto: 'False'
-      ExtTrigSize: '0x0'
+      ExtTrigSize: '0x1000'
     SadcBufferWriter[6]:
       enable: 'True'
       Enable: 'False'
       RstCounters: 'False'
-      IntPreThreshold: '0xc7f0'
-      IntPostThreshold: '0xc600'
+      IntPreThreshold: '0xa300'
+      IntPostThreshold: '0xa2f0'
       IntVetoThreshold: '0xffff'
       IntPreDelay: '0x210'
-      IntPostDelay: '0x1000'
+      IntPostDelay: '0x100'
       IntSaveVeto: 'False'
-      ExtTrigSize: '0x0'
+      ExtTrigSize: '0x1000'
     SadcBufferWriter[7]:
       enable: 'True'
       Enable: 'False'
       RstCounters: 'False'
-      IntPreThreshold: '0xafc0'
-      IntPostThreshold: '0xae00'
+      IntPreThreshold: '0xa300'
+      IntPostThreshold: '0xa2f0'
       IntVetoThreshold: '0xffff'
       IntPreDelay: '0x210'
-      IntPostDelay: '0x1000'
+      IntPostDelay: '0x100'
       IntSaveVeto: 'False'
-      ExtTrigSize: '0x0'
+      ExtTrigSize: '0x1000'
     SadcBufferReader:
       enable: 'False'
     SadcPatternTester:
@@ -375,7 +375,7 @@ lztsBoard:
       Samples: '0x0'
       Request: 'False'
     JesdRx:
-      enable: 'True'
+      enable: 'False'
       Enable: '0xffff'
       SysrefDelay: '0x7'
       Polarity: '0x0'
@@ -503,39 +503,39 @@ lztsBoard:
       LmkReg_0x016C: '0x0'
       LmkReg_0x016B: '0x0'
     FadcDebug:
-      enable: 'True'
+      enable: 'False'
       BRAM[0]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[1]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[2]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[3]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[4]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[5]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[6]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[7]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[8]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[9]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[10]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[11]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[12]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[13]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[14]:
-        enable: 'True'
+        enable: ParentFalse
       BRAM[15]:
-        enable: 'True'
+        enable: ParentFalse
     FastAdcConfig[0]:
       enable: 'True'
       CH[0]:

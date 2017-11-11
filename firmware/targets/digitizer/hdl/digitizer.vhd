@@ -152,16 +152,22 @@ architecture top_level of digitizer is
    signal fAdcValid : slv(7 downto 0);
    signal fAdcData  : Slv64Array(7 downto 0);
 
-   signal adcClk    : sl;
-   signal adcRst    : sl;
-   signal ddrRstN   : sl;
-   signal writerRst : sl;
-   signal lmkRefClk : sl;
-
+   signal adcClk     : sl;
+   signal adcRst     : sl;
+   signal ddrRstN    : sl;
+   signal ddrRstOut  : sl;
+   signal bufferRst  : sl;
+   signal lmkRefClk  : sl;
+   signal sysRst     : sl;
+   signal sysRstSync : sl;
+   
    signal swTrigger : sl;
    signal swArmTrig : sl;
    signal pwrLed    : slv(3 downto 0);
    signal gTime     : slv(63 downto 0);
+   
+   attribute keep : string;                        -- for chipscope
+   attribute keep of adcClk : signal is "true";    -- for chipscope
 
 begin
 
@@ -182,7 +188,7 @@ begin
    -------------------
    -- User LED Mapping
    -------------------
-   leds(3) <= not(writerRst);
+   leds(3) <= not(bufferRst);
    leds(2) <= pwrLed(2);
    leds(1) <= pwrLed(1);
    leds(0) <= pwrLed(0);
@@ -245,7 +251,7 @@ begin
          adcClk             => adcClk,
          adcRst             => adcRst,
          ddrRstN            => ddrRstN,
-         writerRst          => writerRst,
+         ddrRstOut          => ddrRstOut,
          lmkRefClk          => lmkRefClk,
          -- DRR Memory interface ports
          c0_sys_clk_p       => c0_sys_clk_p,
@@ -284,7 +290,7 @@ begin
          -- SYSMON Ports
          vPIn               => vPIn,
          vNIn               => vNIn);
-
+   
    ----------------------
    -- Power Supply Module
    ----------------------
@@ -298,6 +304,7 @@ begin
          sAxilWriteSlave  => axilWriteSlaves(PWR_SYNC_INDEX_C),
          sAxilReadMaster  => axilReadMasters(PWR_SYNC_INDEX_C),
          sAxilReadSlave   => axilReadSlaves(PWR_SYNC_INDEX_C),
+         sysRst           => sysRst,
          leds             => pwrLed,
          pwrCtrlIn        => pwrCtrlIn,
          pwrCtrlOut       => pwrCtrlOut,
@@ -359,7 +366,7 @@ begin
       port map (
          -- ADC interface
          adcClk          => adcClk,
-         adcRst          => writerRst,
+         adcRst          => bufferRst,
          adcData         => sAdcData,
          gTime           => gTime,
          extTrigger      => swTrigger,
@@ -371,8 +378,10 @@ begin
          -- AxiStream output (axisClk domain)
          axisClk         => axilClk,
          axisRst         => axilRst,
-         axisMaster      => axisMasters(0),
-         axisSlave       => axisSlaves(0),
+         --axisMaster      => axisMasters(0),
+         --axisSlave       => axisSlaves(0),
+         axisMaster      => dataTxMaster,
+         axisSlave       => dataTxSlave,
          -- AXI-Lite Interface (axilClk domain)
          axilClk         => axilClk,
          axilRst         => axilRst,
@@ -442,7 +451,7 @@ begin
       port map (
          -- ADC interface
          adcClk          => adcClk,
-         adcRst          => writerRst,
+         adcRst          => bufferRst,
          adcValid        => fAdcValid,
          adcData         => fAdcData,
          gTime           => gTime,
@@ -460,20 +469,33 @@ begin
          axisSlave       => axisSlaves(1)
          );
 
-   ------------------------
-   -- 1000 MSPS and 250 MSPS data stream mux
-   ------------------------
-   U_AxiStreamMux : entity work.AxiStreamMux
-      generic map(
-         TPD_G         => TPD_G,
-         NUM_SLAVES_G  => 2,
-         PIPE_STAGES_G => 1)
-      port map(
-         axisClk      => axilClk,
-         axisRst      => axilRst,
-         sAxisMasters => axisMasters,
-         sAxisSlaves  => axisSlaves,
-         mAxisMaster  => dataTxMaster,
-         mAxisSlave   => dataTxSlave);
+   
+   --------------
+   -- Buffer reset
+   --------------
+   U_RstSync: entity work.Synchronizer
+   port map (
+      clk      => adcClk,
+      rst      => adcRst,
+      dataIn   => sysRst,
+      dataOut  => sysRstSync
+   );
+   bufferRst <= ddrRstOut or sysRstSync;
+   
+   --------------------------
+   ---- 1000 MSPS and 250 MSPS data stream mux
+   --------------------------
+   --U_AxiStreamMux : entity work.AxiStreamMux
+   --   generic map(
+   --      TPD_G         => TPD_G,
+   --      NUM_SLAVES_G  => 2,
+   --      PIPE_STAGES_G => 1)
+   --   port map(
+   --      axisClk      => axilClk,
+   --      axisRst      => axilRst,
+   --      sAxisMasters => axisMasters,
+   --      sAxisSlaves  => axisSlaves,
+   --      mAxisMaster  => dataTxMaster,
+   --      mAxisSlave   => dataTxSlave);
 
 end top_level;

@@ -13,6 +13,7 @@
 ##########################
 
 create_clock -name pgpClkP   -period 6.400 [get_ports {pgpClkP}]
+create_clock -name clkInP    -period 4.000 [get_ports {clkInP}]
 create_clock -name ddrClkP   -period 5.000 [get_ports {c0_sys_clk_p}]
 create_clock -name sadc0ClkP -period 4.000 [get_ports {sadcClkFbP[0]}]
 create_clock -name sadc1ClkP -period 4.000 [get_ports {sadcClkFbP[1]}]
@@ -26,17 +27,18 @@ create_generated_clock -name ddrIntClk1 [get_pins {U_Core/U_DDR/U_MigCore/inst/u
 
 set_clock_groups -asynchronous \
    -group [get_clocks -include_generated_clocks {pgpClkP}] \
+   -group [get_clocks -include_generated_clocks {clkInP}] \
    -group [get_clocks -include_generated_clocks {ddrClkP}] \
    -group [get_clocks -include_generated_clocks {sadc0ClkP}] \
    -group [get_clocks -include_generated_clocks {sadc1ClkP}] \
    -group [get_clocks -include_generated_clocks {sadc2ClkP}] \
-   -group [get_clocks -include_generated_clocks {sadc3ClkP}] \
-   -group [get_clocks -include_generated_clocks {adcClk}] \
-   -group [get_clocks -include_generated_clocks {axilClk}]
+   -group [get_clocks -include_generated_clocks {sadc3ClkP}]
 
 set_clock_groups -asynchronous -group [get_clocks {ddrIntClk0}] -group [get_clocks {ddrClkP}]
 set_clock_groups -asynchronous -group [get_clocks {ddrIntClk1}] -group [get_clocks {ddrClkP}]
-   
+
+set_case_analysis 1 [get_pins {U_Core/U_LztsSynchronizer/U_BUFGMUX_1/S}]
+
 # Lock slow ADC interfaces to clock regions to avoid timing changes that require to re-train the ADC
 # Can comment out temporarily to find better placement if it causes timing closure issues
 set_property CLOCK_REGION X0Y4 [get_cells U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
@@ -54,6 +56,20 @@ set_property PACKAGE_PIN AA4 [get_ports pgpTxP]
 set_property PACKAGE_PIN AA3 [get_ports pgpTxN]
 set_property PACKAGE_PIN Y2  [get_ports pgpRxP]
 set_property PACKAGE_PIN Y1  [get_ports pgpRxN]
+
+set_property PACKAGE_PIN AA24 [get_ports {clkInP}]
+set_property PACKAGE_PIN AA25 [get_ports {clkInN}]
+set_property -dict { IOSTANDARD LVDS DIFF_TERM_ADV TERM_100 } [get_ports {clkInP}]
+set_property PACKAGE_PIN Y23  [get_ports {cmdInP}]
+set_property PACKAGE_PIN AA23 [get_ports {cmdInN}]
+set_property -dict { IOSTANDARD LVDS DIFF_TERM_ADV TERM_100 } [get_ports {cmdInP}]
+
+set_property PACKAGE_PIN AC22 [get_ports {clkOutP}]
+set_property PACKAGE_PIN AC23 [get_ports {clkOutN}]
+set_property -dict { IOSTANDARD LVDS } [get_ports {clkOutP}]
+set_property PACKAGE_PIN AA22 [get_ports {cmdOutP}]
+set_property PACKAGE_PIN AB22 [get_ports {cmdOutN}]
+set_property -dict { IOSTANDARD LVDS } [get_ports {cmdOutP}]
 
 set_property PACKAGE_PIN K20 [get_ports {leds[0]}]
 set_property PACKAGE_PIN K21 [get_ports {leds[1]}]

@@ -40,6 +40,15 @@ entity digitizer is
       leds             : out   slv(3 downto 0);
       pwrCtrlIn        : in    PwrCtrlInType;
       pwrCtrlOut       : out   PwrCtrlOutType;
+      -- Inter board synchronization
+      clkInP           : in    sl;
+      clkInN           : in    sl;
+      clkOutP          : out   sl;
+      clkOutN          : out   sl;
+      cmdInP           : in    sl;
+      cmdInN           : in    sl;
+      cmdOutP          : out   sl;
+      cmdOutN          : out   sl;
       -- JESD ADC Ports
       jesdClkP         : in    sl;
       jesdClkN         : in    sl;
@@ -163,6 +172,8 @@ architecture top_level of digitizer is
    
    signal swTrigger : sl;
    signal swArmTrig : sl;
+   signal syncCmd   : sl;
+   signal rstCmd    : sl;
    signal pwrLed    : slv(3 downto 0);
    signal gTime     : slv(63 downto 0);
    
@@ -171,27 +182,10 @@ architecture top_level of digitizer is
 
 begin
 
-   --------------------------------
-   -- Temporary global time counter
-   --------------------------------
-   process(adcClk)
-   begin
-      if rising_edge(adcClk) then
-         if adcRst = '1' then
-            gTime <= (others => '0') after TPD_G;
-         else
-            gTime <= gTime + 1 after TPD_G;
-         end if;
-      end if;
-   end process;
-
    -------------------
    -- User LED Mapping
    -------------------
    leds(3) <= not(bufferRst);
-   leds(2) <= pwrLed(2);
-   leds(1) <= pwrLed(1);
-   leds(0) <= pwrLed(0);
 
    -----------------------
    -- Communication Module
@@ -226,6 +220,8 @@ begin
          swRst            => adcRst,
          swTrigOut        => swTrigger,
          swArmOut         => swArmTrig,
+         syncCmd          => syncCmd,
+         rstCmd           => rstCmd,
          -- PGP Ports
          pgpClkP          => pgpClkP,
          pgpClkN          => pgpClkN,
@@ -253,6 +249,21 @@ begin
          ddrRstN            => ddrRstN,
          ddrRstOut          => ddrRstOut,
          lmkRefClk          => lmkRefClk,
+         -- Inter board synchronization
+         gTime              => gTime,
+         syncCmd            => syncCmd,
+         rstCmd             => rstCmd,
+         clkInP             => clkInP,
+         clkInN             => clkInN,
+         clkOutP            => clkOutP,
+         clkOutN            => clkOutN,
+         cmdInP             => cmdInP,
+         cmdInN             => cmdInN,
+         cmdOutP            => cmdOutP,
+         cmdOutN            => cmdOutN,
+         clkLed             => leds(2),
+         cmdLed             => leds(1),
+         mstLed             => leds(0),   
          -- DRR Memory interface ports
          c0_sys_clk_p       => c0_sys_clk_p,
          c0_sys_clk_n       => c0_sys_clk_n,

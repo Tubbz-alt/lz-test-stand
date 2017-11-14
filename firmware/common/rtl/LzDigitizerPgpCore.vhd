@@ -58,6 +58,8 @@ entity LzDigitizerPgpCore is
       swRst            : in  sl;
       swTrigOut        : out sl;
       swArmOut         : out sl;
+      syncCmd          : out sl;
+      rstCmd           : out sl;
       -- PGP Ports
       pgpClkP          : in  sl;
       pgpClkN          : in  sl;
@@ -221,7 +223,9 @@ begin
          swClk           => swClk,
          swRst           => swRst,
          swTrigOut       => swTrigOut,
-         swArmOut        => swArmOut
+         swArmOut        => swArmOut,
+         syncCmd         => syncCmd,
+         rstCmd          => rstCmd
          );
 
    U_PgpMon : entity work.Pgp2bAxi

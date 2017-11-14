@@ -57,7 +57,7 @@ class Lzts(pr.Device):
         self.add(AxiMicronN25Q(      name='MicronN25Q', offset=0x00200000, expand=False, hidden=False,))      
         self.add(AxiMemTester(       name='MemTester',  offset=0x00300000, expand=False, hidden=False,))      
         self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False, hidden=False,))      
-        self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False, hidden=False,))      
+        self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False, hidden=False,enabled=False,))      
         for i in range(4):
             self.add(Ads42Lbx9Readout(
                 name    = ('SlowAdcReadout[%d]'%i),

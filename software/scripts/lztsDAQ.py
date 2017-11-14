@@ -152,6 +152,14 @@ class LztsBoard(pyrogue.Root):
             cmd.sendCmd(1, 0)
             cmd.sendCmd(0, 0)
         
+        @self.command()
+        def GlobalRst():
+            cmd.sendCmd(2, 0)
+        
+        @self.command()
+        def GlobalSync():
+            cmd.sendCmd(3, 0)
+        
         self.add(MyRunControl('runControl'))
         #self.add(pyrogue.RunControl(name='runControl', rates={1:'1 Hz', 10:'10 Hz',30:'30 Hz'}, cmd=cmd.sendCmd(0, 0)))
         

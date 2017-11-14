@@ -52,7 +52,9 @@ entity PgpVcMapping is
       swClk           : in  sl;
       swRst           : in  sl;
       swTrigOut       : out sl;
-      swArmOut        : out sl
+      swArmOut        : out sl;
+      syncCmd         : out sl;
+      rstCmd          : out sl
       );
 end PgpVcMapping;
 
@@ -161,7 +163,7 @@ begin
          -- Local clock and reset
          locClk      => swClk,
          locRst      => swRst);
-
+   -- Command opCode x01 - SW arm
    U_ArmPulser : entity work.SsiCmdMasterPulser
       generic map (
          TPD_G          => TPD_G,
@@ -177,7 +179,39 @@ begin
          -- Local clock and reset
          locClk      => swClk,
          locRst      => swRst);
-
+   -- Command opCode x02 - global rst
+   U_RstPulser : entity work.SsiCmdMasterPulser
+      generic map (
+         TPD_G          => TPD_G,
+         OUT_POLARITY_G => '1',
+         PULSE_WIDTH_G  => 1)
+      port map (
+         -- Local command signal
+         cmdSlaveOut => ssiCmd,
+         --addressed cmdOpCode
+         opCode      => x"02",
+         -- output pulse to sync module
+         syncPulse   => rstCmd,
+         -- Local clock and reset
+         locClk      => swClk,
+         locRst      => swRst);
+   -- Command opCode x03 - global sync
+   U_SyncPulser : entity work.SsiCmdMasterPulser
+      generic map (
+         TPD_G          => TPD_G,
+         OUT_POLARITY_G => '1',
+         PULSE_WIDTH_G  => 1)
+      port map (
+         -- Local command signal
+         cmdSlaveOut => ssiCmd,
+         --addressed cmdOpCode
+         opCode      => x"03",
+         -- output pulse to sync module
+         syncPulse   => syncCmd,
+         -- Local clock and reset
+         locClk      => swClk,
+         locRst      => swRst);
+   
    -- VC2 TX, MB
    rxCtrl(2) <= AXI_STREAM_CTRL_UNUSED_C;
    U_VC2 : entity work.AxiStreamFifo

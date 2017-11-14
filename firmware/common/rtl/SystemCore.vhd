@@ -31,11 +31,11 @@ use unisim.vcomponents.all;
 
 entity SystemCore is
    generic (
-      TPD_G             : time            := 1 ns;
-      BUILD_INFO_G      : BuildInfoType;
-      NUM_AXI_MASTERS_G : positive;
-      AXI_CONFIG_G      : AxiLiteCrossbarMasterConfigArray;
-      AXI_ERROR_RESP_G  : slv(1 downto 0) := AXI_RESP_SLVERR_C);
+      TPD_G              : time            := 1 ns;
+      BUILD_INFO_G       : BuildInfoType;
+      NUM_AXI_MASTERS_G  : positive;
+      AXI_CONFIG_G       : AxiLiteCrossbarMasterConfigArray;
+      AXI_ERROR_RESP_G   : slv(1 downto 0) := AXI_RESP_SLVERR_C);
    port (
       -- Clock and Reset
       axilClk            : in    sl;
@@ -45,6 +45,21 @@ entity SystemCore is
       ddrRstN            : in    sl;
       ddrRstOut          : out   sl;
       lmkRefClk          : out   sl;
+      -- Inter board synchronization
+      gTime              : out slv(63 downto 0);
+      syncCmd            : in  sl;
+      rstCmd             : in  sl;
+      clkInP             : in  sl;
+      clkInN             : in  sl;
+      clkOutP            : out sl;
+      clkOutN            : out sl;
+      cmdInP             : in  sl;
+      cmdInN             : in  sl;
+      cmdOutP            : out sl;
+      cmdOutN            : out sl;
+      clkLed             : out sl;
+      cmdLed             : out sl;
+      mstLed             : out sl;
       -- DDR PHY Ref clk
       c0_sys_clk_p       : in    sl;
       c0_sys_clk_n       : in    sl;
@@ -86,13 +101,14 @@ end SystemCore;
 
 architecture top_level of SystemCore is
 
-   constant NUM_AXI_MASTERS_C : natural := 5;
+   constant NUM_AXI_MASTERS_C : natural := 6;
 
    constant VERSION_INDEX_C  : natural := 0;
    constant SYSMON_INDEX_C   : natural := 1;
    constant BOOT_MEM_INDEX_C : natural := 2;
    constant DDR_MEM_INDEX_C  : natural := 3;
    constant MMCM_INDEX_C     : natural := 4;
+   constant SYNC_INDEX_C     : natural := 5;
 
    constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 24, 20);
 
@@ -137,11 +153,53 @@ architecture top_level of SystemCore is
    signal clk250ddr     : sl;
    signal adcClock      : sl;
    signal adcReset      : sl;
+   
+   signal muxClk        : sl;
 
    signal mbIrq : slv(7 downto 0) := (others => '0');  -- unused 
 
 begin
-
+   
+   ------------------------------------------------
+   -- LztsSynchronizer instance
+   -- synchronizes global timer
+   -- selects local clock (master) or external clock (slave)
+   -- generates commands (master) receives and repeats commands (slave)
+   ------------------------------------------------
+   U_LztsSynchronizer : entity work.LztsSynchronizer
+   port map (
+      -- AXI-Lite Interface for local registers 
+      axilClk           => axilClk,
+      axilRst           => axilRst,
+      axilReadMaster    => axilReadMasters(SYNC_INDEX_C),
+      axilReadSlave     => axilReadSlaves(SYNC_INDEX_C),
+      axilWriteMaster   => axilWriteMasters(SYNC_INDEX_C),
+      axilWriteSlave    => axilWriteSlaves(SYNC_INDEX_C),
+      -- local clock input/output
+      locClk            => clk250ddr,
+      -- Master command inputs (synchronous to clkOut)
+      syncCmd           => syncCmd,
+      rstCmd            => rstCmd,
+      -- Inter-board clock and command
+      clkInP            => clkInP,
+      clkInN            => clkInN,
+      clkOutP           => clkOutP,
+      clkOutN           => clkOutN,
+      cmdInP            => cmdInP,
+      cmdInN            => cmdInN,
+      cmdOutP           => cmdOutP,
+      cmdOutN           => cmdOutN,
+      -- globally synchronized outputs
+      clkOut            => muxClk,
+      rstOut            => open,
+      gTime             => gTime,
+      -- status LEDs
+      clkLed            => clkLed,
+      cmdLed            => cmdLed,
+      mstLed            => mstLed
+   );
+   
+   
    ----------------
    -- Clock Manager
    ----------------
@@ -161,7 +219,7 @@ begin
          CLKOUT1_DIVIDE_G  => 100)      -- 10 MHz = 1 GHz /100
       port map(
          -- Clock Input
-         clkIn           => clk250ddr,
+         clkIn           => muxClk,
          -- Clock Outputs
          clkOut(0)       => adcClock,
          clkOut(1)       => lmkRefClk,

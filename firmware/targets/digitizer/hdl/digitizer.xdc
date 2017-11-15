@@ -12,6 +12,8 @@
 ## Timing Constraints   ##
 ##########################
 
+set_case_analysis 1 [get_pins {U_Core/U_LztsSynchronizer/U_BUFGMUX_1/S}]
+
 create_clock -name pgpClkP   -period 6.400 [get_ports {pgpClkP}]
 create_clock -name clkInP    -period 4.000 [get_ports {clkInP}]
 create_clock -name ddrClkP   -period 5.000 [get_ports {c0_sys_clk_p}]
@@ -41,8 +43,6 @@ set_clock_groups -asynchronous -group [get_clocks {lmkRefClk}] -group [get_clock
 
 set_clock_groups -asynchronous -group [get_clocks {ddrIntClk0}] -group [get_clocks {ddrClkP}]
 set_clock_groups -asynchronous -group [get_clocks {ddrIntClk1}] -group [get_clocks {ddrClkP}]
-
-set_case_analysis 1 [get_pins {U_Core/U_LztsSynchronizer/U_BUFGMUX_1/S}]
 
 # Lock slow ADC interfaces to clock regions to avoid timing changes that require to re-train the ADC
 # Can comment out temporarily to find better placement if it causes timing closure issues

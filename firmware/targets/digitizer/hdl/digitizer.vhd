@@ -389,10 +389,8 @@ begin
          -- AxiStream output (axisClk domain)
          axisClk         => axilClk,
          axisRst         => axilRst,
-         --axisMaster      => axisMasters(0),
-         --axisSlave       => axisSlaves(0),
-         axisMaster      => dataTxMaster,
-         axisSlave       => dataTxSlave,
+         axisMaster      => axisMasters(0),
+         axisSlave       => axisSlaves(0),
          -- AXI-Lite Interface (axilClk domain)
          axilClk         => axilClk,
          axilRst         => axilRst,
@@ -496,17 +494,17 @@ begin
    --------------------------
    ---- 1000 MSPS and 250 MSPS data stream mux
    --------------------------
-   --U_AxiStreamMux : entity work.AxiStreamMux
-   --   generic map(
-   --      TPD_G         => TPD_G,
-   --      NUM_SLAVES_G  => 2,
-   --      PIPE_STAGES_G => 1)
-   --   port map(
-   --      axisClk      => axilClk,
-   --      axisRst      => axilRst,
-   --      sAxisMasters => axisMasters,
-   --      sAxisSlaves  => axisSlaves,
-   --      mAxisMaster  => dataTxMaster,
-   --      mAxisSlave   => dataTxSlave);
+   U_AxiStreamMux : entity work.AxiStreamMux
+      generic map(
+         TPD_G         => TPD_G,
+         NUM_SLAVES_G  => 2,
+         PIPE_STAGES_G => 1)
+      port map(
+         axisClk      => axilClk,
+         axisRst      => axilRst,
+         sAxisMasters => axisMasters,
+         sAxisSlaves  => axisSlaves,
+         mAxisMaster  => dataTxMaster,
+         mAxisSlave   => dataTxSlave);
 
 end top_level;

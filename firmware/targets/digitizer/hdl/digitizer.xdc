@@ -21,6 +21,8 @@ create_clock -name sadc2ClkP -period 4.000 [get_ports {sadcClkFbP[2]}]
 create_clock -name sadc3ClkP -period 4.000 [get_ports {sadcClkFbP[3]}]
 
 create_generated_clock -name adcClk     [get_pins {U_Core/U_PLL/PllGen.U_Pll/CLKOUT0}]
+create_generated_clock -name lmkRefClk  [get_pins {U_Core/U_PLL/PllGen.U_Pll/CLKOUT1}]
+
 create_generated_clock -name axilClk    [get_pins {U_PGP/U_PLL/PllGen.U_Pll/CLKOUT0}]
 create_generated_clock -name ddrIntClk0 [get_pins {U_Core/U_DDR/U_MigCore/inst/u_ddr4_infrastructure/gen_mmcme3.u_mmcme_adv_inst/CLKOUT0}]
 create_generated_clock -name ddrIntClk1 [get_pins {U_Core/U_DDR/U_MigCore/inst/u_ddr4_infrastructure/gen_mmcme3.u_mmcme_adv_inst/CLKOUT6}]
@@ -33,6 +35,9 @@ set_clock_groups -asynchronous \
    -group [get_clocks -include_generated_clocks {sadc1ClkP}] \
    -group [get_clocks -include_generated_clocks {sadc2ClkP}] \
    -group [get_clocks -include_generated_clocks {sadc3ClkP}]
+
+set_clock_groups -asynchronous -group [get_clocks {adcClk}]    -group [get_clocks {clkInP}]
+set_clock_groups -asynchronous -group [get_clocks {lmkRefClk}] -group [get_clocks {clkInP}]
 
 set_clock_groups -asynchronous -group [get_clocks {ddrIntClk0}] -group [get_clocks {ddrClkP}]
 set_clock_groups -asynchronous -group [get_clocks {ddrIntClk1}] -group [get_clocks {ddrClkP}]

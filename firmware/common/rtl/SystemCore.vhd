@@ -327,6 +327,7 @@ begin
          TPD_G           => TPD_G,
          BUILD_INFO_G    => BUILD_INFO_G,
          XIL_DEVICE_G    => "ULTRASCALE",
+         EN_ICAP_G       => true,
          EN_DEVICE_DNA_G => true)
       port map (
          -- AXI-Lite Register Interface

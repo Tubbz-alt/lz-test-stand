@@ -128,14 +128,14 @@ architecture rtl of SadcBufferWriter is
       trigFifoWr     : sl;
       trigFifoDin    : slv(31 downto 0);
       trigRd         : sl;
-      trigFifoCnt    : integer;
+      trigFifoCnt    : integer range 0 to HDR_SIZE_C-1;
       trigState      : TrigStateType;
       buffState      : BuffStateType;
       hdrState       : HdrStateType;
       wMaster        : AxiWriteMasterType;
       ackCount       : slv(31 downto 0);
       errCount       : slv(31 downto 0);
-      hdrFifoCnt     : integer;
+      hdrFifoCnt     : integer range 0 to HDR_SIZE_C-1;
       hdrFifoDin     : slv(31 downto 0);
       hdrFifoWr      : sl;
       addrFifoDin    : slv(31 downto 0);

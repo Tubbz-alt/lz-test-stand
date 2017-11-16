@@ -102,10 +102,10 @@ architecture rtl of SadcBufferReader is
       rdSize         : slv(8 downto 0);
       buffState      : BuffStateType;
       rMaster        : AxiReadMasterType;
-      channelSel     : integer;
+      channelSel     : integer range 0 to 7;
       smplCnt        : Slv32Array(7 downto 0);
       txMaster       : AxiStreamMasterType;
-      hdrCnt         : integer;
+      hdrCnt         : integer range 0 to 11;
       rdHigh         : sl;
       first          : sl;
       last           : sl;
@@ -163,6 +163,7 @@ architecture rtl of SadcBufferReader is
    attribute keep : string;
    attribute keep of trig : signal is "true";
    attribute keep of rValid : signal is "true";
+   attribute keep of txSlave : signal is "true";
    
 begin
 
@@ -250,7 +251,7 @@ begin
             end if;
          
          when HDR_S =>
-            if vtrig.txMaster.tValid = '0' and hdrValid(trig.channelSel) = '1' then
+            if vtrig.txMaster.tValid = '0' and (hdrValid(trig.channelSel) = '1' or trig.hdrCnt = 11) then
                vtrig.txMaster.tValid := '1';
                if trig.hdrCnt = 0 then
                   ssiSetUserSof(SLAVE_AXI_CONFIG_C, vtrig.txMaster, '1');

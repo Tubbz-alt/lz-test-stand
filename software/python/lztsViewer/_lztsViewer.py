@@ -40,7 +40,7 @@ from itertools import count, takewhile
 import pdb
 
 
-PRINT_VERBOSE = 1
+PRINT_VERBOSE = 0
 
 ################################################################################
 ################################################################################
@@ -220,7 +220,9 @@ class Window(QtGui.QMainWindow, QObject):
             
             
             
-            
+            #if (PRINT_VERBOSE): 
+            if (len(chData[i]) > 0):
+                print('Channel %d, max ADU %d, max Vpp %f' %(i, max(chData[i])-min(chData[i]), (max(chData[i])-min(chData[i]))/2**16*2.0 ))
         
         
         self.enabled = [self.SadcCh0.isChecked(), self.SadcCh1.isChecked(), self.SadcCh2.isChecked(), self.SadcCh3.isChecked(), 
@@ -330,9 +332,9 @@ class EventReader(rogue.interfaces.stream.Slave):
                 trigSamples = ((dataConv[5] << 16) | dataConv[4])&0x3fffff
                 trigOffset = (dataConv[7] << 16) | dataConv[6]
                 trigTime = (dataConv[9] << 48) | (dataConv[8] << 32) | (dataConv[11] << 16) | dataConv[10]
-                print('Trigger size is %d samples' %(trigSamples))
-                print('Trigger offset is %d samples' %(trigOffset))
-                print('Trigger time is %f' %(trigTime/250000000.0))
+                if (PRINT_VERBOSE): print('Trigger size is %d samples' %(trigSamples))
+                if (PRINT_VERBOSE): print('Trigger offset is %d samples' %(trigOffset))
+                if (PRINT_VERBOSE): print('Trigger time is %f' %(trigTime/250000000.0))
             
             #view data
             if (PRINT_VERBOSE): print('Num. data readout: ', len(p))

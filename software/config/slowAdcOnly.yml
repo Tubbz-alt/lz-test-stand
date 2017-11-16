@@ -58,6 +58,8 @@ lztsBoard:
       Test: '0x0'
     MemTester:
       enable: 'True'
+    LztsSync:
+      enable: 'True'
     PwrReg:
       enable: 'True'
       SysRst: 'False'
@@ -108,7 +110,7 @@ lztsBoard:
       DcDcPhaseMgt1V2: '0x0'
       DcDcPhaseMgt1V8: '0x0'
     Pgp2bAxi:
-      enable: 'True'
+      enable: 'False'
       Loopback: '0x0'
       LocData: '0x0'
       LocDataEn: 'False'
@@ -347,8 +349,8 @@ lztsBoard:
       enable: 'True'
       Enable: 'False'
       RstCounters: 'False'
-      IntPreThreshold: '0xa300'
-      IntPostThreshold: '0xa2f0'
+      IntPreThreshold: '0x8800'
+      IntPostThreshold: '0x87f0'
       IntVetoThreshold: '0xffff'
       IntPreDelay: '0x210'
       IntPostDelay: '0x100'
@@ -358,8 +360,8 @@ lztsBoard:
       enable: 'True'
       Enable: 'False'
       RstCounters: 'False'
-      IntPreThreshold: '0xa300'
-      IntPostThreshold: '0xa2f0'
+      IntPreThreshold: '0x8800'
+      IntPostThreshold: '0x87f0'
       IntVetoThreshold: '0xffff'
       IntPreDelay: '0x210'
       IntPostDelay: '0x100'
@@ -376,16 +378,16 @@ lztsBoard:
       Request: 'False'
     JesdRx:
       enable: 'False'
-      Enable: '0xffff'
-      SysrefDelay: '0x7'
+      Enable: '0x0'
+      SysrefDelay: '0x0'
       Polarity: '0x0'
-      SubClass: '0x1'
-      ReplaceEnable: Enabled
+      SubClass: '0x0'
+      ReplaceEnable: Disabled
       ResetGTs: '0x0'
       ClearErrors: '0x0'
       InvertSync: Regular
-      ScrambleEnable: Enabled
-      LinkErrMask: '0x3f'
+      ScrambleEnable: Disabled
+      LinkErrMask: '0x0'
       InvertAdcData: '0x0'
     LMK:
       enable: 'False'

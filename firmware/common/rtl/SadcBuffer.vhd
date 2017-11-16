@@ -62,7 +62,10 @@ architecture mapping of SadcBuffer is
    constant NUM_AXI_MASTERS_C : natural := 10;
 
    constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, AXI_BASE_ADDR_G, 24, 20);
-
+   
+   -- remapping channel numbers to match the PCB names
+   constant CHMAP_C   : IntegerArray(7 downto 0) := (3, 7, 2, 6, 1, 5, 0, 4);
+   
    signal axilWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
    signal axilWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_C-1 downto 0);
    signal axilReadMasters  : AxiLiteReadMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
@@ -114,43 +117,43 @@ begin
    -- 250 MSPS ADCs Buffer Writers
    -------------------------------
    GEN_VEC : for i in 7 downto 0 generate
-
+      
       U_Writer : entity work.SadcBufferWriter
          generic map (
             TPD_G         => TPD_G,
             ADDR_BITS_G   => ADDR_BITS_G,
-            CHANNEL_G     => toSlv(i, 3)
+            CHANNEL_G     => toSlv(CHMAP_C(i), 3)
          )
          port map (
             -- ADC interface
             adcClk          => adcClk,
             adcRst          => adcRst,
-            adcData         => adcData(i),
+            adcData         => adcData(CHMAP_C(i)),
             gTime           => gTime,
             extTrigger      => extTrigger,
             -- AXI-Lite Interface for local registers 
             axilClk         => axilClk,
             axilRst         => axilRst,
-            axilReadMaster  => axilReadMasters(i),
-            axilReadSlave   => axilReadSlaves(i),
-            axilWriteMaster => axilWriteMasters(i),
-            axilWriteSlave  => axilWriteSlaves(i),
+            axilReadMaster  => axilReadMasters(CHMAP_C(i)),
+            axilReadSlave   => axilReadSlaves(CHMAP_C(i)),
+            axilWriteMaster => axilWriteMasters(CHMAP_C(i)),
+            axilWriteSlave  => axilWriteSlaves(CHMAP_C(i)),
             -- AXI Interface (adcClk)
-            axiWriteMaster  => axiWriteMaster(i),
-            axiWriteSlave   => axiWriteSlave(i),
+            axiWriteMaster  => axiWriteMaster(CHMAP_C(i)),
+            axiWriteSlave   => axiWriteSlave(CHMAP_C(i)),
             -- Trigger information to data reader (adcClk)
-            hdrDout         => hdrDout(i),
-            hdrValid        => hdrValid(i),
-            hdrRd           => hdrRd(i),
-            hdrRdLast       => hdrRdLast(i),
+            hdrDout         => hdrDout(CHMAP_C(i)),
+            hdrValid        => hdrValid(CHMAP_C(i)),
+            hdrRd           => hdrRd(CHMAP_C(i)),
+            hdrRdLast       => hdrRdLast(CHMAP_C(i)),
             -- Address information to data reader (adcClk)
-            addrDout        => addrDout(i),
-            addrValid       => addrValid(i),
-            addrRd          => addrRd(i)
+            addrDout        => addrDout(CHMAP_C(i)),
+            addrValid       => addrValid(CHMAP_C(i)),
+            addrRd          => addrRd(CHMAP_C(i))
          );
 
-      adcDataTester(i)(31 downto 16) <= (others => '0');
-      adcDataTester(i)(15 downto 0)  <= adcData(i);
+      adcDataTester(CHMAP_C(i))(31 downto 16) <= (others => '0');
+      adcDataTester(CHMAP_C(i))(15 downto 0)  <= adcData(CHMAP_C(i));
 
    end generate GEN_VEC;
 

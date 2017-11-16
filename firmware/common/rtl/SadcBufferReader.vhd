@@ -83,9 +83,6 @@ architecture rtl of SadcBufferReader is
    constant SLAVE_AXI_CONFIG_C   : AxiStreamConfigType := ssiAxiStreamConfig(2);
    constant MASTER_AXI_CONFIG_C  : AxiStreamConfigType := ssiAxiStreamConfig(4);
    
-   -- remapping channel numbers to match he PCB names
-   constant CH_MAPPING_C : Slv4Array(7 downto 0) := ("0011", "0111", "0010" , "0110" , "0001", "0101", "0000", "0100");
-   
    type BuffStateType is (
       IDLE_S,
       HDR_S,
@@ -161,17 +158,12 @@ architecture rtl of SadcBufferReader is
    
    signal txSlave : AxiStreamSlaveType;
    
-   signal axiDataRd  : slv(31 downto 0);    -- ONLY FOR SIMULATION
-   signal rValid     : sl;
    attribute keep : string;
    attribute keep of trig : signal is "true";
    attribute keep of rValid : signal is "true";
    attribute keep of txSlave : signal is "true";
    
 begin
-
-   axiDataRd  <= axiReadSlave.rdata(31 downto 0);    -- ONLY FOR SIMULATION
-   rValid <= axiReadSlave.rvalid;
    
    -- register logic (axilClk domain)
    -- trigger and buffer logic (adcClk domian)
@@ -262,7 +254,7 @@ begin
                elsif trig.hdrCnt = 1 then
                   vtrig.txMaster.tData(15 downto 0) := x"0000";                                 -- reserved
                elsif trig.hdrCnt = 2 then
-                  vtrig.txMaster.tData(15 downto 0) := x"000" & CH_MAPPING_C(trig.channelSel);  -- Slow ADC channel number
+                  vtrig.txMaster.tData(15 downto 0) := x"00" & toSlv(trig.channelSel, 8);       -- Slow ADC channel number
                elsif trig.hdrCnt = 3 then
                   vtrig.txMaster.tData(15 downto 0) := x"1000";                                 -- reserved
                elsif trig.hdrCnt = 4 then

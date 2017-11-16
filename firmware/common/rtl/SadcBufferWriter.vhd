@@ -104,6 +104,7 @@ architecture rtl of SadcBufferWriter is
    
    type TrigType is record
       reset          : slv(15 downto 0);
+      adcData        : slv(15 downto 0);
       extTrigger     : slv(1 downto 0);
       gTime          : slv(63 downto 0);
       wrAddress      : slv(ADDR_BITS_G downto 0);  -- address and carry flag
@@ -111,9 +112,9 @@ architecture rtl of SadcBufferWriter is
       enable         : sl;
       adcBufRdy      : sl;
       intSaveVeto    : sl;
-      intPreThresh   : slv(15 downto 0);
-      intPostThresh  : slv(15 downto 0);
-      intVetoThresh  : slv(15 downto 0);
+      intPreThresh   : slv(16 downto 0);
+      intPostThresh  : slv(16 downto 0);
+      intVetoThresh  : slv(16 downto 0);
       intPostDelay   : slv(15 downto 0);
       postCnt        : slv(15 downto 0);
       intPreDelay    : slv(15 downto 0);
@@ -159,6 +160,7 @@ architecture rtl of SadcBufferWriter is
 
    constant TRIG_INIT_C : TrigType := (
       reset          => x"0001",
+      adcData        => (others => '0'),
       extTrigger     => (others => '0'),
       gTime          => (others => '0'),
       wrAddress      => (others => '0'),
@@ -266,7 +268,13 @@ architecture rtl of SadcBufferWriter is
    signal trigFifoFull  : sl;
    signal trigValidInt  : sl;
    signal rdPtrValid    : sl;
-   signal rdPtrDout     : slv(31 downto 0);   
+   signal rdPtrDout     : slv(31 downto 0);
+   signal adcDataSig    : slv(16 downto 0);
+   
+   signal preThr        : sl;
+   signal postThr       : sl;
+   signal vetoThr       : sl;
+   signal preThrZero    : sl;
    
    signal wrAddrSig    : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
    signal wrPtrSig     : slv(ADDR_BITS_G-1 downto 0);    -- for simulation only
@@ -305,9 +313,9 @@ begin
    
    -- register logic (axilClk domain)
    -- trigger and buffer logic (adcClk domian)
-   comb : process (adcRst, axilRst, axiWriteSlave, axilReadMaster, axilWriteMaster, reg, trig, adcData,
+   comb : process (adcRst, axilRst, axiWriteSlave, axilReadMaster, axilWriteMaster, reg, trig,
       trigDout, trigValid, hdrFifoFull, addrFifoFull, burstFifoFull, burstFifoDout, burstValid,
-      gTime, extTrigger, adcData, rdPtrValid, rdPtrDout, hdrRdLast) is
+      gTime, extTrigger, adcData, rdPtrValid, rdPtrDout, hdrRdLast, preThr, postThr, vetoThr, preThrZero) is
       variable vreg      : RegType;
       variable vtrig     : TrigType;
       variable regCon    : AxiLiteEndPointType;
@@ -319,6 +327,7 @@ begin
       -- Latch the current value
       vreg := reg;
       vtrig := trig;
+      vtrig.adcData := adcData;
       
       -- keep reset for several clock cycles
       vtrig.reset := trig.reset(14 downto 0) & '0';
@@ -329,9 +338,9 @@ begin
       vtrig.enable := reg.enable;
       -- update trigger related settings only in IDLE and disabled state
       if trig.trigState = IDLE_S then
-         vtrig.intPreThresh   := reg.intPreThresh;
-         vtrig.intPostThresh  := reg.intPostThresh;
-         vtrig.intVetoThresh  := reg.intVetoThresh;
+         vtrig.intPreThresh   := '0' & reg.intPreThresh;
+         vtrig.intPostThresh  := '0' & reg.intPostThresh;
+         vtrig.intVetoThresh  := '0' & reg.intVetoThresh;
          vtrig.intPreDelay    := reg.intPreDelay;
          vtrig.intPostDelay   := reg.intPostDelay;
          vtrig.extTrigSize    := reg.extTrigSize;
@@ -400,7 +409,7 @@ begin
       
       -- internal trigger pre threshold crossed
       -- ignore pre threshold set to 0
-      if adcData >= trig.intPreThresh and trig.intPreThresh > 0 then
+      if preThr = '1' and preThrZero = '0' then
          intTrig := '1';
       else
          intTrig := '0';
@@ -516,7 +525,7 @@ begin
                   -- Next state
                   vtrig.buffState := MOVE_S;
                   -- save ADC data and move write address
-                  vtrig.wMaster.wdata(15 downto 0) := adcData;
+                  vtrig.wMaster.wdata(15 downto 0) := trig.adcData;
                   vtrig.wrAddress   := trig.wrAddress + 2;
                   -- count available samples
                   if trig.samplesBuff /= 2**trig.samplesBuff'length-1 then
@@ -541,21 +550,21 @@ begin
                -- Register data bytes
                -- Move the data every 8 samples (128 bit AXI bus)
                if trig.wrAddress(3 downto 0) = "0000" then
-                  vtrig.wMaster.wdata(15 downto 0) := adcData;
+                  vtrig.wMaster.wdata(15 downto 0) := trig.adcData;
                elsif trig.wrAddress(3 downto 0) = "0010" then
-                  vtrig.wMaster.wdata(31 downto 16) := adcData;
+                  vtrig.wMaster.wdata(31 downto 16) := trig.adcData;
                elsif trig.wrAddress(3 downto 0) = "0100" then
-                  vtrig.wMaster.wdata(47 downto 32) := adcData;
+                  vtrig.wMaster.wdata(47 downto 32) := trig.adcData;
                elsif trig.wrAddress(3 downto 0) = "0110" then
-                  vtrig.wMaster.wdata(63 downto 48) := adcData;
+                  vtrig.wMaster.wdata(63 downto 48) := trig.adcData;
                elsif trig.wrAddress(3 downto 0) = "1000" then
-                  vtrig.wMaster.wdata(79 downto 64) := adcData;
+                  vtrig.wMaster.wdata(79 downto 64) := trig.adcData;
                elsif trig.wrAddress(3 downto 0) = "1010" then
-                  vtrig.wMaster.wdata(95 downto 80) := adcData;
+                  vtrig.wMaster.wdata(95 downto 80) := trig.adcData;
                elsif trig.wrAddress(3 downto 0) = "1100" then
-                  vtrig.wMaster.wdata(111 downto 96) := adcData;
+                  vtrig.wMaster.wdata(111 downto 96) := trig.adcData;
                else --"1110"
-                  vtrig.wMaster.wdata(127 downto 112) := adcData; 
+                  vtrig.wMaster.wdata(127 downto 112) := trig.adcData; 
                   vtrig.wMaster.wvalid := '1';
                end if;
                
@@ -679,13 +688,13 @@ begin
             if trig.trigType(INT_IND_C) = '1' then
                
                -- post threshold detected
-               if adcData <= trig.intPostThresh then
+               if postThr = '1' then
                   -- write memory address to the FIFO
                   vtrig.addrFifoWr  := '1';
                   -- wait for post data
                   vtrig.trigState   := INT_POST_S;
                -- veto threshold detected
-               elsif adcData >= trig.intVetoThresh then
+               elsif vetoThr = '1' then
                   vtrig.trigType(VETO_IND_C) := '1';
                   vtrig.trigLength := (others=>'0');
                   vtrig.trigOffset := (others=>'0');
@@ -970,5 +979,61 @@ begin
       dout              => burstFifoDout,
       valid             => burstValid
    );   
+   
+   
+   ----------------------------------------------------------------------
+   -- DSP comparators
+   ----------------------------------------------------------------------
+      
+   adcDataSig <= '0' & adcData;
+   
+   U_PreCmp : entity work.DspComparator
+   generic map (
+      WIDTH_G  => 17
+   )
+   port map (
+      clk     => adcClk,
+      rst     => adcRst,
+      ain     => adcDataSig,
+      bin     => trig.intPreThresh,
+      gtEq    => preThr
+   );
+   
+   U_VetoCmp : entity work.DspComparator
+   generic map (
+      WIDTH_G  => 17
+   )
+   port map (
+      clk     => adcClk,
+      rst     => adcRst,
+      ain     => adcDataSig,
+      bin     => trig.intVetoThresh,
+      gtEq    => vetoThr
+   );
+   
+   U_PostCmp : entity work.DspComparator
+   generic map (
+      WIDTH_G  => 17
+   )
+   port map (
+      clk     => adcClk,
+      rst     => adcRst,
+      ain     => adcDataSig,
+      bin     => trig.intPostThresh,
+      lsEq    => postThr
+   );
+
+   
+   U_PreZeroCmp : entity work.DspComparator
+   generic map (
+      WIDTH_G  => 17
+   )
+   port map (
+      clk     => adcClk,
+      rst     => adcRst,
+      ain     => trig.intPreThresh,
+      bin     => "00000000000000000",
+      eq      => preThrZero
+   );
    
 end rtl;

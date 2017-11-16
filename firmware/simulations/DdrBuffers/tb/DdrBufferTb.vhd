@@ -502,7 +502,7 @@ begin
                trigOffset := conv_integer(axisMaster.tData(31 downto 0));
                if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt(trigCh)) &  ": offset " & integer'image(trigOffset); end if;
                if trigOffset > 0 then
-                  trigOffset := trigOffset - TRIG_LATENCY_C;
+                  trigOffset := trigOffset;
                end if;
                --report "trigOffset: " & integer'image(trigOffset);
             elsif wordCnt = 4 then  -- header

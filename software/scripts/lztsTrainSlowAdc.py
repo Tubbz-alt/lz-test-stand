@@ -149,7 +149,7 @@ class LztsBoard(pyrogue.Root):
 LztsBoard = LztsBoard(cmd, dataWriter, srp)
 
 #enable all needed devices
-LztsBoard.Lzts.LztsPowerRegisters.enable.set(True)
+LztsBoard.Lzts.PwrReg.enable.set(True)
 LztsBoard.Lzts.SadcPatternTester.enable.set(True)
 for i in range(4):
     LztsBoard.Lzts.SlowAdcConfig[i].enable.set(True)
@@ -170,14 +170,14 @@ adcRegs11 = LztsBoard.Lzts.find(name="AdcReg_0x0011")
 adcRegs15 = LztsBoard.Lzts.find(name="AdcReg_0x0015")
 
 #initial configuration for the slow ADC
-LztsBoard.Lzts.LztsPowerRegisters.EnDcDcAp3V7.set(True)
-LztsBoard.Lzts.LztsPowerRegisters.EnDcDcAp2V3.set(True)
-LztsBoard.Lzts.LztsPowerRegisters.EnLdoSlow.set(True)
-LztsBoard.Lzts.LztsPowerRegisters.SADCCtrl1.set(0)
-LztsBoard.Lzts.LztsPowerRegisters.SADCCtrl2.set(0)
-LztsBoard.Lzts.LztsPowerRegisters.SADCRst.set(0xf)
+LztsBoard.Lzts.PwrReg.EnDcDcAp3V7.set(True)
+LztsBoard.Lzts.PwrReg.EnDcDcAp2V3.set(True)
+LztsBoard.Lzts.PwrReg.EnLdoSlow.set(True)
+LztsBoard.Lzts.PwrReg.SADCCtrl1.set(0)
+LztsBoard.Lzts.PwrReg.SADCCtrl2.set(0)
+LztsBoard.Lzts.PwrReg.SADCRst.set(0xf)
 time.sleep(1.0)
-LztsBoard.Lzts.LztsPowerRegisters.SADCRst.set(0x0)
+LztsBoard.Lzts.PwrReg.SADCRst.set(0x0)
 time.sleep(1.0)
 for reg in dmodeRegs:
    reg.set(0x3)      # deserializer dmode 0x3
@@ -284,7 +284,7 @@ for adcNo in range(0, 8):
       setDelay = int(starts[index]+(stops[index]-starts[index])/2)
       print('Delay %d' %(setDelay))
       f.write('%d,' %(setDelay))
-      fh.write('#define SADC' + str(adcNo) + '_LANE' + str(lane) + ' ' + str(setDelay) + '\n')
+      fh.write(str(setDelay) + ',')
       
       # set best delay
       delayRegs[lane+adcNo*8].set(setDelay)
@@ -311,9 +311,9 @@ for reg in convertRegs:
    reg.set(0x3)      # convert real data
 
 #enable slow ADC drivers and power
-LztsBoard.Lzts.LztsPowerRegisters.EnDcDcAm6V.set(True)
-LztsBoard.Lzts.LztsPowerRegisters.EnLdoAm5V.set(True)
-LztsBoard.Lzts.LztsPowerRegisters.SAMPEn.set(0xf)
+LztsBoard.Lzts.PwrReg.EnDcDcAm6V.set(True)
+LztsBoard.Lzts.PwrReg.EnLdoAm5V.set(True)
+LztsBoard.Lzts.PwrReg.SAMPEn.set(0xf)
 
 LztsBoard.stop()
 exit()

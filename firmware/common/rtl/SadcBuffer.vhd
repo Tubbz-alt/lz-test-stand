@@ -128,7 +128,7 @@ begin
             -- ADC interface
             adcClk          => adcClk,
             adcRst          => adcRst,
-            adcData         => adcData(CHMAP_C(i)),
+            adcData         => adcData(i),
             gTime           => gTime,
             extTrigger      => extTrigger,
             -- AXI-Lite Interface for local registers 
@@ -152,8 +152,8 @@ begin
             addrRd          => addrRd(CHMAP_C(i))
          );
 
-      adcDataTester(CHMAP_C(i))(31 downto 16) <= (others => '0');
-      adcDataTester(CHMAP_C(i))(15 downto 0)  <= adcData(CHMAP_C(i));
+      adcDataTester(i)(31 downto 16) <= (others => '0');
+      adcDataTester(i)(15 downto 0)  <= adcData(i);
 
    end generate GEN_VEC;
 

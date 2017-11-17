@@ -22,6 +22,7 @@ import collections
 import time
 
 from lztsFpga.LztsPowerRegisters        import *
+from lztsFpga.LztsMonitoring            import *
 from lztsFpga.LztsSynchronizer          import *
 from lztsFpga.SadcBufferReader          import *
 from lztsFpga.SadcBufferWriter          import *
@@ -58,6 +59,10 @@ class Lzts(pr.Device):
         self.add(AxiMicronN25Q(      name='MicronN25Q', offset=0x00200000, expand=False, hidden=False,))
         self.add(AxiMemTester(       name='MemTester',  offset=0x00300000, expand=False, hidden=False,))
         self.add(LztsSynchronizer(   name='LztsSync',   offset=0x00500000, expand=False, hidden=False,))
+        self.add(LztsTemperature(    name='Temp0',      offset=0x00600000, expand=False, hidden=False,))
+        self.add(LztsTemperature(    name='Temp1',      offset=0x00600400, expand=False, hidden=False,))
+        self.add(LztsTemperature(    name='Temp2',      offset=0x00600800, expand=False, hidden=False,))
+        self.add(LztsTemperature(    name='Temp3',      offset=0x00600C00, expand=False, hidden=False,))
         self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False, hidden=False,))
         self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False, hidden=False,enabled=False,))
         for i in range(4):
@@ -118,7 +123,7 @@ class Lzts(pr.Device):
                 self.SlowAdcReadout[i].DMode.set(3)
                 self._root.checkBlocks(recurse=True)
                 #self.SlowAdcReadout[i].Invert.set(1)
-                self.SlowAdcReadout[i].Invert.set(0)
+                self.SlowAdcReadout[i].Invert.set(3)
                 self._root.checkBlocks(recurse=True)
                 self.SlowAdcReadout[i].Convert.set(3)
                 self._root.checkBlocks(recurse=True)

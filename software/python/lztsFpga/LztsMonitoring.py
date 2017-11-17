@@ -20,10 +20,10 @@
 import pyrogue as pr
 import collections
 
-class LztsSynchronizer(pr.Device):
+class LztsTemperature(pr.Device):
    def __init__(self, **kwargs):
-      """Create the configuration device for Synchronizer Registers"""
-      super().__init__(description='Synchronizer Registers', **kwargs)
+      """Create the configuration device for Temperature Sensors"""
+      super().__init__(description='Temperature Sensors Registers', **kwargs)
       
       # Creation. memBase is either the register bus server (srp, rce mapped memory, etc) or the device which
       # contains this object. In most cases the parent and memBase are the same but they can be 
@@ -37,12 +37,7 @@ class LztsSynchronizer(pr.Device):
       
       
       #Setup registers & variables
-      
-      
-      self.add((pr.RemoteVariable(name='ExtClkDetect', description='ExtClkDetect', offset=0x00000000, bitSize=1,  bitOffset=0,  base=pr.Bool, mode='RO')))
-      self.add((pr.RemoteVariable(name='GlobalTime',   description='GlobalTime',   offset=0x00000004, bitSize=64, bitOffset=0,  base=pr.UInt, mode='RO')))
-      self.add((pr.RemoteVariable(name='RstCmdsRcvd',  description='RstCmdsRcvd',  offset=0x0000000C, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RO')))
-      self.add((pr.RemoteVariable(name='SyncCmdsRcvd', description='SyncCmdsRcvd', offset=0x00000010, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RO')))
+      self.add((pr.RemoteVariable(name='Temperature',   description='Temperature',   offset=0x00000000, bitSize=8, bitOffset=0,  base=pr.Int, mode='RO')))
       
       #####################################
       # Create commands

@@ -66,7 +66,7 @@ class Lzts(pr.Device):
                 offset  = (0x03000000 + i*0x100000), 
                 expand  = False, 
                 enabled = False,
-                hidden  = False,
+                hidden  = True,
             ))
         for i in range(4):
             self.add(Ads42Lbx9Config(
@@ -74,7 +74,7 @@ class Lzts(pr.Device):
                 offset  = (0x03400000 + i*0x200), 
                 expand  = False, 
                 enabled = False,
-                hidden  = False,
+                hidden  = True,
             ))  
         for i in range(8):
             self.add(SadcBufferWriter(
@@ -107,7 +107,7 @@ class Lzts(pr.Device):
                 hidden  = False,
             ))    
         #self.sadcDelays = [192,190,169,180,175,174,174,202,192,174,186,182,187,177,170,193,83,86,83,80,83,81,87,90,81,79,80,78,77,81,81,76,86,93,86,89,88,84,79,87,75,81,77,71,82,82,81,73,78,85,78,79,78,80,80,86,82,79,75,81,82,86,91,88]
-        self.sadcDelays = [94,96,81,87,86,85,84,106,95,84,91,89,95,88,83,99,85,87,85,81,83,83,89,92,83,81,83,81,79,82,82,79,88,95,89,91,91,87,82,90,77,83,78,74,84,84,83,76,81,88,82,82,82,84,84,90,86,82,79,84,84,89,95,91]
+        self.sadcDelays = [146,147,124,135,130,131,129,158,145,130,139,140,145,136,128,151,85,87,85,81,83,83,89,92,83,81,83,81,79,83,83,79,88,95,89,92,91,86,82,90,77,83,78,74,83,84,83,76,81,88,82,82,82,84,84,90,86,82,78,83,84,89,95,91]
         self.delayRegs = self.find(name="DelayAdc*")        
         
         @self.command(description="Initialization for slow ADC idelayes",)
@@ -117,7 +117,8 @@ class Lzts(pr.Device):
                 self._root.checkBlocks(recurse=True)
                 self.SlowAdcReadout[i].DMode.set(3)
                 self._root.checkBlocks(recurse=True)
-                self.SlowAdcReadout[i].Invert.set(1)
+                #self.SlowAdcReadout[i].Invert.set(1)
+                self.SlowAdcReadout[i].Invert.set(0)
                 self._root.checkBlocks(recurse=True)
                 self.SlowAdcReadout[i].Convert.set(3)
                 self._root.checkBlocks(recurse=True)

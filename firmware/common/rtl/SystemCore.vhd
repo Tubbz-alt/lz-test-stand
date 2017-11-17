@@ -25,6 +25,8 @@ use work.AxiPkg.all;
 use work.AxiLitePkg.all;
 use work.AxiStreamPkg.all;
 use work.AppPkg.all;
+use work.I2cPkg.all;
+use work.AxiI2cMasterPkg.all;
 
 library unisim;
 use unisim.vcomponents.all;
@@ -60,6 +62,9 @@ entity SystemCore is
       clkLed             : out sl;
       cmdLed             : out sl;
       mstLed             : out sl;
+      -- temperature sensors
+      tmpScl             : inout sl;
+      tmpSda             : inout sl;
       -- DDR PHY Ref clk
       c0_sys_clk_p       : in    sl;
       c0_sys_clk_n       : in    sl;
@@ -101,7 +106,7 @@ end SystemCore;
 
 architecture top_level of SystemCore is
 
-   constant NUM_AXI_MASTERS_C : natural := 6;
+   constant NUM_AXI_MASTERS_C : natural := 7;
 
    constant VERSION_INDEX_C  : natural := 0;
    constant SYSMON_INDEX_C   : natural := 1;
@@ -109,6 +114,7 @@ architecture top_level of SystemCore is
    constant DDR_MEM_INDEX_C  : natural := 3;
    constant MMCM_INDEX_C     : natural := 4;
    constant SYNC_INDEX_C     : natural := 5;
+   constant TEMP_SNS_INDEX_C : natural := 6;
 
    constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 24, 20);
 
@@ -521,5 +527,25 @@ begin
    end process memRst;
 
    ddrRstOut <= ddrReset;
+   
+   ------------------------------------------------
+   --Temperature sensors readout
+   ------------------------------------------------
+   U_TempI2C : entity work.AxiI2cMasterCore
+   generic map (
+      DEVICE_MAP_G     => I2C_TEMP_CONFIG_C,
+      AXI_CLK_FREQ_G   => 156.25E+6,
+      I2C_SCL_FREQ_G   => 100.0E+3
+   )
+   port map (
+      i2cInOut.scl   => tmpScl,
+      i2cInOut.sda   => tmpSda,
+      axiReadMaster  => axilReadMasters(TEMP_SNS_INDEX_C),
+      axiReadSlave   => axilReadSlaves(TEMP_SNS_INDEX_C),
+      axiWriteMaster => axilWriteMasters(TEMP_SNS_INDEX_C),
+      axiWriteSlave  => axilWriteSlaves(TEMP_SNS_INDEX_C),
+      axiClk         => axilClk,
+      axiRst         => axilRst
+   );
 
 end top_level;

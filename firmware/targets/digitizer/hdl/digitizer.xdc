@@ -240,6 +240,11 @@ set_property PACKAGE_PIN K25 [get_ports {sampEn[2]}]
 set_property PACKAGE_PIN L25 [get_ports {sampEn[3]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {sampEn*}] 
 
+set_property PACKAGE_PIN M26 [get_ports {tmpScl}]
+set_property IOSTANDARD LVCMOS33 [get_ports {tmpScl}] 
+set_property PACKAGE_PIN L22 [get_ports {tmpSda}]
+set_property IOSTANDARD LVCMOS33 [get_ports {tmpSda}] 
+
 set_property PACKAGE_PIN T6  [get_ports {jesdClkP}]
 set_property PACKAGE_PIN T5  [get_ports {jesdClkN}]
 

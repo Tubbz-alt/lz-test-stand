@@ -20,9 +20,18 @@ use ieee.std_logic_1164.all;
 
 use work.StdRtlPkg.all;
 use work.AxiPkg.all;
+use work.I2cPkg.all;
 
 package AppPkg is
 
+   constant I2C_TEMP_CONFIG_C : I2cAxiLiteDevArray(3 downto 0) := (
+      0 => (MakeI2cAxiLiteDevType("1001000", 8, 8, '0')),
+      1 => (MakeI2cAxiLiteDevType("1001001", 8, 8, '0')),
+      2 => (MakeI2cAxiLiteDevType("1001011", 8, 8, '0')),
+      3 => (MakeI2cAxiLiteDevType("1001111", 8, 8, '0'))
+   );
+   
+   
    constant DDR_WIDTH_C : positive := 32;
    constant DDR_AXI_CONFIG_C : AxiConfigType := axiConfig(
       ADDR_WIDTH_C => 30,

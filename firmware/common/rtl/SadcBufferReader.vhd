@@ -160,7 +160,6 @@ architecture rtl of SadcBufferReader is
    
    attribute keep : string;
    attribute keep of trig : signal is "true";
-   attribute keep of rValid : signal is "true";
    attribute keep of txSlave : signal is "true";
    
 begin

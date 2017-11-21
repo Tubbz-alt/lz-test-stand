@@ -133,8 +133,6 @@ architecture rtl of SadcBufferWriter is
       buffState      : BuffStateType;
       hdrState       : HdrStateType;
       wMaster        : AxiWriteMasterType;
-      ackCount       : slv(31 downto 0);
-      errCount       : slv(31 downto 0);
       hdrFifoCnt     : integer range 0 to HDR_SIZE_C-1;
       hdrFifoDin     : slv(31 downto 0);
       hdrFifoWr      : sl;
@@ -189,8 +187,6 @@ architecture rtl of SadcBufferWriter is
       buffState      => IDLE_S,
       hdrState       => IDLE_S,
       wMaster        => axiWriteMasterInit(AXI_CONFIG_C, '1', AXI_BURST_C, AXI_CACHE_C),
-      ackCount       => (others => '0'),
-      errCount       => (others => '0'),
       hdrFifoCnt     => 0,
       hdrFifoDin     => (others => '0'),
       hdrFifoWr      => '0',
@@ -225,8 +221,6 @@ architecture rtl of SadcBufferWriter is
       extTrigSize    : slv(21 downto 0);
       axilReadSlave  : AxiLiteReadSlaveType;
       axilWriteSlave : AxiLiteWriteSlaveType;
-      ackCount       : slv(31 downto 0);
-      errCount       : slv(31 downto 0);
       lostSamples    : slv(31 downto 0);
       lostTriggers   : slv(31 downto 0);
       dropIntTrigs   : slv(31 downto 0);
@@ -244,8 +238,6 @@ architecture rtl of SadcBufferWriter is
       extTrigSize    => (others => '0'),
       axilReadSlave  => AXI_LITE_READ_SLAVE_INIT_C,
       axilWriteSlave => AXI_LITE_WRITE_SLAVE_INIT_C,
-      ackCount       => (others => '0'),
-      errCount       => (others => '0'),
       lostSamples    => (others => '0'),
       lostTriggers   => (others => '0'),
       dropIntTrigs   => (others => '0'),
@@ -338,8 +330,6 @@ begin
          vtrig.intSaveVeto    := reg.intSaveVeto;
       end if;
       
-      vreg.ackCount        := trig.ackCount;
-      vreg.errCount        := trig.errCount;
       vreg.lostSamples     := trig.lostSamples;
       vreg.lostTriggers    := trig.lostTriggers;
       vreg.dropIntTrigs    := trig.dropIntTrigs;
@@ -363,8 +353,6 @@ begin
       axiSlaveRegisterR(regCon, x"008", 0, reg.lostSamples);
       axiSlaveRegisterR(regCon, x"00C", 0, reg.lostTriggers);
       axiSlaveRegisterR(regCon, x"010", 0, reg.dropIntTrigs);
-      axiSlaveRegisterR(regCon, x"014", 0, reg.ackCount);
-      axiSlaveRegisterR(regCon, x"018", 0, reg.errCount);
       
       axiSlaveRegister (regCon, x"100", 0, vreg.intPreThresh);
       axiSlaveRegister (regCon, x"104", 0, vreg.intPostThresh);
@@ -466,16 +454,6 @@ begin
       if (axiWriteSlave.wready = '1') then
          vtrig.wMaster.wvalid := '0';
          vtrig.wMaster.wlast  := '0';
-      end if;
-
-      -- Wait for memory bus response
-      if (axiWriteSlave.bvalid = '1') then
-         -- Increment the counter
-         vtrig.ackCount := trig.ackCount + 1;
-         -- Check for error response
-         if (axiWriteSlave.bresp /= "00") then
-            vtrig.errCount := trig.errCount + 1;
-         end if;
       end if;
       
       ----------------------------------------------------------------------

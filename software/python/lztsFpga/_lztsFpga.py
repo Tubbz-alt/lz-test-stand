@@ -90,8 +90,8 @@ class Lzts(pr.Device):
                 hidden  = False,
             ))              
         self.add(SadcBufferReader(  name='SadcBufferReader',    offset=0x04800000, enabled=False, expand=False,  hidden=False,))      
-        self.add(SadcPatternTester( name='SadcPatternTester',   offset=0x04900000, enabled=False, expand=False,  hidden=False,))      
-        self.add(JesdRx(            name='JesdRx',              offset=0x05000000, enabled=False, expand=False,  numRxLanes=16, hidden=False,))      
+        self.add(SadcPatternTester( name='SadcPatternTester',   offset=0x04900000, enabled=False, expand=False,  hidden=True,))      
+        self.add(JesdRx(            name='JesdRx',              offset=0x05000000, enabled=True,  expand=False,  numRxLanes=16, hidden=False,))      
         self.add(Lmk04828(          name='LMK',                 offset=0x05100000, expand=False,                 hidden=False,))  
         self.add(FadcDebug(         name='FadcDebug',           offset=0x05700000, enabled=False, expand=False,  hidden=False,))  
         
@@ -123,7 +123,7 @@ class Lzts(pr.Device):
                 self.SlowAdcReadout[i].DMode.set(3)
                 self._root.checkBlocks(recurse=True)
                 #self.SlowAdcReadout[i].Invert.set(1)
-                self.SlowAdcReadout[i].Invert.set(3)
+                self.SlowAdcReadout[i].Invert.set(0)
                 self._root.checkBlocks(recurse=True)
                 self.SlowAdcReadout[i].Convert.set(3)
                 self._root.checkBlocks(recurse=True)

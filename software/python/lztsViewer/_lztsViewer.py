@@ -202,7 +202,6 @@ class Window(QtGui.QMainWindow, QObject):
         chData = [bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray(),bytearray()]
         for i in range(0, 16):
             chData[i] = np.frombuffer(self.eventReaderData.channelDataArray[i], dtype='uint16')
-            
             # currently header is 12 x 16 bit words (will be more)
             # read header information
             trigSamples = 0
@@ -221,8 +220,9 @@ class Window(QtGui.QMainWindow, QObject):
             
             
             #if (PRINT_VERBOSE): 
+            
             if (len(chData[i]) > 0):
-                print('Channel %d, max ADU %d, max Vpp %f' %(i, max(chData[i])-min(chData[i]), (max(chData[i])-min(chData[i]))/2**16*2.0 ))
+                print('Channel %d, min ADU %d, max ADU %d, Vpp %f' %(i, min(chData[i]), max(chData[i]), (max(chData[i])-min(chData[i]))/2**16*2.0 ))
         
         
         self.enabled = [self.SadcCh0.isChecked(), self.SadcCh1.isChecked(), self.SadcCh2.isChecked(), self.SadcCh3.isChecked(), 
@@ -327,6 +327,7 @@ class EventReader(rogue.interfaces.stream.Slave):
             trigSamples = 0
             trigOffset = 0
             trigTime = 0
+            if (PRINT_VERBOSE): print('Received packet size is %d' %(len(p)))
             if len(p) >= 24:
                 dataConv = np.frombuffer(p, dtype='uint16', count=12)
                 trigSamples = ((dataConv[5] << 16) | dataConv[4])&0x3fffff
@@ -336,8 +337,7 @@ class EventReader(rogue.interfaces.stream.Slave):
                 if (PRINT_VERBOSE): print('Trigger offset is %d samples' %(trigOffset))
                 if (PRINT_VERBOSE): print('Trigger time is %f' %(trigTime/250000000.0))
             
-            #view data
-            if (PRINT_VERBOSE): print('Num. data readout: ', len(p))
+            
             # sort ADC channels
             # copy data only when display is not busy
             if self.busy == False:
@@ -351,6 +351,7 @@ class EventReader(rogue.interfaces.stream.Slave):
                     if (PRINT_VERBOSE): print('Fast ADC channnel: ', (p[4] & 0xFF))
                     chIndex = 8+(p[4] & 0xFF)
                     self.channelDataArray[chIndex][:] = p
+                    
                 self.chReceived[chIndex] = True
                 testAllData = np.array_equal(np.logical_or(np.logical_not(self.enabledCh), np.logical_and(self.chReceived, self.enabledCh)), [True]*16)
                 # Emit the signal but no more often than every 0.5s

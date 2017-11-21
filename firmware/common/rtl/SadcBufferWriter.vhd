@@ -281,6 +281,10 @@ architecture rtl of SadcBufferWriter is
    attribute keep of rdPtrValid : signal is "true";
    attribute keep of rdPtrDout : signal is "true";
    attribute keep of hdrFifoFull : signal is "true";
+   attribute keep of adcDataSig : signal is "true";
+   attribute keep of preThr : signal is "true";
+   attribute keep of postThr : signal is "true";
+   attribute keep of vetoThr : signal is "true";
    
 begin
    

@@ -174,6 +174,10 @@ class LztsBoard(pyrogue.Root):
 # Create board
 LztsBoard = LztsBoard(cmd, dataWriter, srp)
 
+# disable jestRx (seg fault?)
+LztsBoard.Lzts.JesdRx.enable.set(False)
+
+
 # program flash
 LztsBoard.Lzts.MicronN25Q.LoadMcsFile(args.f)
 

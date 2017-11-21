@@ -148,12 +148,14 @@ architecture top_level of digitizer is
    signal axilReadSlave   : AxiLiteReadSlaveType;
    signal axilReadMaster  : AxiLiteReadMasterType;
 
-   signal mbTxMaster   : AxiStreamMasterType;
-   signal mbTxSlave    : AxiStreamSlaveType;
-   signal dataTxMaster : AxiStreamMasterType;
-   signal dataTxSlave  : AxiStreamSlaveType;
-   signal axisMasters  : AxiStreamMasterArray(1 downto 0);
-   signal axisSlaves   : AxiStreamSlaveArray(1 downto 0);
+   signal mbTxMaster    : AxiStreamMasterType;
+   signal mbTxSlave     : AxiStreamSlaveType;
+   signal axisMuxMaster : AxiStreamMasterType;
+   signal axisMuxSlave  : AxiStreamSlaveType;
+   signal dataTxMaster  : AxiStreamMasterType;
+   signal dataTxSlave   : AxiStreamSlaveType;
+   signal axisMasters   : AxiStreamMasterArray(1 downto 0);
+   signal axisSlaves    : AxiStreamSlaveArray(1 downto 0);
 
    signal sAdcData           : Slv16Array(7 downto 0);
    signal axiAdcWriteMasters : AxiWriteMasterArray(7 downto 0);
@@ -179,6 +181,7 @@ architecture top_level of digitizer is
    signal rstCmd    : sl;
    signal pwrLed    : slv(3 downto 0);
    signal gTime     : slv(63 downto 0);
+   signal dnaValue  : slv(127 downto 0);
    
    attribute keep : string;                        -- for chipscope
    attribute keep of adcClk : signal is "true";    -- for chipscope
@@ -270,6 +273,8 @@ begin
          -- temperature sensors
          tmpScl             => tmpScl,
          tmpSda             => tmpSda,
+         -- DNA output
+         dnaValue           => dnaValue,
          -- DRR Memory interface ports
          c0_sys_clk_p       => c0_sys_clk_p,
          c0_sys_clk_n       => c0_sys_clk_n,
@@ -510,7 +515,27 @@ begin
          axisRst      => axilRst,
          sAxisMasters => axisMasters,
          sAxisSlaves  => axisSlaves,
-         mAxisMaster  => dataTxMaster,
-         mAxisSlave   => dataTxSlave);
+         mAxisMaster  => axisMuxMaster,
+         mAxisSlave   => axisMuxSlave);
+   
+   U_FadcPacketizer: entity work.FadcPacketizer
+   port map (
+      -- AXI-Lite Interface for local registers 
+      axilClk           => axilClk,
+      axilRst           => axilRst,
+      axilReadMaster    => axilReadMasters(PACKET_INDEX_C),
+      axilReadSlave     => axilReadSlaves(PACKET_INDEX_C),
+      axilWriteMaster   => axilWriteMasters(PACKET_INDEX_C),
+      axilWriteSlave    => axilWriteSlaves(PACKET_INDEX_C),
+      -- AxiStream interface (axisClk domain)
+      axisClk           => axilClk,
+      axisRst           => axilRst,
+      axisRxMaster      => axisMuxMaster,
+      axisRxSlave       => axisMuxSlave,
+      axisTxMaster      => dataTxMaster,
+      axisTxSlave       => dataTxSlave,
+      -- Device DNA input
+      dnaValue          => dnaValue
+   );
 
 end top_level;

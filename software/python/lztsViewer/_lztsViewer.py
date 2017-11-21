@@ -332,7 +332,7 @@ class EventReader(rogue.interfaces.stream.Slave):
                 dataConv = np.frombuffer(p, dtype='uint16', count=12)
                 trigSamples = ((dataConv[5] << 16) | dataConv[4])&0x3fffff
                 trigOffset = (dataConv[7] << 16) | dataConv[6]
-                trigTime = (dataConv[9] << 48) | (dataConv[8] << 32) | (dataConv[11] << 16) | dataConv[10]
+                trigTime = (dataConv[11] << 48) | (dataConv[10] << 32) | (dataConv[9] << 16) | dataConv[8]
                 if (PRINT_VERBOSE): print('Trigger size is %d samples' %(trigSamples))
                 if (PRINT_VERBOSE): print('Trigger offset is %d samples' %(trigOffset))
                 if (PRINT_VERBOSE): print('Trigger time is %f' %(trigTime/250000000.0))

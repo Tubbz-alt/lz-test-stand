@@ -740,9 +740,9 @@ begin
                elsif trig.trigFifoCnt = 1 then
                   vtrig.trigFifoDin := trig.trigOffset;
                elsif trig.trigFifoCnt = 2 then
-                  vtrig.trigFifoDin := trig.gTime(63 downto 32);
-               else
                   vtrig.trigFifoDin := trig.gTime(31 downto 0);
+               else
+                  vtrig.trigFifoDin := trig.gTime(63 downto 32);
                   vtrig.trigFifoCnt := 0;
                   vtrig.trigState   := IDLE_S;
                   vtrig.trigWrLast  := '1';

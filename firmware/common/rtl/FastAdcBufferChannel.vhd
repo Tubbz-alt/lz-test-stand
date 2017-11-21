@@ -188,7 +188,7 @@ begin
                   vtrig.txMaster.tData(63 downto 32) := x"00000000";                            -- trigger offset (not yet implemented)
                   vtrig.wordCnt := trig.wordCnt + 1;
                else
-                  vtrig.txMaster.tData(63 downto  0) := trig.gTime(31 downto 0) & trig.gTime(63 downto 32);   -- gTime
+                  vtrig.txMaster.tData(63 downto  0) := trig.gTime;                             -- gTime
                   vtrig.wordCnt := (others => '0');
                   if trig.extTrigSize > 0 then
                      vtrig.timeout := 0;

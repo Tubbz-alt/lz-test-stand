@@ -65,6 +65,8 @@ entity SystemCore is
       -- temperature sensors
       tmpScl             : inout sl;
       tmpSda             : inout sl;
+      -- DNA output
+      dnaValue           : out   slv(127 downto 0);
       -- DDR PHY Ref clk
       c0_sys_clk_p       : in    sl;
       c0_sys_clk_n       : in    sl;
@@ -343,7 +345,9 @@ begin
          axiWriteSlave  => axilWriteSlaves(VERSION_INDEX_C),
          -- Clocks and Resets
          axiClk         => axilClk,
-         axiRst         => axilRst);
+         axiRst         => axilRst,
+         dnaValueOut    => dnaValue
+      );
 
    --------------------------
    -- AXI-Lite: SYSMON Module

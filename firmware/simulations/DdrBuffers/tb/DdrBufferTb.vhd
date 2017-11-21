@@ -150,6 +150,8 @@ architecture testbed of DdrBufferTb is
    signal addrRd        : slv(7 downto 0);
    signal axisClk       : sl := '0';
    signal axisRst       : sl := '1';
+   signal axisTxMaster  : AxiStreamMasterType;
+   signal axisTxSlave   : AxiStreamSlaveType;
    signal axisMaster    : AxiStreamMasterType;
    signal axisSlave     : AxiStreamSlaveType;
    signal adcClk        : sl := '0';
@@ -269,8 +271,31 @@ begin
       -- AxiStream output
       axisClk           => axisClk,
       axisRst           => axisRst,
-      axisMaster        => axisMaster,
-      axisSlave         => axisSlave
+      axisMaster        => axisTxMaster,
+      axisSlave         => axisTxSlave
+   );
+   
+   ------------------------------------------------
+   -- Packetizer UUT (turned off)
+   ------------------------------------------------
+   U_FadcPacketizer: entity work.FadcPacketizer
+   port map (
+      -- AXI-Lite Interface for local registers 
+      axilClk           => axiClk,
+      axilRst           => axiRst,
+      axilReadMaster    => AXI_LITE_READ_MASTER_INIT_C,
+      axilReadSlave     => open,
+      axilWriteMaster   => AXI_LITE_WRITE_MASTER_INIT_C,
+      axilWriteSlave    => open,
+      -- AxiStream interface (axisClk domain)
+      axisClk           => axisClk,
+      axisRst           => axisRst,
+      axisRxMaster      => axisTxMaster,
+      axisRxSlave       => axisTxSlave,
+      axisTxMaster      => axisMaster,
+      axisTxSlave       => axisSlave,
+      -- Device DNA input
+      dnaValue          => x"0000000000000000000000123456789A"
    );
    
    -- generate ADC data and time
@@ -506,9 +531,9 @@ begin
                end if;
                --report "trigOffset: " & integer'image(trigOffset);
             elsif wordCnt = 4 then  -- header
-               trigTimeVect(63 downto 32) := axisMaster.tData(31 downto 0);
-            elsif wordCnt = 5 then  -- header
                trigTimeVect(31 downto 0) := axisMaster.tData(31 downto 0);
+            elsif wordCnt = 5 then  -- header
+               trigTimeVect(63 downto 32) := axisMaster.tData(31 downto 0);
                trigTime := conv_integer(trigTimeVect(31 downto 0));
                
                -- count and remove lost triggers from the trigger verification queue

@@ -165,7 +165,8 @@ class LztsBoard(pyrogue.Root):
         #self.add(pyrogue.RunControl(name='runControl', rates={1:'1 Hz', 10:'10 Hz',30:'30 Hz'}, cmd=cmd.sendCmd(0, 0)))
         
         # Export remote objects
-        self.start(pyroGroup='lztsGui')
+        # disable polling (help with seg fault and bus errors?)
+        self.start(pyroGroup='lztsGui', pollEn=False)
 
 
 
@@ -174,7 +175,7 @@ class LztsBoard(pyrogue.Root):
 # Create board
 LztsBoard = LztsBoard(cmd, dataWriter, srp)
 
-# disable jestRx (seg fault?)
+# disable jestRx (help with seg fault and bus errors?)
 LztsBoard.Lzts.JesdRx.enable.set(False)
 
 

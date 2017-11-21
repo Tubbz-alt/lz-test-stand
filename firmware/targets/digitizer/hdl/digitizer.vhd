@@ -125,7 +125,7 @@ end digitizer;
 
 architecture top_level of digitizer is
 
-   constant NUM_AXI_MASTERS_C : natural := 7;
+   constant NUM_AXI_MASTERS_C : natural := 8;
 
    constant PWR_SYNC_INDEX_C    : natural := 1;
    constant COMM_INDEX_C        : natural := 2;
@@ -133,6 +133,7 @@ architecture top_level of digitizer is
    constant SADC_BUFFER_INDEX_C : natural := 4;
    constant FADC_PHY_INDEX_C    : natural := 5;
    constant FADC_BUFFER_INDEX_C : natural := 6;
+   constant PACKET_INDEX_C      : natural := 7;
 
    constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 31, 24);
 

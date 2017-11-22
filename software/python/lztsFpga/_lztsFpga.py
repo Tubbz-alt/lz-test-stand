@@ -57,8 +57,8 @@ class Lzts(pr.Device):
         #########
         self.add(AxiVersion(         name='AxiVersion', offset=0x00000000, expand=False, hidden=False,))
         self.add(AxiSysMonUltraScale(name='SysMon',     offset=0x00100000, expand=False, hidden=False,))
-        self.add(AxiMicronN25Q(      name='MicronN25Q', offset=0x00200000, expand=False, hidden=False,))
-        self.add(AxiMemTester(       name='MemTester',  offset=0x00300000, expand=False, hidden=False,))
+        self.add(AxiMicronN25Q(      name='MicronN25Q', offset=0x00200000, expand=False, hidden=True,))
+        self.add(AxiMemTester(       name='MemTester',  offset=0x00300000, expand=False, hidden=True,))
         self.add(LztsSynchronizer(   name='LztsSync',   offset=0x00500000, expand=False, hidden=False,))
         self.add(LztsTemperature(    name='Temp0',      offset=0x00600000, expand=False, hidden=False,))
         self.add(LztsTemperature(    name='Temp1',      offset=0x00600400, expand=False, hidden=False,))

@@ -53,9 +53,6 @@ lztsBoard:
       AlarmThresholdReg_25_16[5]: '0x0'
       AlarmThresholdReg_25_16[6]: '0x0'
       AlarmThresholdReg_25_16[7]: '0x0'
-    MicronN25Q:
-      enable: 'True'
-      Test: '0x0'
     MemTester:
       enable: 'True'
     LztsSync:
@@ -213,13 +210,6 @@ lztsBoard:
       ExtTrigSize: '0x1000'
     SadcBufferReader:
       enable: 'False'
-    SadcPatternTester:
-      enable: 'False'
-      Channel: '0x0'
-      Mask: '0x0'
-      Pattern: '0x0'
-      Samples: '0x0'
-      Request: 'False'
     JesdRx:
       enable: 'False'
       Enable: '0x0'

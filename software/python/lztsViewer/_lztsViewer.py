@@ -329,13 +329,26 @@ class EventReader(rogue.interfaces.stream.Slave):
             trigTime = 0
             if (PRINT_VERBOSE): print('Received packet size is %d' %(len(p)))
             if len(p) >= 24:
-                dataConv = np.frombuffer(p, dtype='uint16', count=12)
-                trigSamples = ((dataConv[5] << 16) | dataConv[4])&0x3fffff
-                trigOffset = (dataConv[7] << 16) | dataConv[6]
-                trigTime = (dataConv[11] << 48) | (dataConv[10] << 32) | (dataConv[9] << 16) | dataConv[8]
+                header = np.frombuffer(p, dtype='uint16', count=12)
+                trigSamples = ((header[5] << 16) | header[4])&0x3fffff
+                trigOffset = (header[7] << 16) | header[6]
+                trigTime = (header[11] << 48) | (header[10] << 32) | (header[9] << 16) | header[8]
                 if (PRINT_VERBOSE): print('Trigger size is %d samples' %(trigSamples))
                 if (PRINT_VERBOSE): print('Trigger offset is %d samples' %(trigOffset))
                 if (PRINT_VERBOSE): print('Trigger time is %f' %(trigTime/250000000.0))
+                # check if footer exists and print its content
+                if (header[3] & 0x1) == 1:
+                    footer = np.frombuffer(p, dtype='uint16', count=24, offset=len(p)-24*2)
+                    if (PRINT_VERBOSE): print('Footer time max %f' %(( ((footer[3] << 48) | (footer[2] << 32) | (footer[1] << 16) | footer[0])/250000000.0  )))
+                    if (PRINT_VERBOSE): print('Footer time min %f' %(( ((footer[7] << 48) | (footer[6] << 32) | (footer[5] << 16) | footer[4])/250000000.0  )))
+                    if (PRINT_VERBOSE): print('Footer DNA_L 0x%X' %(( (footer[11] << 48) | (footer[10] << 32) | (footer[9] << 16) | footer[8] )))
+                    if (PRINT_VERBOSE): print('Footer DNA_H 0x%X' %(( (footer[15] << 48) | (footer[14] << 32) | (footer[13] << 16) | footer[12] )))
+                    if (PRINT_VERBOSE): print('Footer lost flag %d' %(footer[16] & 0x1))
+                    if (PRINT_VERBOSE): print('Footer ext flag %d' %((footer[16]>>1) & 0x1))
+                    if (PRINT_VERBOSE): print('Footer int flag %d' %((footer[16]>>2) & 0x1))
+                    if (PRINT_VERBOSE): print('Footer empty flag %d' %((footer[16]>>3) & 0x1))
+                    if (PRINT_VERBOSE): print('Footer veto flag %d' %((footer[16]>>4) & 0x1))
+                    if (PRINT_VERBOSE): print('Footer bad ADC flag %d' %((footer[16]>>5) & 0x1))
             
             
             # sort ADC channels

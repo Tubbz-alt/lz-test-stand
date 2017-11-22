@@ -56,12 +56,20 @@ parser.add_argument(
     help     = "true to show viewer",
 )  
 
+parser.add_argument(
+    "--l", 
+    type     = int,
+    required = False,
+    default  = 0,
+    help     = "PGP lane number",
+)
+
 # Get the arguments
 args = parser.parse_args()
 
 # Create the PGP interfaces for ePix camera
-pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,0) # Registers for lzts board
-pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,1) # Data for lzts board
+pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,0) # Registers for lzts board
+pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,1) # Data for lzts board
 #pgpVc2 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,2) # PseudoScope
 #pgpVc3 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,3) # Monitoring (Slow ADC)
 

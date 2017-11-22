@@ -30,22 +30,31 @@ import atexit
 import yaml
 import time
 import sys
+import argparse
 import PyQt4.QtGui
 import PyQt4.QtCore
 import lztsFpga as fpga
 import lztsViewer as vi
 import operator
+#################
 
-#############################################
-# Define if the GUI is started (1 starts it)
-START_GUI = True
-START_VIEWER = False
-#############################################
 
+# Set the argument parser
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    "--l", 
+    type     = int,
+    required = False,
+    default  = 0,
+    help     = "PGP lane number",
+)
+# Get the arguments
+args = parser.parse_args()
 
 # Create the PGP interfaces for ePix camera
-pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,0) # Registers for lzts board
-pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,1) # Data for lzts board
+pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,0) # Registers for lzts board
+pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,1) # Data for lzts board
 #pgpVc2 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,2) # PseudoScope
 #pgpVc3 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,3) # Monitoring (Slow ADC)
 
@@ -198,7 +207,6 @@ delays = [0 for x in range(512)]
 
 fileName = 'SADC_Delays_DeviceDna' + hex(LztsBoard.Lzts.AxiVersion.DeviceDna.get()) + '.csv'
 f = open(fileName, 'a')
-fh = open('sadc_delays.h', 'w')
 
 #iterate all ADCs
 for adcNo in range(0, 8):
@@ -284,7 +292,6 @@ for adcNo in range(0, 8):
       setDelay = int(starts[index]+(stops[index]-starts[index])/2)
       print('Delay %d' %(setDelay))
       f.write('%d,' %(setDelay))
-      fh.write(str(setDelay) + ',')
       
       # set best delay
       delayRegs[lane+adcNo*8].set(setDelay)
@@ -292,28 +299,8 @@ for adcNo in range(0, 8):
 #close the file
 f.write('\n')
 f.close()
-fh.close()
 
-# enable real ADC data
-for reg in adcRegsF:
-   reg.set(0x0)
-# set fixed exteral trigger size and enable writers
-extSizeRegs = LztsBoard.Lzts.find(name="ExtTrigSize*")
-for reg in extSizeRegs:
-   reg.set(0x500)
-writerEnRegs = LztsBoard.Lzts.find(name="Enable*")
-for reg in writerEnRegs:
-   reg.set(True)
 
-for reg in invertRegs:
-   reg.set(0x1)      # invert real data in even channnels (PCB layout correction)
-for reg in convertRegs:
-   reg.set(0x3)      # convert real data
-
-#enable slow ADC drivers and power
-LztsBoard.Lzts.PwrReg.EnDcDcAm6V.set(True)
-LztsBoard.Lzts.PwrReg.EnLdoAm5V.set(True)
-LztsBoard.Lzts.PwrReg.SAMPEn.set(0xf)
 
 LztsBoard.stop()
 exit()

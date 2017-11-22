@@ -138,6 +138,7 @@ architecture rtl of SadcBufferWriter is
       hdrFifoWr      : sl;
       addrFifoDin    : slv(31 downto 0);
       addrFifoWr     : sl;
+      lostTrigFlag   : sl;
       lostSamples    : slv(31 downto 0);
       lostTriggers   : slv(31 downto 0);
       dropIntTrigs   : slv(31 downto 0);
@@ -192,6 +193,7 @@ architecture rtl of SadcBufferWriter is
       hdrFifoWr      => '0',
       addrFifoDin    => (others => '0'),
       addrFifoWr     => '0',
+      lostTrigFlag   => '0',
       lostSamples    => (others => '0'),
       lostTriggers   => (others => '0'),
       dropIntTrigs   => (others => '0'),
@@ -435,6 +437,12 @@ begin
          vtrig.lostTriggers := (others=>'0');
       elsif trig.trigState = WR_TRIG_S and (extTrig = '1' or intTrig = '1') then
          vtrig.lostTriggers := trig.lostTriggers + 1;
+      end if;
+      -- lost triggers flag (auto cleared)
+      if trig.trigState = WR_TRIG_S and (extTrig = '1' or intTrig = '1') then
+         vtrig.lostTrigFlag := '1';
+      elsif trig.trigState /= WR_TRIG_S then
+         vtrig.lostTrigFlag := '0';
       end if;
       -- count dropped internal triggers
       if trig.rstCounters = '1' then
@@ -714,7 +722,7 @@ begin
                vtrig.trigFifoCnt  := trig.trigFifoCnt + 1;
                vtrig.trigFifoWr   := '1';
                if trig.trigFifoCnt = 0 then
-                  vtrig.trigFifoDin   := trig.trigType & "00000" & trig.trigLength;
+                  vtrig.trigFifoDin   := trig.trigType & "0000" & trig.lostTrigFlag & trig.trigLength;
                elsif trig.trigFifoCnt = 1 then
                   vtrig.trigFifoDin := trig.trigOffset;
                elsif trig.trigFifoCnt = 2 then

@@ -12,6 +12,7 @@ from lztsFpga.LztsPowerRegisters import *
 from lztsFpga.MicroblazeLog import *
 from lztsFpga.LztsMonitoring import *
 from lztsFpga.LztsSynchronizer import *
+from lztsFpga.LztsPacketizer import *
 from lztsFpga.SadcBufferReader import *
 from lztsFpga.SadcBufferWriter import *
 from lztsFpga.SadcPatternTester import *

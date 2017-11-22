@@ -24,6 +24,7 @@ import time
 from lztsFpga.LztsPowerRegisters        import *
 from lztsFpga.LztsMonitoring            import *
 from lztsFpga.LztsSynchronizer          import *
+from lztsFpga.LztsPacketizer            import *
 from lztsFpga.SadcBufferReader          import *
 from lztsFpga.SadcBufferWriter          import *
 from lztsFpga.SadcPatternTester         import *
@@ -64,6 +65,7 @@ class Lzts(pr.Device):
         self.add(LztsTemperature(    name='Temp2',      offset=0x00600800, expand=False, hidden=False,))
         self.add(LztsTemperature(    name='Temp3',      offset=0x00600C00, expand=False, hidden=False,))
         self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False, hidden=False,))
+        self.add(LztsPacketizer(     name='Packet',     offset=0x07000000, expand=False, hidden=False,enabled=False,))
         self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False, hidden=False,enabled=False,))
         for i in range(4):
             self.add(Ads42Lbx9Readout(

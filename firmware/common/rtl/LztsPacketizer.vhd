@@ -74,6 +74,12 @@ architecture rtl of FadcPacketizer is
       dataCnt        : slv(31 downto 0);
       timeCnt        : slv(31 downto 0);
       dnaValue       : slv(127 downto 0);
+      lostTrigFlag   : sl;
+      emptyTrigFlag  : sl;
+      extTrigFlag    : sl;
+      intTrigFlag    : sl;
+      vetoTrigFlag   : sl;
+      badAdcFlag     : sl;
       state          : StateType;
    end record StrType;
    
@@ -90,6 +96,12 @@ architecture rtl of FadcPacketizer is
       dataCnt        => (others=>'0'),
       timeCnt        => (others=>'0'),
       dnaValue       => (others=>'0'),
+      lostTrigFlag   => '0',
+      emptyTrigFlag  => '0',
+      extTrigFlag    => '0',
+      intTrigFlag    => '0',
+      vetoTrigFlag   => '0',
+      badAdcFlag     => '0',
       state          => IDLE_S
    );
    
@@ -173,12 +185,18 @@ begin
       case str.state is
       
          when IDLE_S =>
-            vstr.hdrCnt    := (others => '0');
-            vstr.dataCnt   := (others => '0');
-            vstr.timeCnt   := (others => '0');
-            vstr.gTime     := (others => '0');
-            vstr.gTimeMin  := (others => '1');
-            vstr.gTimeMax  := (others => '0');
+            vstr.hdrCnt          := (others => '0');
+            vstr.dataCnt         := (others => '0');
+            vstr.timeCnt         := (others => '0');
+            vstr.gTime           := (others => '0');
+            vstr.gTimeMin        := (others => '1');
+            vstr.gTimeMax        := (others => '0');
+            vstr.lostTrigFlag    := '0';
+            vstr.badAdcFlag      := '0';
+            vstr.vetoTrigFlag    := '0';
+            vstr.emptyTrigFlag   := '0';
+            vstr.intTrigFlag     := '0';
+            vstr.extTrigFlag     := '0';
             if vstr.txMaster.tValid = '0' and  axisRxMaster.tValid = '1' then
                if ssiGetUserSof(AXIS_CONFIG_C, axisRxMaster) = '1' and str.enable = '1' then
                   -- move data
@@ -209,8 +227,14 @@ begin
                vstr.txMaster.tValid := '1';
                vstr.rxSlave.tReady  := '1';
                
-               -- move data with no change
+               -- move data
                vstr.txMaster.tData  := axisRxMaster.tData;
+               
+               -- change footer bit in the 2nd word
+               -- to let the software that the footer will follow
+               if str.hdrCnt = 1 then
+                  vstr.txMaster.tData(16) := '1';
+               end if;
                
                -- count all data
                vstr.dataCnt         := str.dataCnt + 4;
@@ -218,8 +242,15 @@ begin
                -- count header data (reset every rx.tLast)
                vstr.hdrCnt          := str.hdrCnt + 1;
                
-               -- store timestamps minimums and maximums
-               if str.hdrCnt = 4 then
+               -- store required header data
+               if str.hdrCnt = 2 then
+                  vstr.badAdcFlag            := axisRxMaster.tData(31) or str.badAdcFlag;
+                  vstr.vetoTrigFlag          := axisRxMaster.tData(30) or str.vetoTrigFlag;
+                  vstr.emptyTrigFlag         := axisRxMaster.tData(29) or str.emptyTrigFlag;
+                  vstr.intTrigFlag           := axisRxMaster.tData(28) or str.intTrigFlag;
+                  vstr.extTrigFlag           := axisRxMaster.tData(27) or str.extTrigFlag;
+                  vstr.lostTrigFlag          := axisRxMaster.tData(22) or str.lostTrigFlag;
+               elsif str.hdrCnt = 4 then
                   vstr.gTime(31 downto 0)    := axisRxMaster.tData(31 downto 0);
                elsif str.hdrCnt = 5 then
                   vstr.gTime(63 downto  32)  := axisRxMaster.tData(31 downto 0);
@@ -267,15 +298,28 @@ begin
                   vstr.txMaster.tData(31 downto 0)  := str.gTimeMin(31 downto 0);
                elsif str.hdrCnt = 3 then
                   vstr.txMaster.tData(31 downto 0)  := str.gTimeMin(63 downto 32);
-               
                elsif str.hdrCnt = 4 then
                   vstr.txMaster.tData(31 downto 0)  := str.dnaValue(31 downto 0);
                elsif str.hdrCnt = 5 then
                   vstr.txMaster.tData(31 downto 0)  := str.dnaValue(63 downto 32);
                elsif str.hdrCnt = 6 then
                   vstr.txMaster.tData(31 downto 0)  := str.dnaValue(95 downto 64);
-               else
+               elsif str.hdrCnt = 7 then
                   vstr.txMaster.tData(31 downto 0)  := str.dnaValue(127 downto 96);
+               elsif str.hdrCnt = 8 then
+                  vstr.txMaster.tData(31 downto 6)  := (others=>'0');   -- reserved
+                  vstr.txMaster.tData(5)            := str.badAdcFlag;
+                  vstr.txMaster.tData(4)            := str.vetoTrigFlag;
+                  vstr.txMaster.tData(3)            := str.emptyTrigFlag;
+                  vstr.txMaster.tData(2)            := str.intTrigFlag;
+                  vstr.txMaster.tData(1)            := str.extTrigFlag;
+                  vstr.txMaster.tData(0)            := str.lostTrigFlag;
+               elsif str.hdrCnt = 9 then
+                  vstr.txMaster.tData(31 downto 0)  := (others=>'0');   -- reserved
+               elsif str.hdrCnt = 10 then
+                  vstr.txMaster.tData(31 downto 0)  := (others=>'0');   -- reserved
+               else
+                  vstr.txMaster.tData(31 downto 0)  := (others=>'0');   -- reserved
                   vstr.txMaster.tLast  := '1';
                   vstr.hdrCnt := (others => '0');
                   vstr.dataCnt := (others => '0');

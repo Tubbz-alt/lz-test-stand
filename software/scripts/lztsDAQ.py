@@ -64,17 +64,40 @@ parser.add_argument(
     help     = "PGP lane number",
 )
 
+parser.add_argument(
+    "--type", 
+    type     = str,
+    required = True,
+    help     = "define the PCIe card type (either pgp-gen3 or datadev-pgp2b)",
+)  
+
 # Get the arguments
 args = parser.parse_args()
 
+# Add PGP virtual channels
+if ( args.type == 'pgp-gen3' ):
+    # Create the PGP interfaces for ePix hr camera
+    pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,0) # Registers for lzts board
+    pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,1) # Data for lzts board
+
+    print("")
+    print("PGP Card Version: %x" % (pgpL0Vc0.getInfo().version))
+    
+elif ( args.type == 'datadev-pgp2b' ):
+    # Create the PGP interfaces for ePix hr camera
+    
+    pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+0) # Registers for lzts board
+    pgpVc1 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+1) # Data for lzts board
+    
+else:
+    raise ValueError("Invalid type (%s)" % (args.type) )
+
 # Create the PGP interfaces for ePix camera
-pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,0) # Registers for lzts board
-pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,1) # Data for lzts board
+#pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,0) # Registers for lzts board
+#pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,1) # Data for lzts board
 #pgpVc2 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,2) # PseudoScope
 #pgpVc3 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,3) # Monitoring (Slow ADC)
 
-print("")
-print("PGP Card Version: %x" % (pgpVc0.getInfo().version))
 
 # Add data stream to file as channel 1
 # File writer

@@ -35,6 +35,7 @@ import PyQt4.QtGui
 import PyQt4.QtCore
 import lztsFpga as fpga
 import lztsViewer as vi
+from AdmPcieKu3Pgp2b import *
 
 # Set the argument parser
 parser = argparse.ArgumentParser()
@@ -84,10 +85,12 @@ if ( args.type == 'pgp-gen3' ):
     print("PGP Card Version: %x" % (pgpL0Vc0.getInfo().version))
     
 elif ( args.type == 'datadev-pgp2b' ):
-    # Create the PGP interfaces for ePix hr camera
     
     pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+0) # Registers for lzts board
     pgpVc1 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+1) # Data for lzts board
+    
+    memBase = rogue.hardware.data.DataMap(args.dev)
+    
     
 else:
     raise ValueError("Invalid type (%s)" % (args.type) )
@@ -199,6 +202,9 @@ class LztsBoard(pyrogue.Root):
         
 # Create board
 LztsBoard = LztsBoard(cmd, dataWriter, srp)
+
+if ( args.type == 'datadev-pgp2b' ):
+    LztsBoard.add(AdmPcieKu3Pgp2b(name='HW',memBase=memBase))
 
 # Create GUI
 if (args.start_gui):

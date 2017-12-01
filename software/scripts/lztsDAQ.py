@@ -89,7 +89,7 @@ elif ( args.type == 'datadev-pgp2b' ):
     pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+0) # Registers for lzts board
     pgpVc1 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+1) # Data for lzts board
     
-    memBase = rogue.hardware.data.DataMap(args.dev)
+    memBase = rogue.hardware.data.DataMap('/dev/datadev_0')
     
     
 else:
@@ -197,14 +197,16 @@ class LztsBoard(pyrogue.Root):
         self.add(MyRunControl('runControl'))
         #self.add(pyrogue.RunControl(name='runControl', rates={1:'1 Hz', 10:'10 Hz',30:'30 Hz'}, cmd=cmd.sendCmd(0, 0)))
         
+        if ( args.type == 'datadev-pgp2b' ):
+            self.add(AdmPcieKu3Pgp2b(name='PCIE',memBase=memBase))        
+        
         # Export remote objects
         self.start(pyroGroup='lztsGui')
         
 # Create board
 LztsBoard = LztsBoard(cmd, dataWriter, srp)
 
-if ( args.type == 'datadev-pgp2b' ):
-    LztsBoard.add(AdmPcieKu3Pgp2b(name='HW',memBase=memBase))
+
 
 # Create GUI
 if (args.start_gui):

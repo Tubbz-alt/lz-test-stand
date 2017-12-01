@@ -15,7 +15,7 @@ import rogue.hardware.data
 
 from DataLib.DataDev import *
 from surf.xilinx import *
-from XilinxKcu1500Pgp2b.PgpLane import *
+from AdmPcieKu3Pgp2b.PgpLane import *
 
 class AdmPcieKu3Pgp2b(pr.Device):
     def __init__(   self,       

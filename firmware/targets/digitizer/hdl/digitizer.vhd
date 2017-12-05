@@ -49,6 +49,10 @@ entity digitizer is
       cmdInN           : in    sl;
       cmdOutP          : out   sl;
       cmdOutN          : out   sl;
+      ncInP            : in    slv(1 downto 0); -- unused
+      ncInN            : in    slv(1 downto 0); -- unused
+      ncOutP           : out   slv(1 downto 0); -- unused
+      ncOutN           : out   slv(1 downto 0); -- unused
       -- JESD ADC Ports
       jesdClkP         : in    sl;
       jesdClkN         : in    sl;
@@ -184,6 +188,9 @@ architecture top_level of digitizer is
    signal gTime     : slv(63 downto 0);
    signal dnaValue  : slv(127 downto 0);
    
+   signal ncIn      : slv(1 downto 0);
+   signal ncOut     : slv(1 downto 0);
+   
    attribute keep : string;                        -- for chipscope
    attribute keep of adcClk : signal is "true";    -- for chipscope
 
@@ -193,6 +200,24 @@ begin
    -- User LED Mapping
    -------------------
    leds(3) <= not(bufferRst);
+   
+   -- unused RJ45 pairs
+   GEN_VEC : for i in 1 downto 0 generate
+      U_IBUFDS_1 : IBUFDS
+      port map (
+         I  => ncInP(i),
+         IB => ncInN(i),
+         O  => ncIn(i)
+      );
+      
+      U_OBUFDS_1 : OBUFDS
+      port map (
+         I  => ncOut(i),
+         OB => ncOutN(i),
+         O  => ncOutP(i)
+      );
+      ncOut(i) <= ncIn(i) and '0';
+   end generate GEN_VEC;
 
    -----------------------
    -- Communication Module

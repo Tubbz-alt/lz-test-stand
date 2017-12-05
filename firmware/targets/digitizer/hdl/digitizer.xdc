@@ -76,6 +76,18 @@ set_property PACKAGE_PIN AA22 [get_ports {cmdOutP}]
 set_property PACKAGE_PIN AB22 [get_ports {cmdOutN}]
 set_property -dict { IOSTANDARD LVDS } [get_ports {cmdOutP}]
 
+set_property PACKAGE_PIN AB25 [get_ports {ncOutP[0]}]
+set_property PACKAGE_PIN AB26 [get_ports {ncOutN[0]}]
+set_property PACKAGE_PIN AA27 [get_ports {ncOutP[1]}]
+set_property PACKAGE_PIN AB27 [get_ports {ncOutN[1]}]
+set_property -dict { IOSTANDARD LVDS } [get_ports {ncOutP*}]
+
+set_property PACKAGE_PIN AB21 [get_ports {ncInP[0]}]
+set_property PACKAGE_PIN AC21 [get_ports {ncInN[0]}]
+set_property PACKAGE_PIN AA20 [get_ports {ncInP[1]}]
+set_property PACKAGE_PIN AB20 [get_ports {ncInN[1]}]
+set_property -dict { IOSTANDARD LVDS DIFF_TERM_ADV TERM_100 } [get_ports {ncInP*}]
+
 set_property PACKAGE_PIN K20 [get_ports {leds[0]}]
 set_property PACKAGE_PIN K21 [get_ports {leds[1]}]
 set_property PACKAGE_PIN K22 [get_ports {leds[2]}]

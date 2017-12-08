@@ -67,9 +67,6 @@ end LztsSynchronizer;
 
 architecture rtl of LztsSynchronizer is
    
-   
-   constant MAX_CLK_PULSES_C : integer := ite(SIM_SPEEDUP_G, 40, 2**16-1);
-   constant MAX_CLK_ERROR_C  : integer := integer(MAX_CLK_PULSES_C * 0.05);
    constant LED_TIME_C       : integer := ite(SIM_SPEEDUP_G, 100, 250000000);
    
    type MuxType is record
@@ -77,22 +74,24 @@ architecture rtl of LztsSynchronizer is
       serIn          : slv(7 downto 0);
       serOut         : slv(7 downto 0);
       cmdOut         : sl;
-      extClkDet      : sl;
+      slaveDev       : sl;
       syncCmd        : sl;
       syncCmdCnt     : slv(15 downto 0);
       syncDet        : sl;
-      syncDetDly     : slv(1 downto 0);
+      syncDetDly     : slv(2 downto 0);
       syncPending    : sl;
       rstCmd         : sl;
       rstCmdCnt      : slv(15 downto 0);
       rstDet         : sl;
-      rstDetDly      : slv(1 downto 0);
+      rstDetDly      : slv(2 downto 0);
       rstPending     : sl;
       cmdBits        : integer range 0 to 7;
       clkLedCnt      : integer range 0 to LED_TIME_C;
       cmdLedCnt      : integer range 0 to LED_TIME_C;
       clkLed         : sl;
       cmdLed         : sl;
+      badIdleCnt     : slv(15 downto 0);
+      delayEn        : sl;
    end record MuxType;
    
    constant MUX_INIT_C : MuxType := (
@@ -100,82 +99,70 @@ architecture rtl of LztsSynchronizer is
       serIn          => (others=>'0'),
       serOut         => "01010101",
       cmdOut         => '0',
-      extClkDet      => '0',
+      slaveDev       => '0',
       syncCmd        => '0',
       syncCmdCnt     => (others=>'0'),
       syncDet        => '0',
-      syncDetDly     => "00",
+      syncDetDly     => "000",
       syncPending    => '0',
       rstCmd         => '0',
       rstCmdCnt      => (others=>'0'),
       rstDet         => '0',
-      rstDetDly      => "00",
+      rstDetDly      => "000",
       rstPending     => '0',
       cmdBits        => 0,
       clkLedCnt      => 0,
       cmdLedCnt      => 0,
       clkLed         => '0',
-      cmdLed         => '0'
-   );
-   
-   type ExtType is record
-      extCount       : integer range 0 to MAX_CLK_PULSES_C;
-      extReset       : sl;
-   end record ExtType;
-   
-   constant EXT_INIT_C : ExtType := (
-      extCount       => 0,
-      extReset       => '0'
-   );
-   
-   type LocType is record
-      locCount       : integer range 0 to MAX_CLK_PULSES_C;
-      extCount       : integer range 0 to MAX_CLK_PULSES_C;
-      extReset       : slv(7 downto 0);
-      extCountZero   : sl;
-      extClkDet      : sl;
-   end record LocType;
-   
-   constant LOC_INIT_C : LocType := (
-      locCount       => 0,
-      extCount       => 0,
-      extReset       => (others=>'0'),
-      extCountZero   => '0',
-      extClkDet      => '0'
+      cmdLed         => '0',
+      badIdleCnt     => (others=>'0'),
+      delayEn        => '0'
    );
    
    type RegType is record
       axilReadSlave  : AxiLiteReadSlaveType;
       axilWriteSlave : AxiLiteWriteSlaveType;
-      extClkDet      : sl;
+      slaveDev       : sl;
       gTime          : slv(63 downto 0);
       syncCmdCnt     : slv(15 downto 0);
       rstCmdCnt      : slv(15 downto 0);
+      badIdleCnt     : slv(15 downto 0);
+      delayIn        : slv(8 downto 0);
+      delayLd        : sl;
+      delayEn        : sl;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       axilReadSlave  => AXI_LITE_READ_SLAVE_INIT_C,
       axilWriteSlave => AXI_LITE_WRITE_SLAVE_INIT_C,
-      extClkDet      => '0',
+      slaveDev       => '0',
       gTime          => (others=>'0'),
       syncCmdCnt     => (others=>'0'),
-      rstCmdCnt      => (others=>'0')
+      rstCmdCnt      => (others=>'0'),
+      badIdleCnt     => (others=>'0'),
+      delayIn        => (others=>'0'),
+      delayLd        => '0',
+      delayEn        => '0'
    );
    
    signal mux     : MuxType   := MUX_INIT_C;
    signal muxIn   : MuxType;
-   signal ext     : ExtType   := EXT_INIT_C;
-   signal extIn   : ExtType;
-   signal loc     : LocType   := LOC_INIT_C;
-   signal locIn   : LocType;
    signal reg     : RegType   := REG_INIT_C;
    signal regIn   : RegType;
    
    signal clkInBuf         : sl;
    signal clkIn            : sl;
    signal cmdIn            : sl;
+   signal cmdInDly         : sl;
+   signal cmdInBuf         : sl;
    signal cmdOutBuf        : sl;
    signal muxClk           : sl;
+   signal muxClkB          : sl;
+   signal delayOut         : slv(8 downto 0);
+   
+   attribute keep : string;                        -- for chipscope
+   attribute keep of muxClk : signal is "true";    -- for chipscope
+   attribute keep of mux    : signal is "true";    -- for chipscope
    
 begin
    
@@ -197,7 +184,7 @@ begin
       O  => muxClk,
       I0 => locClk,
       I1 => clkInBuf,
-      S  => loc.extClkDet
+      S  => reg.slaveDev
    );
    
    clkOut <= muxClk;
@@ -206,8 +193,48 @@ begin
    port map (
       I  => cmdInP,
       IB => cmdInN,
-      O  => cmdIn
+      O  => cmdInBuf
    );
+   
+   U_IDDRE_1 : IDDRE1
+   port map (
+      C  => muxClk,
+      CB => muxClkB,
+      R  => '0',
+      D  => cmdInBuf,
+      Q1 => cmdIn,
+      Q2 => open
+   );
+   muxClkB <= not muxClk;
+   
+   
+   IDELAYE3_U : IDELAYE3
+   generic map (
+      CASCADE => "NONE",            -- Cascade setting (MASTER, NONE, SLAVE_END, SLAVE_MIDDLE)
+      DELAY_FORMAT => "COUNT",      -- Units of the DELAY_VALUE (COUNT, TIME)
+      DELAY_SRC => "DATAIN",        -- Delay input (DATAIN, IDATAIN)
+      DELAY_TYPE => "VAR_LOAD",     -- Set the type of tap delay line (FIXED, VARIABLE, VAR_LOAD)
+      IS_CLK_INVERTED => '0',       -- Optional inversion for CLK
+      IS_RST_INVERTED => '0',       -- Optional inversion for RST
+      REFCLK_FREQUENCY => 250.0,    -- IDELAYCTRL clock input frequency in MHz (200.0-2400.0)
+      UPDATE_MODE => "ASYNC")       -- Determines when updates to the delay will take effect (ASYNC, MANUAL, SYNC)
+   port map (
+      CASC_IN     => '0',           -- 1-bit input: Cascade delay input from slave ODELAY CASCADE_OUT 
+      CASC_OUT    => open,          -- 1-bit output: Cascade delay output to ODELAY input cascade 
+      CASC_RETURN => '0',           -- 1-bit input: Cascade delay returning from slave ODELAY DATAOUT 
+      DATAIN      => cmdIn,         -- 1-bit input: Data input from the logic 
+      IDATAIN     => '0',           -- 1-bit input: Data input from the IOBUF
+      DATAOUT     => cmdInDly,      -- 1-bit output: Delayed data output 
+      CLK         => axilClk,       -- 1-bit input: Clock input 
+      EN_VTC      => '0',           -- 1-bit input: Keep delay constant over VT 
+      INC         => '0',           -- 1-bit input: Increment / Decrement tap delay input 
+      CE          => '0',           -- 1-bit input: Active high enable increment/decrement input 
+      LOAD        => reg.delayLd,   -- 1-bit input: Load DELAY_VALUE input 
+      RST         => axilRst,       -- 1-bit input: Asynchronous Reset to the DELAY_VALUE
+      CNTVALUEIN  => reg.delayIn,   -- 9-bit input: Counter value input 
+      CNTVALUEOUT => delayOut       -- 9-bit output: Counter value output 
+   );  
+   
    
    U_ClkOutBufDiff_1 : entity work.ClkOutBufDiff
    generic map (
@@ -219,32 +246,25 @@ begin
    );
    
    -- register logic (axilClk domain)
-   -- remote clock detect (locClk domain)
-   -- remote clock counter (clkIn domain)
    -- patern serdes logic (muxClk domain)
-   comb : process (axilRst, axilReadMaster, axilWriteMaster, reg, loc, ext, mux, cmdIn, syncCmd, rstCmd) is
+   comb : process (axilRst, axilReadMaster, axilWriteMaster, reg, mux, cmdIn, cmdInDly, syncCmd, rstCmd, delayOut) is
       variable vreg        : RegType := REG_INIT_C;
-      variable vloc        : LocType := LOC_INIT_C;
-      variable vext        : ExtType := EXT_INIT_C;
       variable vmux        : MuxType := MUX_INIT_C;
       variable regCon      : AxiLiteEndPointType;
    begin
       -- Latch the current value
       vreg := reg;
-      vloc := loc;
-      vext := ext;
       vmux := mux;
       
       ------------------------------------------------
       -- cross domian sync
       ------------------------------------------------
-      vloc.extCount   := ext.extCount;
-      vext.extReset   := loc.extReset(7);
-      vreg.extClkDet  := loc.extClkDet;
       vreg.gTime      := mux.gTime;
       vreg.syncCmdCnt := mux.syncCmdCnt;
       vreg.rstCmdCnt  := mux.rstCmdCnt;
-      vmux.extClkDet  := loc.extClkDet;
+      vreg.badIdleCnt := mux.badIdleCnt;
+      vmux.slaveDev   := reg.slaveDev;
+      vmux.delayEn    := reg.delayEn;
       
       ------------------------------------------------
       -- register access (axilClk domain)
@@ -253,48 +273,24 @@ begin
       -- Determine the transaction type
       axiSlaveWaitTxn(regCon, axilWriteMaster, axilReadMaster, vreg.axilWriteSlave, vreg.axilReadSlave);
       
-      axiSlaveRegisterR(regCon, x"000", 0, reg.extClkDet);
+      axiSlaveRegister (regCon, x"000", 0, vreg.slaveDev);
       axiSlaveRegisterR(regCon, x"004", 0, reg.gTime(31 downto 0));
       axiSlaveRegisterR(regCon, x"008", 0, reg.gTime(63 downto 32));
       axiSlaveRegisterR(regCon, x"00C", 0, reg.rstCmdCnt);
       axiSlaveRegisterR(regCon, x"010", 0, reg.syncCmdCnt);
+      axiSlaveRegisterR(regCon, x"014", 0, reg.badIdleCnt);
+      axiSlaveRegister (regCon, x"018", 0, vreg.delayEn);
+      axiSlaveRegister (regCon, x"01C", 0, vreg.delayIn);
+      axiSlaveRegisterR(regCon, x"01C", 0, delayOut);
+      
+      if reg.delayIn /= delayOut then
+         vreg.delayLd := '1';
+      else
+         vreg.delayLd := '0';
+      end if;
       
       -- Closeout the transaction
       axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
-      
-      ------------------------------------------------
-      -- Remote clock counter (clkIn domain)
-      ------------------------------------------------
-      
-      if ext.extReset = '1' then
-         vext.extCount := 0;
-      elsif ext.extCount < MAX_CLK_PULSES_C then
-         vext.extCount := ext.extCount + 1;
-      end if;
-      
-      ------------------------------------------------
-      -- Remote clock detect (locClk domain)
-      ------------------------------------------------
-      
-      if loc.extReset(7) = '1' then
-         vloc.extReset := loc.extReset(6 downto 0) & '0';
-         if loc.extCount = 0 then
-            vloc.extCountZero := '1';
-         else
-            vloc.extCountZero := '0';
-         end if;
-      elsif loc.locCount = MAX_CLK_PULSES_C then
-         vloc.locCount := 0;
-         vloc.extReset := x"FF";
-         -- verify extCount both 0 and max value
-         if loc.extCount >= (MAX_CLK_PULSES_C-MAX_CLK_ERROR_C) and loc.extCountZero = '1' then
-            vloc.extClkDet := '1';
-         else
-            vloc.extClkDet := '0';
-         end if;
-      else
-         vloc.locCount := loc.locCount + 1;
-      end if;
       
       ------------------------------------------------
       -- Serial pattern in/out logic (muxClk domain)
@@ -305,18 +301,24 @@ begin
       vmux.rstDet  := '0';
       vmux.syncDetDly(0) := '0';
       vmux.syncDetDly(1) := mux.syncDetDly(0);
+      vmux.syncDetDly(2) := mux.syncDetDly(1);
       vmux.rstDetDly(0)  := '0';
       vmux.rstDetDly(1)  := mux.rstDetDly(0);
+      vmux.rstDetDly(2)  := mux.rstDetDly(1);
       
       ------------------------------------------------
       -- slave logic
       ------------------------------------------------
       
-      if mux.extClkDet = '1' then
+      if mux.slaveDev = '1' then
          -- repeat cmdIn
          vmux.cmdOut := cmdIn;
          -- decode cmdIn and look for reser/sync
-         vmux.serIn  := mux.serIn(6 downto 0) & cmdIn;
+         if mux.delayEn = '0' then
+            vmux.serIn  := mux.serIn(6 downto 0) & cmdIn;
+         else
+            vmux.serIn  := mux.serIn(6 downto 0) & cmdInDly;
+         end if;
          if mux.serIn = "00001111" then
             vmux.syncDet := '1';
          elsif mux.serIn = "00110011" then
@@ -331,7 +333,7 @@ begin
       -- master logic
       ------------------------------------------------
       
-      if mux.extClkDet = '0' then
+      if mux.slaveDev = '0' then
          -- clear unused de-serializer
          vmux.serIn  := (others=>'0');
          -- look for master commands
@@ -371,8 +373,8 @@ begin
             end if;
          end if;
          -- delay local command detect in master
-         vmux.rstDet  := mux.rstDetDly(1);
-         vmux.syncDet := mux.syncDetDly(1);
+         vmux.rstDet  := mux.rstDetDly(2);
+         vmux.syncDet := mux.syncDetDly(2);
          -- register serial output
          vmux.cmdOut := mux.serOut(7);
       end if;
@@ -394,6 +396,19 @@ begin
       end if;
       if mux.rstDet = '1' then
          vmux.rstCmdCnt := mux.rstCmdCnt + 1;
+      end if;
+      
+      -- bad idle counter
+      if mux.syncDet = '1' or mux.rstDet = '1' then
+         vmux.badIdleCnt  := (others=>'0');
+      elsif mux.slaveDev = '1' then
+         if mux.serIn(0) = mux.serIn(1) and mux.badIdleCnt /= 2**mux.badIdleCnt'length-1 then
+            vmux.badIdleCnt  := vmux.badIdleCnt + 1;
+         end if;
+      else
+         if mux.serOut(0) = mux.serOut(1) and mux.badIdleCnt /= 2**mux.badIdleCnt'length-1 then
+            vmux.badIdleCnt  := vmux.badIdleCnt + 1;
+         end if;
       end if;
       
       -- LED timers
@@ -426,8 +441,6 @@ begin
 
       -- Register the variable for next clock cycle      
       regIn <= vreg;
-      locIn <= vloc;
-      extIn <= vext;
       muxIn <= vmux;
 
       -- Outputs
@@ -437,7 +450,7 @@ begin
       rstOut         <= mux.rstDet;
       clkLed         <= mux.clkLed;
       cmdLed         <= mux.cmdLed;
-      mstLed         <= not mux.extClkDet;
+      mstLed         <= not mux.slaveDev;
    end process comb;
 
    seqR : process (axilClk) is
@@ -447,20 +460,6 @@ begin
       end if;
    end process seqR;
    
-   seqL : process (locClk) is
-   begin
-      if (rising_edge(locClk)) then
-         loc <= locIn after TPD_G;
-      end if;
-   end process seqL;
-   
-   seqE : process (clkIn) is
-   begin
-      if (rising_edge(clkIn)) then
-         ext <= extIn after TPD_G;
-      end if;
-   end process seqE;
-   
    seqM : process (muxClk) is
    begin
       if (rising_edge(muxClk)) then
@@ -469,12 +468,18 @@ begin
    end process seqM;
    
    -- clock out command on falling edge
-   seqCmd : process (muxClk) is
-   begin
-      if (falling_edge(muxClk)) then
-         cmdOutBuf <= mux.cmdOut after TPD_G;
-      end if;
-   end process seqCmd;
+   U_ODDRE_1 : ODDRE1
+   generic map (
+      IS_C_INVERTED  => '1'
+   )
+   port map (
+      C  => muxClk,
+      SR => '0',
+      D1 => mux.cmdOut,
+      D2 => mux.cmdOut,
+      Q  => cmdOutBuf
+   );
+   
    
    U_OBUFDS_1 : OBUFDS
    port map (

@@ -91,7 +91,6 @@ architecture rtl of LztsSynchronizer is
       clkLed         : sl;
       cmdLed         : sl;
       badIdleCnt     : slv(15 downto 0);
-      delayEn        : sl;
    end record MuxType;
    
    constant MUX_INIT_C : MuxType := (
@@ -115,8 +114,7 @@ architecture rtl of LztsSynchronizer is
       cmdLedCnt      => 0,
       clkLed         => '0',
       cmdLed         => '0',
-      badIdleCnt     => (others=>'0'),
-      delayEn        => '0'
+      badIdleCnt     => (others=>'0')
    );
    
    type RegType is record
@@ -127,9 +125,6 @@ architecture rtl of LztsSynchronizer is
       syncCmdCnt     : slv(15 downto 0);
       rstCmdCnt      : slv(15 downto 0);
       badIdleCnt     : slv(15 downto 0);
-      delayIn        : slv(8 downto 0);
-      delayLd        : sl;
-      delayEn        : sl;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
@@ -139,10 +134,7 @@ architecture rtl of LztsSynchronizer is
       gTime          => (others=>'0'),
       syncCmdCnt     => (others=>'0'),
       rstCmdCnt      => (others=>'0'),
-      badIdleCnt     => (others=>'0'),
-      delayIn        => (others=>'0'),
-      delayLd        => '0',
-      delayEn        => '0'
+      badIdleCnt     => (others=>'0')
    );
    
    signal mux     : MuxType   := MUX_INIT_C;
@@ -151,14 +143,11 @@ architecture rtl of LztsSynchronizer is
    signal regIn   : RegType;
    
    signal clkInBuf         : sl;
-   signal clkIn            : sl;
    signal cmdIn            : sl;
-   signal cmdInDly         : sl;
    signal cmdInBuf         : sl;
    signal cmdOutBuf        : sl;
    signal muxClk           : sl;
    signal muxClkB          : sl;
-   signal delayOut         : slv(8 downto 0);
    
    attribute keep : string;                        -- for chipscope
    attribute keep of muxClk : signal is "true";    -- for chipscope
@@ -171,12 +160,6 @@ begin
       I  => clkInP,
       IB => clkInN,
       O  => clkInBuf
-   );
-   
-   U_BUFG_1 : BUFG
-   port map (
-      I => clkInBuf,
-      O => clkIn
    );
    
    U_BUFGMUX_1 : BUFGMUX
@@ -205,36 +188,7 @@ begin
       Q1 => cmdIn,
       Q2 => open
    );
-   muxClkB <= not muxClk;
-   
-   
-   IDELAYE3_U : IDELAYE3
-   generic map (
-      CASCADE => "NONE",            -- Cascade setting (MASTER, NONE, SLAVE_END, SLAVE_MIDDLE)
-      DELAY_FORMAT => "COUNT",      -- Units of the DELAY_VALUE (COUNT, TIME)
-      DELAY_SRC => "DATAIN",        -- Delay input (DATAIN, IDATAIN)
-      DELAY_TYPE => "VAR_LOAD",     -- Set the type of tap delay line (FIXED, VARIABLE, VAR_LOAD)
-      IS_CLK_INVERTED => '0',       -- Optional inversion for CLK
-      IS_RST_INVERTED => '0',       -- Optional inversion for RST
-      REFCLK_FREQUENCY => 250.0,    -- IDELAYCTRL clock input frequency in MHz (200.0-2400.0)
-      UPDATE_MODE => "ASYNC")       -- Determines when updates to the delay will take effect (ASYNC, MANUAL, SYNC)
-   port map (
-      CASC_IN     => '0',           -- 1-bit input: Cascade delay input from slave ODELAY CASCADE_OUT 
-      CASC_OUT    => open,          -- 1-bit output: Cascade delay output to ODELAY input cascade 
-      CASC_RETURN => '0',           -- 1-bit input: Cascade delay returning from slave ODELAY DATAOUT 
-      DATAIN      => cmdIn,         -- 1-bit input: Data input from the logic 
-      IDATAIN     => '0',           -- 1-bit input: Data input from the IOBUF
-      DATAOUT     => cmdInDly,      -- 1-bit output: Delayed data output 
-      CLK         => axilClk,       -- 1-bit input: Clock input 
-      EN_VTC      => '0',           -- 1-bit input: Keep delay constant over VT 
-      INC         => '0',           -- 1-bit input: Increment / Decrement tap delay input 
-      CE          => '0',           -- 1-bit input: Active high enable increment/decrement input 
-      LOAD        => reg.delayLd,   -- 1-bit input: Load DELAY_VALUE input 
-      RST         => axilRst,       -- 1-bit input: Asynchronous Reset to the DELAY_VALUE
-      CNTVALUEIN  => reg.delayIn,   -- 9-bit input: Counter value input 
-      CNTVALUEOUT => delayOut       -- 9-bit output: Counter value output 
-   );  
-   
+   muxClkB <= not muxClk;   
    
    U_ClkOutBufDiff_1 : entity work.ClkOutBufDiff
    generic map (
@@ -247,7 +201,7 @@ begin
    
    -- register logic (axilClk domain)
    -- patern serdes logic (muxClk domain)
-   comb : process (axilRst, axilReadMaster, axilWriteMaster, reg, mux, cmdIn, cmdInDly, syncCmd, rstCmd, delayOut) is
+   comb : process (axilRst, axilReadMaster, axilWriteMaster, reg, mux, cmdIn, syncCmd, rstCmd) is
       variable vreg        : RegType := REG_INIT_C;
       variable vmux        : MuxType := MUX_INIT_C;
       variable regCon      : AxiLiteEndPointType;
@@ -264,7 +218,6 @@ begin
       vreg.rstCmdCnt  := mux.rstCmdCnt;
       vreg.badIdleCnt := mux.badIdleCnt;
       vmux.slaveDev   := reg.slaveDev;
-      vmux.delayEn    := reg.delayEn;
       
       ------------------------------------------------
       -- register access (axilClk domain)
@@ -279,15 +232,6 @@ begin
       axiSlaveRegisterR(regCon, x"00C", 0, reg.rstCmdCnt);
       axiSlaveRegisterR(regCon, x"010", 0, reg.syncCmdCnt);
       axiSlaveRegisterR(regCon, x"014", 0, reg.badIdleCnt);
-      axiSlaveRegister (regCon, x"018", 0, vreg.delayEn);
-      axiSlaveRegister (regCon, x"01C", 0, vreg.delayIn);
-      axiSlaveRegisterR(regCon, x"01C", 0, delayOut);
-      
-      if reg.delayIn /= delayOut then
-         vreg.delayLd := '1';
-      else
-         vreg.delayLd := '0';
-      end if;
       
       -- Closeout the transaction
       axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
@@ -314,11 +258,7 @@ begin
          -- repeat cmdIn
          vmux.cmdOut := cmdIn;
          -- decode cmdIn and look for reser/sync
-         if mux.delayEn = '0' then
-            vmux.serIn  := mux.serIn(6 downto 0) & cmdIn;
-         else
-            vmux.serIn  := mux.serIn(6 downto 0) & cmdInDly;
-         end if;
+         vmux.serIn  := mux.serIn(6 downto 0) & cmdIn;
          if mux.serIn = "00001111" then
             vmux.syncDet := '1';
          elsif mux.serIn = "00110011" then

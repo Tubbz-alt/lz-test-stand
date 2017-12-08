@@ -41,18 +41,29 @@ set_property C_DATA_DEPTH 2048 [get_debug_cores ${ilaName}]
 ## Set the clock for the ILA core
 #################################
 #SetDebugCoreClk ${ilaName} {U_FadcPhy/U_Jesd/U_Jesd204bRx/generateRxLanes[0].JesdRx_INST/devClk_i}
-SetDebugCoreClk ${ilaName} {adcClk}
+#SetDebugCoreClk ${ilaName} {adcClk}
+SetDebugCoreClk ${ilaName} {U_Core/U_LztsSynchronizer/muxClk}
 
 #######################
 ## Set the debug Probes
 #######################
 
-ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/trig[trigState][*]}
-ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/trig[trigType][*]}
-ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/adcDataSig[*]}
-ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/preThr}
-ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/postThr}
-ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/vetoThr}
+ConfigProbe ${ilaName} {U_Core/U_LztsSynchronizer/mux[serIn][*]}
+ConfigProbe ${ilaName} {U_Core/U_LztsSynchronizer/mux[syncDet]}
+ConfigProbe ${ilaName} {U_Core/U_LztsSynchronizer/mux[rstDet]}
+ConfigProbe ${ilaName} {U_Core/U_LztsSynchronizer/mux[syncCmd]}
+ConfigProbe ${ilaName} {U_Core/U_LztsSynchronizer/mux[rstCmd]}
+ConfigProbe ${ilaName} {U_Core/U_LztsSynchronizer/mux[syncPending]}
+ConfigProbe ${ilaName} {U_Core/U_LztsSynchronizer/mux[rstPending]}
+
+
+
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/trig[trigState][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/trig[trigType][*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/adcDataSig[*]}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/preThr}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/postThr}
+#ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/vetoThr}
 
 
 ##ConfigProbe ${ilaName} {U_SadcBuffer/GEN_VEC[0].U_Writer/trig[trigState][*]}

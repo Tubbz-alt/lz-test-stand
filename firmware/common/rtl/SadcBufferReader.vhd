@@ -61,7 +61,9 @@ entity SadcBufferReader is
       axisClk           : in  sl;
       axisRst           : in  sl;
       axisMaster        : out AxiStreamMasterType;
-      axisSlave         : in  AxiStreamSlaveType
+      axisSlave         : in  AxiStreamSlaveType;
+      -- optional register trigger for writers
+      regTrig           : out sl
    );
 end SadcBufferReader;
 
@@ -143,12 +145,14 @@ architecture rtl of SadcBufferReader is
       axilReadSlave  : AxiLiteReadSlaveType;
       axilWriteSlave : AxiLiteWriteSlaveType;
       smplCnt        : Slv32Array(7 downto 0);
+      regTrig        : sl;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
       axilReadSlave  => AXI_LITE_READ_SLAVE_INIT_C,
       axilWriteSlave => AXI_LITE_WRITE_SLAVE_INIT_C,
-      smplCnt        => (others => (others => '0'))
+      smplCnt        => (others => (others => '0')),
+      regTrig        => '0'
    );
 
    signal trig    : TrigType  := TRIG_INIT_C;
@@ -177,6 +181,8 @@ begin
       vreg := reg;
       vtrig := trig;
       
+      vreg.regTrig := '0';
+      
       -- keep reset for several clock cycles
       vtrig.reset    := trig.reset(14 downto 0) & '0';
       vtrig.addrDout := addrDout(trig.channelSel);
@@ -197,6 +203,9 @@ begin
       for ch in 7 downto 0 loop
          axiSlaveRegisterR(regCon, x"000"+toSlv(ch*4, 12), 0, reg.smplCnt(ch));
       end loop;
+      -- optional trigger reister
+      -- trigger distributed to all writers
+      axiSlaveRegister (regCon, x"100", 0, vreg.regTrig);
       
       -- Closeout the transaction
       axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
@@ -452,6 +461,7 @@ begin
       hdrRd          <= trig.hdrRd;
       hdrRdLast      <= trig.hdrRdLast;
       addrRd         <= trig.addrRd;
+      regTrig        <= reg.regTrig;
       
    end process comb;
 

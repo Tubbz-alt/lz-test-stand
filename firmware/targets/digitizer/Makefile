@@ -1,7 +1,7 @@
 export GIT_BYPASS = 0
 
 # Define Firmware Version Number
-export PRJ_VERSION = 0x00000045
+export PRJ_VERSION = 0x1C000046
 
 # Define the Microblaze source path
 #export SDK_SRC_PATH = $(PROJ_DIR)/../../common/src

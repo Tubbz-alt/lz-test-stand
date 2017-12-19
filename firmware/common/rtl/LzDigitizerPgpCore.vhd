@@ -180,11 +180,11 @@ begin
          pgpGtRxP        => pgpRxP,
          pgpGtRxN        => pgpRxN,
          pgpTxReset      => rst,
-         pgpTxRecClk     => open,
+         pgpTxOutClk     => open,
          pgpTxClk        => clk,
          pgpTxMmcmLocked => '1',
          pgpRxReset      => rst,
-         pgpRxRecClk     => open,
+         pgpRxOutClk     => open,
          pgpRxClk        => clk,
          pgpRxMmcmLocked => '1',
          pgpTxIn         => pgpTxIn,
@@ -194,7 +194,13 @@ begin
          pgpTxMasters    => txMasters,
          pgpTxSlaves     => txSlaves,
          pgpRxMasters    => rxMasters,
-         pgpRxCtrl       => rxCtrl);
+         pgpRxCtrl       => rxCtrl,
+         axilClk         => '0',
+         axilRst         => '0',
+         axilReadMaster  => AXI_LITE_READ_MASTER_INIT_C,
+         axilReadSlave   => open,
+         axilWriteMaster => AXI_LITE_WRITE_MASTER_INIT_C,
+         axilWriteSlave  => open);
 
    U_VcMapping : entity work.PgpVcMapping
       generic map (

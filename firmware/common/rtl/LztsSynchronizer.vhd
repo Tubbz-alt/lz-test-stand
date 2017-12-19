@@ -75,11 +75,13 @@ architecture rtl of LztsSynchronizer is
       serOut         : slv(7 downto 0);
       cmdOut         : sl;
       slaveDev       : sl;
+      syncCmdReg     : slv(2 downto 0);
       syncCmd        : sl;
       syncCmdCnt     : slv(15 downto 0);
       syncDet        : sl;
       syncDetDly     : slv(2 downto 0);
       syncPending    : sl;
+      rstCmdReg      : slv(2 downto 0);
       rstCmd         : sl;
       rstCmdCnt      : slv(15 downto 0);
       rstDet         : sl;
@@ -99,11 +101,13 @@ architecture rtl of LztsSynchronizer is
       serOut         => "01010101",
       cmdOut         => '0',
       slaveDev       => '0',
+      syncCmdReg     => (others=>'0'),
       syncCmd        => '0',
       syncCmdCnt     => (others=>'0'),
       syncDet        => '0',
       syncDetDly     => "000",
       syncPending    => '0',
+      rstCmdReg      => (others=>'0'),
       rstCmd         => '0',
       rstCmdCnt      => (others=>'0'),
       rstDet         => '0',
@@ -125,6 +129,8 @@ architecture rtl of LztsSynchronizer is
       syncCmdCnt     : slv(15 downto 0);
       rstCmdCnt      : slv(15 downto 0);
       badIdleCnt     : slv(15 downto 0);
+      rstCmd         : sl;
+      syncCmd        : sl;
    end record RegType;
 
    constant REG_INIT_C : RegType := (
@@ -134,7 +140,9 @@ architecture rtl of LztsSynchronizer is
       gTime          => (others=>'0'),
       syncCmdCnt     => (others=>'0'),
       rstCmdCnt      => (others=>'0'),
-      badIdleCnt     => (others=>'0')
+      badIdleCnt     => (others=>'0'),
+      rstCmd         => '0',
+      syncCmd        => '0'
    );
    
    signal mux     : MuxType   := MUX_INIT_C;
@@ -210,14 +218,23 @@ begin
       vreg := reg;
       vmux := mux;
       
+      vreg.rstCmd    := '0';
+      vreg.syncCmd   := '0';
+      
       ------------------------------------------------
       -- cross domian sync
       ------------------------------------------------
-      vreg.gTime      := mux.gTime;
-      vreg.syncCmdCnt := mux.syncCmdCnt;
-      vreg.rstCmdCnt  := mux.rstCmdCnt;
-      vreg.badIdleCnt := mux.badIdleCnt;
-      vmux.slaveDev   := reg.slaveDev;
+      vreg.gTime           := mux.gTime;
+      vreg.syncCmdCnt      := mux.syncCmdCnt;
+      vreg.rstCmdCnt       := mux.rstCmdCnt;
+      vreg.badIdleCnt      := mux.badIdleCnt;
+      vmux.slaveDev        := reg.slaveDev;
+      vmux.rstCmdReg(0)    := reg.rstCmd;
+      vmux.rstCmdReg(1)    := mux.rstCmdReg(0);
+      vmux.rstCmdReg(2)    := mux.rstCmdReg(1);
+      vmux.syncCmdReg(0)   := reg.syncCmd;
+      vmux.syncCmdReg(1)   := mux.syncCmdReg(0);
+      vmux.syncCmdReg(2)   := mux.syncCmdReg(1);
       
       ------------------------------------------------
       -- register access (axilClk domain)
@@ -232,6 +249,10 @@ begin
       axiSlaveRegisterR(regCon, x"00C", 0, reg.rstCmdCnt);
       axiSlaveRegisterR(regCon, x"010", 0, reg.syncCmdCnt);
       axiSlaveRegisterR(regCon, x"014", 0, reg.badIdleCnt);
+      
+      -- optional register based commands
+      axiSlaveRegister (regCon, x"100", 0, vreg.rstCmd);
+      axiSlaveRegister (regCon, x"104", 0, vreg.syncCmd);
       
       -- Closeout the transaction
       axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
@@ -277,9 +298,9 @@ begin
          -- clear unused de-serializer
          vmux.serIn  := (others=>'0');
          -- look for master commands
-         if rstCmd = '1' then
+         if rstCmd = '1' or (mux.rstCmdReg(1) = '1' and mux.rstCmdReg(2) = '0') then
             vmux.rstCmd := '1';
-         elsif syncCmd = '1' then
+         elsif syncCmd = '1' or (mux.syncCmdReg(1) = '1' and mux.syncCmdReg(2) = '0') then
             vmux.syncCmd := '1';
          end if;
          -- generate patterns

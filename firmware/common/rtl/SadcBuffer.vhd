@@ -78,6 +78,8 @@ architecture mapping of SadcBuffer is
    signal addrDout   : Slv32Array(7 downto 0);
    signal addrValid  : slv(7 downto 0);
    signal addrRd     : slv(7 downto 0);
+   signal regTrig    : sl;
+   signal trig       : sl;
 
    signal adcDataTester : Slv32Array(7 downto 0);
    
@@ -130,7 +132,7 @@ begin
             adcRst          => adcRst,
             adcData         => adcData(i),
             gTime           => gTime,
-            extTrigger      => extTrigger,
+            extTrigger      => trig,
             -- AXI-Lite Interface for local registers 
             axilClk         => axilClk,
             axilRst         => axilRst,
@@ -156,7 +158,9 @@ begin
       adcDataTester(i)(15 downto 0)  <= adcData(i);
 
    end generate GEN_VEC;
-
+   
+   trig <= regTrig or extTrigger;
+   
    ------------------------------
    -- 250 MSPS ADCs Buffer Reader
    ------------------------------
@@ -192,7 +196,9 @@ begin
          axisClk         => axisClk,
          axisRst         => axisRst,
          axisMaster      => axisMaster,
-         axisSlave       => axisSlave
+         axisSlave       => axisSlave,
+         -- optional register trigger for writers
+         regTrig         => regTrig
       );
 
    -------------------------------

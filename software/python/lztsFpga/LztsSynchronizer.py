@@ -44,8 +44,6 @@ class LztsSynchronizer(pr.Device):
       self.add((pr.RemoteVariable(name='RstCmdsRcvd',  description='RstCmdsRcvd',  offset=0x0000000C, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RO')))
       self.add((pr.RemoteVariable(name='SyncCmdsRcvd', description='SyncCmdsRcvd', offset=0x00000010, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RO')))
       self.add((pr.RemoteVariable(name='BadIdles',     description='BadIdles',     offset=0x00000014, bitSize=16, bitOffset=0,  base=pr.UInt, mode='RO')))
-      self.add((pr.RemoteVariable(name='DelayEn',      description='DelayEn',      offset=0x00000018, bitSize=1,  bitOffset=0,  base=pr.Bool, mode='RW')))
-      self.add((pr.RemoteVariable(name='DelayVal',     description='DelayVal',     offset=0x0000001C, bitSize=9,  bitOffset=0,  base=pr.UInt, mode='RW')))
       
       #####################################
       # Create commands

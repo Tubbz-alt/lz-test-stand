@@ -172,7 +172,7 @@ class MyRunControl(pyrogue.RunControl):
 # Set base
 ##############################
 class LztsBoard(pyrogue.Root):
-    def __init__(self, cmd, dataWriter, srp, **kwargs):
+    def __init__(self, cmd, dataWriter, srp, args, **kwargs):
         
         pyrogue.Root.__init__(self, name='lztsBoard', description='LZTS Board')
         
@@ -183,16 +183,28 @@ class LztsBoard(pyrogue.Root):
 
         @self.command()
         def Trigger():
-            cmd.sendCmd(1, 0)
-            cmd.sendCmd(0, 0)
+            if ( args.type == 'datadev-pgp2b' ):
+                print('Register Trigger command')
+                self.Lzts.SadcBufferReader._rawWrite(0x100,1)
+            else:
+                cmd.sendCmd(1, 0)
+                cmd.sendCmd(0, 0)
         
         @self.command()
         def GlobalRst():
-            cmd.sendCmd(2, 0)
+            if ( args.type == 'datadev-pgp2b' ):
+                print('Register GlobalRst command')
+                self.Lzts.LztsSynchronizer._rawWrite(0x100,1)
+            else:
+                cmd.sendCmd(2, 0)
         
         @self.command()
         def GlobalSync():
-            cmd.sendCmd(3, 0)
+            if ( args.type == 'datadev-pgp2b' ):
+                print('Register GlobalSync command')
+                self.Lzts.LztsSynchronizer._rawWrite(0x104,1)
+            else:
+                cmd.sendCmd(3, 0)
         
         self.add(MyRunControl('runControl'))
         #self.add(pyrogue.RunControl(name='runControl', rates={1:'1 Hz', 10:'10 Hz',30:'30 Hz'}, cmd=cmd.sendCmd(0, 0)))
@@ -204,7 +216,7 @@ class LztsBoard(pyrogue.Root):
         self.start(pyroGroup='lztsGui')
         
 # Create board
-LztsBoard = LztsBoard(cmd, dataWriter, srp)
+LztsBoard = LztsBoard(cmd, dataWriter, srp, args)
 
 
 

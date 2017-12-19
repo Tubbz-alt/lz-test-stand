@@ -55,6 +55,8 @@ set_property CLOCK_REGION X2Y2 [get_cells U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb6
 ## Pinout Configuration   ##
 ############################
 
+set_property -dict { PACKAGE_PIN V12 IOSTANDARD ANALOG } [get_ports {vPIn}]
+
 set_property PACKAGE_PIN V6  [get_ports {pgpClkP}]
 set_property PACKAGE_PIN V5  [get_ports {pgpClkN}]
 set_property PACKAGE_PIN AA4 [get_ports pgpTxP]

@@ -1,6 +1,6 @@
 lztsBoard:
   enable: True
-  forceWrite: False
+  # forceWrite: False
   dataWriter:
     enable: True
     dataFile: 

@@ -18,6 +18,7 @@
 # contained in the LICENSE.txt file.
 #-----------------------------------------------------------------------------
 import pyrogue as pr
+import rogue.interfaces.memory as rim
 import collections
 import time
 
@@ -230,12 +231,12 @@ class Lzts(pr.Device):
 
         # Process local blocks.
         if variable is not None:
-            variable._block.backgroundTransaction(rogue.interfaces.memory.Write)
+            variable._block.backgroundTransaction(rim.Write)
         else:
             for block in self._blocks:
                 if force or block.stale:
                     if block.bulkEn:
-                        block.backgroundTransaction(rogue.interfaces.memory.Write)
+                        block.backgroundTransaction(rim.Write)
 
         # Retire any in-flight transactions before starting next sequence
         self._root.checkBlocks(recurse=True)

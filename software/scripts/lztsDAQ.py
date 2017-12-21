@@ -58,6 +58,14 @@ parser.add_argument(
 )  
 
 parser.add_argument(
+    "--command_fix", 
+    type     = bool,
+    required = False,
+    default  = True,
+    help     = "disable temporary command fix",
+)  
+
+parser.add_argument(
     "--l", 
     type     = int,
     required = False,
@@ -183,7 +191,7 @@ class LztsBoard(pyrogue.Root):
 
         @self.command()
         def Trigger():
-            if ( args.type == 'datadev-pgp2b' ):
+            if ( args.type == 'datadev-pgp2b' and args.command_fix == True):
                 print('Register Trigger command')
                 self.Lzts.SadcBufferReader._rawWrite(0x100,1)
             else:
@@ -192,7 +200,7 @@ class LztsBoard(pyrogue.Root):
         
         @self.command()
         def GlobalRst():
-            if ( args.type == 'datadev-pgp2b' ):
+            if ( args.type == 'datadev-pgp2b' and args.command_fix == True):
                 print('Register GlobalRst command')
                 self.Lzts.LztsSynchronizer._rawWrite(0x100,1)
             else:
@@ -200,7 +208,7 @@ class LztsBoard(pyrogue.Root):
         
         @self.command()
         def GlobalSync():
-            if ( args.type == 'datadev-pgp2b' ):
+            if ( args.type == 'datadev-pgp2b' and args.command_fix == True):
                 print('Register GlobalSync command')
                 self.Lzts.LztsSynchronizer._rawWrite(0x104,1)
             else:

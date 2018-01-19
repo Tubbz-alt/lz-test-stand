@@ -223,7 +223,7 @@ class Lzts(pr.Device):
             self.JesdRx.CmdClearErrors()
             self.checkBlocks(recurse=True)   
             
-    def writeBlocks(self, force=False, recurse=True, variable=None):
+    def writeBlocks(self, force=False, recurse=True, variable=None, checkEach=False):
         """
         Write all of the blocks held by this Device to memory
         """
@@ -231,12 +231,12 @@ class Lzts(pr.Device):
 
         # Process local blocks.
         if variable is not None:
-            variable._block.backgroundTransaction(rim.Write)
+            variable._block.startTransaction(rim.Write, check=checkEach)
         else:
             for block in self._blocks:
                 if force or block.stale:
                     if block.bulkEn:
-                        block.backgroundTransaction(rim.Write)
+                        block.startTransaction(rim.Write, check=checkEach)
 
         # Retire any in-flight transactions before starting next sequence
         self._root.checkBlocks(recurse=True)

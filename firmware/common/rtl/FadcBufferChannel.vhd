@@ -151,7 +151,7 @@ architecture rtl of FadcBufferChannel is
    
    constant TRIG_INIT_C : TrigType := (
       enable         => '0',
-      reset          => (others=>'0'),
+      reset          => x"0001",
       extTrigger     => (others=>'0'),
       adcData        => (others=>'0'),
       intPreThresh   => (others=>'0'),
@@ -476,8 +476,8 @@ begin
       -- track address of the buffer's beginning
       -- there is 4 samples per address
       -- divide the pre delay by 4
-      preDelayOffset := trig.actPreDelay+3;
-      vtrig.preAddress := vtrig.buffAddr - resize(preDelayOffset(DELAY_LEN_C downto 2), BUFF_ADDR_G);
+      preDelayOffset := resize(trig.actPreDelay+3, DELAY_LEN_C+1);
+      vtrig.preAddress := vtrig.buffAddr - resize(preDelayOffset(DELAY_LEN_C downto 2), TRIG_ADDR_G);
       
       ----------------------------------------------------------------------
       -- Trigger state machine
@@ -829,7 +829,7 @@ begin
       axilWriteSlave <= reg.axilWriteSlave;
       axilReadSlave  <= reg.axilReadSlave;
       
-      memRdAddr      <= trig.buffCntRd & trig.buffAddrRd;
+      memRdAddr      <= trig.buffCntRd & vtrig.buffAddrRd;
       memWrAddr      <= trig.buffCnt & trig.buffAddr;
       memWrEn        <= trig.memWrEn;
       

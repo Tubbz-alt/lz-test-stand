@@ -141,7 +141,8 @@ architecture testbed of FadcBuffersTb is
       SHORT_LOW_PEAK_S,
       SHORT_HIGH_PEAK_S,
       NON_VETO_SHORT_HIGH_PEAK_S,
-      VETO_SHORT_HIGH_PEAK_S
+      VETO_SHORT_HIGH_PEAK_S,
+      END_SIM_S
    );
    
    signal testState : TestType := IDLE_S;
@@ -237,7 +238,7 @@ begin
    process(ghzClk)
    variable adcDirection : sl := '0';
    variable adcCnt : slv(1 downto 0) := "00";
-   variable smplCnt : slv(15 downto 0) := x"0000";
+   variable smplCnt : slv(15 downto 0) := (others=>'0');
    variable seed1 :positive ;
    variable seed2 :positive ;
    variable randSamplesRel : real;
@@ -254,7 +255,7 @@ begin
             adcData3        <= ADC_DATA_BOT_C;
             testState       <= IDLE_S;
             adcCnt          := "00";
-            smplCnt         := x"0000";
+            smplCnt         := (others=>'0');
             adcDirection    := '0';
             adcDataG        <= (others=>'0');
          else
@@ -288,34 +289,45 @@ begin
                      if j = 0 then
                         j := j + 1;
                         testState <= LONG_LOW_PEAK_S;
+                        smplCnt := (others=>'0');
                      elsif j = 1 then
                         j := j + 1;
                         testState <= LONG_HIGH_PEAK_S;
+                        smplCnt := (others=>'0');
                      elsif j = 2 then
                         j := j + 1;
                         testState <= MED_LOW_PEAK_S;
+                        smplCnt := (others=>'0');
                      elsif j = 3 then
                         j := j + 1;
                         testState <= MED_HIGH_PEAK_S;
+                        smplCnt := (others=>'0');
                      elsif j = 4 then
                         j := j + 1;
                         testState <= SHORT_LOW_PEAK_S;
+                        smplCnt := (others=>'0');
                      elsif j = 5 then
                         j := j + 1;
                         testState <= SHORT_HIGH_PEAK_S;
+                        smplCnt := (others=>'0');
                      elsif j = 6 then
                         j := j + 1;
                         testState <= NON_VETO_SHORT_HIGH_PEAK_S;
+                        smplCnt := (others=>'0');
                      elsif j = 7 then
                         if TEST_LOOP_C = true then
+                           -- repeat all waveforms in a loop
                            j := 0;
                            testState <= VETO_SHORT_HIGH_PEAK_S;
+                           smplCnt := (others=>'0');
                         else
-                           report "Simulation finished" severity failure;
+                           -- end simulation after a delay
+                           testState <= END_SIM_S;
+                           smplCnt := (others=>'1');
                         end if;
                      end if;
                      i := 0;
-                     smplCnt := (others=>'0');
+                     
                   else
                      smplCnt := smplCnt + 1;
                   end if;
@@ -423,6 +435,13 @@ begin
                         adcData0 <= adcData0 + 1;
                         adcDirection := '0';
                      end if;
+                  end if;
+               
+               when END_SIM_S =>
+                  if smplCnt = 0 then
+                     report "Simulation finished" severity failure;
+                  else
+                     smplCnt := smplCnt - 1;
                   end if;
                   
                when others =>
@@ -572,15 +591,20 @@ begin
       variable lostTriggerCnt : natural := 0;
       variable goodTriggerCnt : natural := 0;
       variable offsetError    : integer := 0;
+      variable sampleNo       : integer := 0;
    begin
    
       triggersGood      <= (others=>'0');
       
-      if FORCE_EXT_TRIG_C = true then
       
-         loop
-            
-            --wait until axisMaster.tValid = '1';
+      
+      loop
+         
+         ------------------------------------------------------------------
+         -- External triggering verification
+         ------------------------------------------------------------------
+         if FORCE_EXT_TRIG_C = true then
+         
             wait until rising_edge(axisClk);
             
             if axisMaster.tValid = '1' and axisSlave.tReady = '1' then
@@ -756,14 +780,93 @@ begin
                   goodTriggerCnt := goodTriggerCnt + 1;
                end if;
             end if;
+         
+         
+         ------------------------------------------------------------------
+         -- Internal triggering verification
+         ------------------------------------------------------------------
+         else
             
-         end loop;
+            wait until rising_edge(axisClk);
+            
+            if axisMaster.tValid = '1' and axisSlave.tReady = '1' then
+               -- reset counter if start of packet
+               if axisMaster.tUser(1 downto 0) = "10" then
+                  wordCnt     := 0;
+                  offsetCnt   := 0;
+                  sampleCnt   := 0;
+               else
+                  wordCnt     := wordCnt + 1;
+               end if;
+               
+               -- check and report the packet content
+               if wordCnt = 0 then
+                  --has only PGP info
+                  assert axisMaster.tData(3 downto 0) = PGP_VC_C report "Bad PGP VC number" severity failure;
+               elsif wordCnt = 1 then     -- header
+                  trigCh := conv_integer(axisMaster.tData(7 downto 0));
+                  assert trigCh >=0 and trigCh <= 7 report "Bad channel number" severity failure;
+               elsif wordCnt = 2 then  -- header
+                  trigSize := conv_integer(axisMaster.tData(21 downto 0));
+                  if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": size " & integer'image(trigSize); end if;
+               elsif wordCnt = 3 then  -- header
+                  trigOffset := conv_integer(axisMaster.tData(31 downto 0));
+                  if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset " & integer'image(trigOffset); end if;
+                  if trigOffset > 0 then
+                     trigOffset := trigOffset;
+                  end if;
+               elsif wordCnt = 4 then  -- header
+                  trigTimeVect(31 downto 0) := axisMaster.tData(31 downto 0);
+               elsif wordCnt = 5 then  -- header
+                  trigTimeVect(63 downto 32) := axisMaster.tData(31 downto 0);
+                  trigTime := conv_integer(trigTimeVect(31 downto 0));
+                  -- report received timestamp
+                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": timestamp " & integer'image(trigTime);
+                  
+                  sampleNo := 0;
+                  
+               -- all other words contain 2 samples
+               else
+                  
+                  -- count all samples
+                  if axisMaster.tKeep(3 downto 0) = "1111" then
+                     sampleCnt := sampleCnt + 2;
+                  elsif axisMaster.tKeep(3 downto 0) = "0011" and axisMaster.tLast = '1' then
+                     sampleCnt := sampleCnt + 1;
+                  elsif axisMaster.tKeep(3 downto 0) = "1100" and axisMaster.tLast = '1' then
+                     sampleCnt := sampleCnt + 1;
+                  else
+                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad tKeep!" severity failure;
+                  end if;
+                  
+                  -- print all samples
+                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": sample " & integer'image(sampleNo) & ": "  & integer'image(conv_integer(axisMaster.tData(15 downto 0))) severity note;
+                  sampleNo := sampleNo + 1;
+                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": sample " & integer'image(sampleNo) & ": "  & integer'image(conv_integer(axisMaster.tData(31 downto 16))) severity note;
+                  sampleNo := sampleNo + 1;
+                  
+                  
+               end if;
+               
+               -- validate and report trigger size at last word
+               if axisMaster.tLast = '1' then
+                  
+                  if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": samples " & integer'image(sampleCnt); end if;
+                  assert sampleCnt = trigSize 
+                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": wrong number of samples. Expected " & integer'image(trigSize) & " received " & integer'image(sampleCnt)
+                     severity failure;
+                  triggersGood <= triggersGood + 1;
+                  goodTriggerCnt := goodTriggerCnt + 1;
+               end if;
+            end if;
+            
+            
+            
+         end if;
+         
+         
+      end loop;
       
-      else
-      
-         wait until rising_edge(axisClk);
-      
-      end if;
       
    end process;
 

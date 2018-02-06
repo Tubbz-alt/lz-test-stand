@@ -144,7 +144,7 @@ architecture rtl of FadcBufferChannel is
       trigSizeRd     : slv(TRIG_ADDR_G+1 downto 0);
       sampleOffsetRd : slv(1 downto 0);
       buffAddrRd     : slv(TRIG_ADDR_G-1 downto 0); 
-      buffCntRd      : slv(BUFF_ADDR_G-1 downto 0); 
+      buffSelRd      : slv(BUFF_ADDR_G-1 downto 0); 
       
       hdrCnt         : integer range 0 to 11;
    end record TrigType;
@@ -203,7 +203,7 @@ architecture rtl of FadcBufferChannel is
       trigSizeRd     => (others=>'0'),
       sampleOffsetRd => (others=>'0'),
       buffAddrRd     => (others=>'0'),
-      buffCntRd      => (others=>'0'),
+      buffSelRd      => (others=>'0'),
       hdrCnt         => 0
    );
    
@@ -502,6 +502,7 @@ begin
       vtrig.trigFifoWr  := '0';
       vtrig.trigIntDrop := '0';
       vtrig.buffSwitch  := '0';
+      vtrig.addrFifoWr  := '0';
       
       case trig.trigState is
          
@@ -515,7 +516,7 @@ begin
                
                -- track the time and sample address for all trigger sources
                vtrig.gTime       := gTime;
-               vtrig.addrFifoDin := trig.buffCnt & trig.preAddress;
+               vtrig.addrFifoDin := trig.buffSel & trig.preAddress;
                -- both sources share the preDelay setting
                vtrig.trigOffset := resize(trig.actPreDelay, 32);
                
@@ -764,7 +765,7 @@ begin
                   vtrig.hdrCnt      := 0;
                   -- Set the memory address
                   vtrig.buffAddrRd := addrDout(TRIG_ADDR_G-1 downto 0);
-                  vtrig.buffCntRd  := addrDout(ADDR_LEN_C-1 downto TRIG_ADDR_G);
+                  vtrig.buffSelRd  := addrDout(ADDR_LEN_C-1 downto TRIG_ADDR_G);
                   -- check if the trigger has data
                   if trig.trigSizeRd > 0 and addrValid = '1' then
                      -- Move data
@@ -803,6 +804,7 @@ begin
                if vtrig.trigSizeRd = 0 then
                   vtrig.txMaster.tLast := '1';
                   vtrig.buffRdDone     := '1';
+                  vtrig.addrRd         := '1';
                   vtrig.dataState      := IDLE_S;
                end if;
             
@@ -829,8 +831,8 @@ begin
       axilWriteSlave <= reg.axilWriteSlave;
       axilReadSlave  <= reg.axilReadSlave;
       
-      memRdAddr      <= trig.buffCntRd & vtrig.buffAddrRd;
-      memWrAddr      <= trig.buffCnt & trig.buffAddr;
+      memRdAddr      <= vtrig.buffSelRd & vtrig.buffAddrRd;
+      memWrAddr      <= trig.buffSel & trig.buffAddr;
       memWrEn        <= trig.memWrEn;
       
    end process comb;

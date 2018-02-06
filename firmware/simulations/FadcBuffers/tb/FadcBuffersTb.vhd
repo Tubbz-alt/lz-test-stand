@@ -42,8 +42,107 @@ architecture testbed of FadcBuffersTb is
    constant DLY_C         : natural := 16;
    constant SIM_SPEEDUP_C : boolean := true;
    
-   constant ADC_DATA_TOP_C : slv(15 downto 0) := toSlv(65000,16);
+   constant ADC_DATA_TOP_C : slv(15 downto 0) := toSlv(32000,16);
    constant ADC_DATA_BOT_C : slv(15 downto 0) := toSlv(100,16);
+   
+   constant PSEUDO_NOISE_BASE_C : IntegerArray(7 downto 0) := (
+      5 => conv_integer(ADC_DATA_BOT_C)-1,
+      2 => conv_integer(ADC_DATA_BOT_C)-2,
+      4 => conv_integer(ADC_DATA_BOT_C)-3,
+      6 => conv_integer(ADC_DATA_BOT_C)-4,
+      3 => conv_integer(ADC_DATA_BOT_C)-5,
+      1 => conv_integer(ADC_DATA_BOT_C)-6,
+      0 => conv_integer(ADC_DATA_BOT_C)-7,
+      7 => conv_integer(ADC_DATA_BOT_C)-8
+   );
+   
+   constant PRE_THRESHOLD_C  : integer := conv_integer(ADC_DATA_TOP_C) + 1000;
+   constant POST_THRESHOLD_C : integer := conv_integer(ADC_DATA_TOP_C) + 900;
+   constant VETO_THRESHOLD_C : integer := conv_integer(ADC_DATA_TOP_C) + 2000;
+   
+   constant LONG_LOW_PEAK_C   : IntegerArray(11 downto 0) := (
+      0  => PRE_THRESHOLD_C,
+      1  => PRE_THRESHOLD_C+1,
+      2  => PRE_THRESHOLD_C+2,
+      3  => PRE_THRESHOLD_C+3,
+      4  => PRE_THRESHOLD_C+4,
+      5  => PRE_THRESHOLD_C+5,
+      6  => POST_THRESHOLD_C-1,
+      7  => POST_THRESHOLD_C-2,
+      8  => POST_THRESHOLD_C-3,
+      9  => POST_THRESHOLD_C-4,
+      10 => POST_THRESHOLD_C-5,
+      11 => POST_THRESHOLD_C-6
+   );
+   
+   constant LONG_HIGH_PEAK_C   : IntegerArray(11 downto 0) := (
+      0  => PRE_THRESHOLD_C,
+      1  => PRE_THRESHOLD_C+1,
+      2  => PRE_THRESHOLD_C+2,
+      3  => PRE_THRESHOLD_C+3,
+      4  => PRE_THRESHOLD_C+4,
+      5  => PRE_THRESHOLD_C+5,
+      6  => VETO_THRESHOLD_C+1,
+      7  => VETO_THRESHOLD_C,
+      8  => VETO_THRESHOLD_C-1,
+      9  => VETO_THRESHOLD_C-2,
+      10 => VETO_THRESHOLD_C-3,
+      11 => VETO_THRESHOLD_C-4
+   );
+   
+   constant MED_LOW_PEAK_C   : IntegerArray(3 downto 0) := (
+      0  => PRE_THRESHOLD_C+4,
+      1  => PRE_THRESHOLD_C+5,
+      2  => POST_THRESHOLD_C-1,
+      3  => POST_THRESHOLD_C-2
+   );
+   
+   constant MED_HIGH_PEAK_C   : IntegerArray(3 downto 0) := (
+      0  => PRE_THRESHOLD_C+4,
+      1  => PRE_THRESHOLD_C+5,
+      2  => VETO_THRESHOLD_C+1,
+      3  => VETO_THRESHOLD_C
+   );
+   
+   constant SHORT_LOW_PEAK_C   : IntegerArray(1 downto 0) := (
+      0  => PRE_THRESHOLD_C+5,
+      1  => POST_THRESHOLD_C-1
+   );
+   
+   constant SHORT_HIGH_PEAK_C   : IntegerArray(1 downto 0) := (
+      0  => PRE_THRESHOLD_C+5,
+      1  => VETO_THRESHOLD_C+1
+   );
+   
+   constant NON_VETO_SHORT_HIGH_PEAK_C   : IntegerArray(2 downto 0) := (
+      0  => VETO_THRESHOLD_C+1,
+      1  => PRE_THRESHOLD_C+5,
+      2  => POST_THRESHOLD_C-1
+   );
+   
+   constant VETO_SHORT_HIGH_PEAK_C   : IntegerArray(1 downto 0) := (
+      0  => VETO_THRESHOLD_C+1,
+      1  => POST_THRESHOLD_C-1
+   );
+   
+   type TestType is (
+      IDLE_S,
+      EXT_TRIG_S,
+      RAND_TIME_S,
+      PSEUDO_NOISE_BASE_S,
+      LONG_LOW_PEAK_S,
+      LONG_HIGH_PEAK_S,
+      MED_LOW_PEAK_S,
+      MED_HIGH_PEAK_S,
+      SHORT_LOW_PEAK_S,
+      SHORT_HIGH_PEAK_S,
+      NON_VETO_SHORT_HIGH_PEAK_S,
+      VETO_SHORT_HIGH_PEAK_S
+   );
+   
+   signal testState : TestType := IDLE_S;
+   
+   constant FORCE_EXT_TRIG_C : boolean := false;
    
    constant PGP_VC_C      : slv(3 downto 0) := "0001";
    -- expected clock cycles latency in between the trigger and its capture
@@ -100,7 +199,7 @@ begin
    adcRst <= '0' after 100 ns;
    ghzRst <= '0' after 100 ns;
    
-   axisSlave.tReady  <= '1';
+   --axisSlave.tReady  <= '1';
    
    ------------------------------------------------
    -- Fast ADC Buffer UUT
@@ -133,10 +232,17 @@ begin
       axisSlave         => axisSlave
    );
    
-   -- generate ADC data and time
    process(ghzClk)
    variable adcDirection : sl := '0';
    variable adcCnt : slv(1 downto 0) := "00";
+   variable smplCnt : slv(15 downto 0) := x"0000";
+   variable seed1 :positive ;
+   variable seed2 :positive ;
+   variable randSamplesRel : real;
+   variable randSamples : integer;
+   variable i : natural := 0;
+   variable j : natural := 0;
+   constant MAX_SAMPLES_C : natural := 1000;
    begin
       if rising_edge(ghzClk) then
          if ghzRst = '1' then
@@ -144,25 +250,180 @@ begin
             adcData1        <= ADC_DATA_BOT_C;
             adcData2        <= ADC_DATA_BOT_C;
             adcData3        <= ADC_DATA_BOT_C;
-            adcDirection   := '0';
-            adcCnt         := "00";
-            adcDataG       <= (others=>'0');
+            testState       <= IDLE_S;
+            adcCnt          := "00";
+            smplCnt         := x"0000";
+            adcDirection    := '0';
+            adcDataG        <= (others=>'0');
          else
-            if adcDirection = '0' then
-               if adcData0 < ADC_DATA_TOP_C then
-                  adcData0 <= adcData0 + 1;
-               else
-                  adcData0 <= adcData0 - 1;
-                  adcDirection := '1';
-               end if;
-            else
-               if adcData0 > ADC_DATA_BOT_C then
-                  adcData0 <= adcData0 - 1;
-               else
-                  adcData0 <= adcData0 + 1;
-                  adcDirection := '0';
-               end if;
-            end if;
+         
+            case testState is
+               
+               when IDLE_S =>
+                  if FORCE_EXT_TRIG_C = true then
+                     testState <= EXT_TRIG_S;
+                  else
+                     testState <= RAND_TIME_S;
+                  end if;
+               
+               when RAND_TIME_S =>
+                  -- randomize time
+                  uniform (seed1,seed2,randSamplesRel);
+                  randSamples := integer(randSamplesRel * real(MAX_SAMPLES_C -1));
+                  smplCnt := (others=>'0');
+                  testState <= PSEUDO_NOISE_BASE_S;
+               
+               when PSEUDO_NOISE_BASE_S =>
+                  -- assign samples periodically
+                  if i >= PSEUDO_NOISE_BASE_C'high then
+                     i := 0;
+                  end if;
+                  adcData0 <= toSlv(PSEUDO_NOISE_BASE_C(i), 16);
+                  i := i + 1;
+                  
+                  -- count random time and move to the next state
+                  if smplCnt >= randSamples then
+                     if j = 0 then
+                        j := j + 1;
+                        testState <= LONG_LOW_PEAK_S;
+                     elsif j = 1 then
+                        j := j + 1;
+                        testState <= LONG_HIGH_PEAK_S;
+                     elsif j = 2 then
+                        j := j + 1;
+                        testState <= MED_LOW_PEAK_S;
+                     elsif j = 3 then
+                        j := j + 1;
+                        testState <= MED_HIGH_PEAK_S;
+                     elsif j = 4 then
+                        j := j + 1;
+                        testState <= SHORT_LOW_PEAK_S;
+                     elsif j = 5 then
+                        j := j + 1;
+                        testState <= SHORT_HIGH_PEAK_S;
+                     elsif j = 6 then
+                        j := j + 1;
+                        testState <= NON_VETO_SHORT_HIGH_PEAK_S;
+                     elsif j = 7 then
+                        j := 0;
+                        testState <= VETO_SHORT_HIGH_PEAK_S;
+                     end if;
+                     i := 0;
+                     smplCnt := (others=>'0');
+                  else
+                     smplCnt := smplCnt + 1;
+                  end if;
+                  
+                  
+               when LONG_LOW_PEAK_S =>
+                  -- assign samples once and move to the next state
+                  adcData0 <= toSlv(LONG_LOW_PEAK_C(i), 16);
+                  if i >= LONG_LOW_PEAK_C'high then
+                     i := 0;
+                     testState <= RAND_TIME_S;
+                  else
+                     i := i + 1;
+                  end if;
+                  
+               when LONG_HIGH_PEAK_S =>
+                  -- assign samples once and move to the next state
+                  adcData0 <= toSlv(LONG_HIGH_PEAK_C(i), 16);
+                  if i >= LONG_HIGH_PEAK_C'high then
+                     i := 0;
+                     testState <= RAND_TIME_S;
+                  else
+                     i := i + 1;
+                  end if;
+                  
+                  
+               when MED_LOW_PEAK_S =>
+                  -- assign samples once and move to the next state
+                  adcData0 <= toSlv(MED_LOW_PEAK_C(i), 16);
+                  if i >= MED_LOW_PEAK_C'high then
+                     i := 0;
+                     testState <= RAND_TIME_S;
+                  else
+                     i := i + 1;
+                  end if;
+                  
+                  
+               when MED_HIGH_PEAK_S =>
+                  -- assign samples once and move to the next state
+                  adcData0 <= toSlv(MED_HIGH_PEAK_C(i), 16);
+                  if i >= MED_HIGH_PEAK_C'high then
+                     i := 0;
+                     testState <= RAND_TIME_S;
+                  else
+                     i := i + 1;
+                  end if;
+                  
+                  
+               when SHORT_LOW_PEAK_S =>
+                  -- assign samples once and move to the next state
+                  adcData0 <= toSlv(SHORT_LOW_PEAK_C(i), 16);
+                  if i >= SHORT_LOW_PEAK_C'high then
+                     i := 0;
+                     testState <= RAND_TIME_S;
+                  else
+                     i := i + 1;
+                  end if;
+                  
+                  
+               when SHORT_HIGH_PEAK_S =>
+                  -- assign samples once and move to the next state
+                  adcData0 <= toSlv(SHORT_HIGH_PEAK_C(i), 16);
+                  if i >= SHORT_HIGH_PEAK_C'high then
+                     i := 0;
+                     testState <= RAND_TIME_S;
+                  else
+                     i := i + 1;
+                  end if;
+                  
+                  
+               when NON_VETO_SHORT_HIGH_PEAK_S =>
+                  -- assign samples once and move to the next state
+                  adcData0 <= toSlv(NON_VETO_SHORT_HIGH_PEAK_C(i), 16);
+                  if i >= NON_VETO_SHORT_HIGH_PEAK_C'high then
+                     i := 0;
+                     testState <= RAND_TIME_S;
+                  else
+                     i := i + 1;
+                  end if;
+                  
+                  
+               when VETO_SHORT_HIGH_PEAK_S =>
+                  -- assign samples once and move to the next state
+                  adcData0 <= toSlv(VETO_SHORT_HIGH_PEAK_C(i), 16);
+                  if i >= VETO_SHORT_HIGH_PEAK_C'high then
+                     i := 0;
+                     testState <= RAND_TIME_S;
+                  else
+                     i := i + 1;
+                  end if;
+               
+               when EXT_TRIG_S =>
+                  
+                  if adcDirection = '0' then
+                     if adcData0 < ADC_DATA_TOP_C then
+                        adcData0 <= adcData0 + 1;
+                     else
+                        adcData0 <= adcData0 - 1;
+                        adcDirection := '1';
+                     end if;
+                  else
+                     if adcData0 > ADC_DATA_BOT_C then
+                        adcData0 <= adcData0 - 1;
+                     else
+                        adcData0 <= adcData0 + 1;
+                        adcDirection := '0';
+                     end if;
+                  end if;
+                  
+               when others =>
+                  testState <= RAND_TIME_S;
+         
+            end case;
+            
             adcData1 <= adcData0;
             adcData2 <= adcData1;
             adcData3 <= adcData2;
@@ -195,8 +456,10 @@ begin
       
       wait for 1 us;
       -- initial setup
-      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", x"01", false);  -- enable trigger
-      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000200", x"100", false); -- size
+      if FORCE_EXT_TRIG_C = true then
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", x"01", false);  -- enable trigger
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000200", x"100", false); -- size
+      end if;
       
 
       wait;
@@ -220,6 +483,26 @@ begin
          wait until falling_edge(adcClk);
          
          extTrigger <= '0';
+         
+      end loop;
+      
+   end process;
+   
+   -----------------------------------------------------------------------
+   -- backpressure the output stream
+   -----------------------------------------------------------------------
+   process
+   begin
+      
+      axisSlave.tReady  <= '1';
+      
+      loop
+         
+         wait for 1000 us;
+         
+         wait until falling_edge(axisClk);
+         
+         axisSlave.tReady <= not axisSlave.tReady;
          
       end loop;
       

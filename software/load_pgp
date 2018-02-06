@@ -1,37 +1,7 @@
 #!/bin/sh
 
-module="pgpcard"
-device="pgpcard_"
-lane="pgpcardLane"
-mode="666"
-
-# remove old driver
-/sbin/rmmod -s $module
-
 # add new driver
-/sbin/insmod /afs/slac/g/reseng/rogue/v2.2.0/drivers/pgpcard/driver/$module.ko || exit 1
-
-# remove stale nodes
-rm -f /dev/${device}*
-rm -f /dev/${lane}*
-
-major=`grep $module /proc/devices | cut -f1 -d' '`
-
-i="0";
-
-for num in $major
-do
-   mknod /dev/${device}${i}  c $num 0
-   mknod /dev/${lane}${i}0   c $num 1
-   mknod /dev/${lane}${i}1   c $num 2
-   mknod /dev/${lane}${i}2   c $num 3
-   mknod /dev/${lane}${i}3   c $num 4
-   mknod /dev/${lane}${i}4   c $num 5
-   mknod /dev/${lane}${i}5   c $num 6
-   mknod /dev/${lane}${i}6   c $num 7
-   mknod /dev/${lane}${i}7   c $num 8
-   ((i++))
-done
+/sbin/insmod /usr/local/daq/aes-stream-drivers/data_dev/driver/datadev.ko cfgSize=2097152 cfgRxCount=32 cfgTxCount=16 || exit 1
 
 # give appropriate group/permissions
-chmod $mode /dev/${device}*
+chmod 666 /dev/datadev*

@@ -35,7 +35,11 @@ use unisim.vcomponents.all;
 entity FadcBuffersTb is end FadcBuffersTb;
 
 architecture testbed of FadcBuffersTb is
-
+   
+   constant FORCE_EXT_TRIG_C : boolean := false;
+   constant TEST_LOOP_C : boolean := false;
+   
+   
    constant VERBOSE_PRINT : boolean := true;
    constant CLK_PERIOD_C  : time    := 5 ns;
    constant TPD_C         : time    := CLK_PERIOD_C/4;
@@ -141,8 +145,6 @@ architecture testbed of FadcBuffersTb is
    );
    
    signal testState : TestType := IDLE_S;
-   
-   constant FORCE_EXT_TRIG_C : boolean := false;
    
    constant PGP_VC_C      : slv(3 downto 0) := "0001";
    -- expected clock cycles latency in between the trigger and its capture
@@ -305,8 +307,12 @@ begin
                         j := j + 1;
                         testState <= NON_VETO_SHORT_HIGH_PEAK_S;
                      elsif j = 7 then
-                        j := 0;
-                        testState <= VETO_SHORT_HIGH_PEAK_S;
+                        if TEST_LOOP_C = true then
+                           j := 0;
+                           testState <= VETO_SHORT_HIGH_PEAK_S;
+                        else
+                           report "Simulation finished" severity failure;
+                        end if;
                      end if;
                      i := 0;
                      smplCnt := (others=>'0');
@@ -459,6 +465,14 @@ begin
       if FORCE_EXT_TRIG_C = true then
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", x"01", false);  -- enable trigger
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000200", x"100", false); -- size
+      else
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000100", toSlv(PRE_THRESHOLD_C, 16), false);  -- 
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000104", toSlv(POST_THRESHOLD_C, 16), false);  -- 
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000108", toSlv(VETO_THRESHOLD_C, 16), false);  -- 
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"0000010C", toSlv(10, 7), false);  -- pre delay
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000110", toSlv(10, 7), false);  -- post delay
+         
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", x"01", false);  -- enable trigger
       end if;
       
 
@@ -562,186 +576,194 @@ begin
    
       triggersGood      <= (others=>'0');
       
-      loop
-         
-         --wait until axisMaster.tValid = '1';
-         wait until rising_edge(axisClk);
-         
-         if axisMaster.tValid = '1' and axisSlave.tReady = '1' then
-            -- reset counter if start of packet
-            if axisMaster.tUser(1 downto 0) = "10" then
-               wordCnt     := 0;
-               offsetCnt   := 0;
-               sampleCnt   := 0;
-               adcOffsetChk := true;
-            else
-               wordCnt     := wordCnt + 1;
-            end if;
+      if FORCE_EXT_TRIG_C = true then
+      
+         loop
             
-            -- check and report the packet content
-            if wordCnt = 0 then
-               --has only PGP info
-               assert axisMaster.tData(3 downto 0) = PGP_VC_C report "Bad PGP VC number" severity failure;
-            elsif wordCnt = 1 then     -- header
-               trigCh := conv_integer(axisMaster.tData(7 downto 0));
-               assert trigCh >=0 and trigCh <= 7 report "Bad channel number" severity failure;
-            elsif wordCnt = 2 then  -- header
-               trigSize := conv_integer(axisMaster.tData(21 downto 0));
-               if trigSize = 0 then
-                  adcOffsetChk := false;
+            --wait until axisMaster.tValid = '1';
+            wait until rising_edge(axisClk);
+            
+            if axisMaster.tValid = '1' and axisSlave.tReady = '1' then
+               -- reset counter if start of packet
+               if axisMaster.tUser(1 downto 0) = "10" then
+                  wordCnt     := 0;
+                  offsetCnt   := 0;
+                  sampleCnt   := 0;
+                  adcOffsetChk := true;
+               else
+                  wordCnt     := wordCnt + 1;
                end if;
-               if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": size " & integer'image(trigSize); end if;
-            elsif wordCnt = 3 then  -- header
-               trigOffset := conv_integer(axisMaster.tData(31 downto 0));
-               if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset " & integer'image(trigOffset); end if;
-               if trigOffset > 0 then
-                  trigOffset := trigOffset;
-               end if;
-               --report "trigOffset: " & integer'image(trigOffset);
-            elsif wordCnt = 4 then  -- header
-               trigTimeVect(31 downto 0) := axisMaster.tData(31 downto 0);
-            elsif wordCnt = 5 then  -- header
-               trigTimeVect(63 downto 32) := axisMaster.tData(31 downto 0);
-               trigTime := conv_integer(trigTimeVect(31 downto 0));
                
-               -- count and remove lost triggers from the trigger verification queue
-               while triggerTime(conv_integer(triggerRdPtr)) + TRIG_LATENCY_C < trigTime loop
+               -- check and report the packet content
+               if wordCnt = 0 then
+                  --has only PGP info
+                  assert axisMaster.tData(3 downto 0) = PGP_VC_C report "Bad PGP VC number" severity failure;
+               elsif wordCnt = 1 then     -- header
+                  trigCh := conv_integer(axisMaster.tData(7 downto 0));
+                  assert trigCh >=0 and trigCh <= 7 report "Bad channel number" severity failure;
+               elsif wordCnt = 2 then  -- header
+                  trigSize := conv_integer(axisMaster.tData(21 downto 0));
+                  if trigSize = 0 then
+                     adcOffsetChk := false;
+                  end if;
+                  if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": size " & integer'image(trigSize); end if;
+               elsif wordCnt = 3 then  -- header
+                  trigOffset := conv_integer(axisMaster.tData(31 downto 0));
+                  if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset " & integer'image(trigOffset); end if;
+                  if trigOffset > 0 then
+                     trigOffset := trigOffset;
+                  end if;
+                  --report "trigOffset: " & integer'image(trigOffset);
+               elsif wordCnt = 4 then  -- header
+                  trigTimeVect(31 downto 0) := axisMaster.tData(31 downto 0);
+               elsif wordCnt = 5 then  -- header
+                  trigTimeVect(63 downto 32) := axisMaster.tData(31 downto 0);
+                  trigTime := conv_integer(trigTimeVect(31 downto 0));
                   
-                  -- report missed timestamps
-                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": missed timestamp " & integer'image(conv_integer(triggerTime(conv_integer(triggerRdPtr))(31 downto 0))) severity warning;
+                  -- count and remove lost triggers from the trigger verification queue
+                  while triggerTime(conv_integer(triggerRdPtr)) + TRIG_LATENCY_C < trigTime loop
+                     
+                     -- report missed timestamps
+                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": missed timestamp " & integer'image(conv_integer(triggerTime(conv_integer(triggerRdPtr))(31 downto 0))) severity warning;
+                     
+                     if triggerCnt > 0 then
+                        triggerRdPtr := triggerRdPtr + 1;
+                        triggerCnt   := triggerCnt - 1;
+                        lostTriggerCnt := lostTriggerCnt + 1;
+                     else
+                        report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": timestamp verification queue underflow." severity failure;
+                     end if;
+                     
+                  end loop;
+                  
+                  -- report received timestamp
+                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": timestamp " & integer'image(trigTime);
+                  -- verify timestamp
+                  assert triggerTime(conv_integer(triggerRdPtr)) + TRIG_LATENCY_C = trigTime 
+                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad timestamp. Expected " & integer'image(conv_integer(triggerTime(conv_integer(triggerRdPtr)))) & " received " & integer'image(trigTime)
+                     severity failure;
+                     
+               -- all other words contain 2 samples
+               else
+                  
+                  -- verify trigger offset
+                  if trigOffset > 1 then
+                     trigOffset := trigOffset - 2;
+                  else
+                     if adcOffsetChk = true then
+                        adcOffsetChk := false;
+                        --report "wordCnt: " & integer'image(wordCnt) & " trigOffset: " & integer'image(trigOffset);
+                        
+                        if trigOffset = 0 then
+                           offsetError := abs(conv_integer(triggerSample(conv_integer(triggerRdPtr))) - conv_integer(axisMaster.tData(15 downto 0)));
+                           assert offsetError <= MAX_OFFSET_ERR_C
+                              report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad offset. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0)))
+                              severity warning;
+                           if VERBOSE_PRINT then 
+                              if offsetError = 0 then
+                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset ok. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0)));
+                              else
+                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset with error. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0))) severity warning;
+                              end if;
+                           end if;
+                        else -- trigOffset = 1
+                           offsetError := abs(conv_integer(triggerSample(conv_integer(triggerRdPtr))) - conv_integer(axisMaster.tData(31 downto 16)));
+                           assert offsetError <= MAX_OFFSET_ERR_C
+                              report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad offset. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16)))
+                              severity warning;
+                           if VERBOSE_PRINT then 
+                              if offsetError = 0 then
+                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset ok. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16)));
+                              else
+                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset with error. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16))) severity warning;
+                              end if;
+                           end if;
+                        end if;
+                     end if;
+                  end if;
+                  
+                  -- discover data direction in first word
+                  if wordCnt = 6 then
+                     if axisMaster.tData(15 downto 0) = ADC_DATA_BOT_C or axisMaster.tData(31 downto 16) = ADC_DATA_BOT_C then
+                        adcGoingUp := true;
+                     elsif axisMaster.tData(15 downto 0) = ADC_DATA_TOP_C or axisMaster.tData(31 downto 16) = ADC_DATA_TOP_C then
+                        adcGoingUp := false;
+                     elsif axisMaster.tData(31 downto 16) > axisMaster.tData(15 downto 0) then
+                        adcGoingUp := true;
+                     else
+                        adcGoingUp := false;
+                     end if;
+                     adcPrevious := axisMaster.tData(31 downto 16);
+                  end if;
+                  
+                  -- count all samples
+                  if axisMaster.tKeep(3 downto 0) = "1111" then
+                     sampleCnt := sampleCnt + 2;
+                  elsif axisMaster.tKeep(3 downto 0) = "0011" and axisMaster.tLast = '1' then
+                     sampleCnt := sampleCnt + 1;
+                  elsif axisMaster.tKeep(3 downto 0) = "1100" and axisMaster.tLast = '1' then
+                     sampleCnt := sampleCnt + 1;
+                  else
+                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad tKeep!" severity failure;
+                  end if;
+                  
+                  -- verify all samples
+                  if wordCnt /= 6 and (axisMaster.tLast /= '1' or axisMaster.tKeep(3 downto 0) = "1111") then
+                     if adcGoingUp = true then
+                        if axisMaster.tData(15 downto 0) = ADC_DATA_TOP_C or axisMaster.tData(31 downto 16) = ADC_DATA_TOP_C then
+                           adcGoingUp := false;
+                           adcPrevious := axisMaster.tData(31 downto 16);
+                           if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": top ADC peak"; end if;
+                        else
+                           -- check samples here
+                           assert adcPrevious = axisMaster.tData(15 downto 0)-1 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad ADC values" severity failure;
+                           assert axisMaster.tData(15 downto 0) < axisMaster.tData(31 downto 16) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad ADC values" severity failure;
+                           -- update previous
+                           adcPrevious := axisMaster.tData(31 downto 16);
+                        end if;
+                     else
+                        if axisMaster.tData(15 downto 0) = ADC_DATA_BOT_C or axisMaster.tData(31 downto 16) = ADC_DATA_BOT_C then
+                           adcGoingUp := true;
+                           adcPrevious := axisMaster.tData(31 downto 16);
+                           if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bottom ADC peak"; end if;
+                        else
+                           -- check samples here
+                           assert adcPrevious = axisMaster.tData(15 downto 0)+1 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad ADC values" severity failure;
+                           assert axisMaster.tData(15 downto 0) > axisMaster.tData(31 downto 16) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad ADC values" severity failure;
+                           -- update previous
+                           adcPrevious := axisMaster.tData(31 downto 16);
+                        end if;
+                     end if;
+                  end if;
+                  
+               end if;
+               
+               -- validate and report trigger size at last word
+               if axisMaster.tLast = '1' then
                   
                   if triggerCnt > 0 then
                      triggerRdPtr := triggerRdPtr + 1;
                      triggerCnt   := triggerCnt - 1;
-                     lostTriggerCnt := lostTriggerCnt + 1;
                   else
                      report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": timestamp verification queue underflow." severity failure;
                   end if;
                   
-               end loop;
-               
-               -- report received timestamp
-               report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": timestamp " & integer'image(trigTime);
-               -- verify timestamp
-               assert triggerTime(conv_integer(triggerRdPtr)) + TRIG_LATENCY_C = trigTime 
-                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad timestamp. Expected " & integer'image(conv_integer(triggerTime(conv_integer(triggerRdPtr)))) & " received " & integer'image(trigTime)
-                  severity failure;
-                  
-            -- all other words contain 2 samples
-            else
-               
-               -- verify trigger offset
-               if trigOffset > 1 then
-                  trigOffset := trigOffset - 2;
-               else
-                  if adcOffsetChk = true then
-                     adcOffsetChk := false;
-                     --report "wordCnt: " & integer'image(wordCnt) & " trigOffset: " & integer'image(trigOffset);
-                     
-                     if trigOffset = 0 then
-                        offsetError := abs(conv_integer(triggerSample(conv_integer(triggerRdPtr))) - conv_integer(axisMaster.tData(15 downto 0)));
-                        assert offsetError <= MAX_OFFSET_ERR_C
-                           report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad offset. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0)))
-                           severity warning;
-                        if VERBOSE_PRINT then 
-                           if offsetError = 0 then
-                              report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset ok. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0)));
-                           else
-                              report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset with error. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0))) severity warning;
-                           end if;
-                        end if;
-                     else -- trigOffset = 1
-                        offsetError := abs(conv_integer(triggerSample(conv_integer(triggerRdPtr))) - conv_integer(axisMaster.tData(31 downto 16)));
-                        assert offsetError <= MAX_OFFSET_ERR_C
-                           report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad offset. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16)))
-                           severity warning;
-                        if VERBOSE_PRINT then 
-                           if offsetError = 0 then
-                              report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset ok. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16)));
-                           else
-                              report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset with error. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16))) severity warning;
-                           end if;
-                        end if;
-                     end if;
-                  end if;
+                  if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": samples " & integer'image(sampleCnt); end if;
+                  assert sampleCnt = trigSize 
+                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": wrong number of samples. Expected " & integer'image(trigSize) & " received " & integer'image(sampleCnt)
+                     severity failure;
+                  triggersGood <= triggersGood + 1;
+                  goodTriggerCnt := goodTriggerCnt + 1;
                end if;
-               
-               -- discover data direction in first word
-               if wordCnt = 6 then
-                  if axisMaster.tData(15 downto 0) = ADC_DATA_BOT_C or axisMaster.tData(31 downto 16) = ADC_DATA_BOT_C then
-                     adcGoingUp := true;
-                  elsif axisMaster.tData(15 downto 0) = ADC_DATA_TOP_C or axisMaster.tData(31 downto 16) = ADC_DATA_TOP_C then
-                     adcGoingUp := false;
-                  elsif axisMaster.tData(31 downto 16) > axisMaster.tData(15 downto 0) then
-                     adcGoingUp := true;
-                  else
-                     adcGoingUp := false;
-                  end if;
-                  adcPrevious := axisMaster.tData(31 downto 16);
-               end if;
-               
-               -- count all samples
-               if axisMaster.tKeep(3 downto 0) = "1111" then
-                  sampleCnt := sampleCnt + 2;
-               elsif axisMaster.tKeep(3 downto 0) = "0011" and axisMaster.tLast = '1' then
-                  sampleCnt := sampleCnt + 1;
-               elsif axisMaster.tKeep(3 downto 0) = "1100" and axisMaster.tLast = '1' then
-                  sampleCnt := sampleCnt + 1;
-               else
-                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad tKeep!" severity failure;
-               end if;
-               
-               -- verify all samples
-               if wordCnt /= 6 and (axisMaster.tLast /= '1' or axisMaster.tKeep(3 downto 0) = "1111") then
-                  if adcGoingUp = true then
-                     if axisMaster.tData(15 downto 0) = ADC_DATA_TOP_C or axisMaster.tData(31 downto 16) = ADC_DATA_TOP_C then
-                        adcGoingUp := false;
-                        adcPrevious := axisMaster.tData(31 downto 16);
-                        if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": top ADC peak"; end if;
-                     else
-                        -- check samples here
-                        assert adcPrevious = axisMaster.tData(15 downto 0)-1 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad ADC values" severity failure;
-                        assert axisMaster.tData(15 downto 0) < axisMaster.tData(31 downto 16) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad ADC values" severity failure;
-                        -- update previous
-                        adcPrevious := axisMaster.tData(31 downto 16);
-                     end if;
-                  else
-                     if axisMaster.tData(15 downto 0) = ADC_DATA_BOT_C or axisMaster.tData(31 downto 16) = ADC_DATA_BOT_C then
-                        adcGoingUp := true;
-                        adcPrevious := axisMaster.tData(31 downto 16);
-                        if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bottom ADC peak"; end if;
-                     else
-                        -- check samples here
-                        assert adcPrevious = axisMaster.tData(15 downto 0)+1 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad ADC values" severity failure;
-                        assert axisMaster.tData(15 downto 0) > axisMaster.tData(31 downto 16) report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad ADC values" severity failure;
-                        -- update previous
-                        adcPrevious := axisMaster.tData(31 downto 16);
-                     end if;
-                  end if;
-               end if;
-               
             end if;
             
-            -- validate and report trigger size at last word
-            if axisMaster.tLast = '1' then
-               
-               if triggerCnt > 0 then
-                  triggerRdPtr := triggerRdPtr + 1;
-                  triggerCnt   := triggerCnt - 1;
-               else
-                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": timestamp verification queue underflow." severity failure;
-               end if;
-               
-               if VERBOSE_PRINT then report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": samples " & integer'image(sampleCnt); end if;
-               assert sampleCnt = trigSize 
-                  report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": wrong number of samples. Expected " & integer'image(trigSize) & " received " & integer'image(sampleCnt)
-                  severity failure;
-               triggersGood <= triggersGood + 1;
-               goodTriggerCnt := goodTriggerCnt + 1;
-            end if;
-         end if;
-         
-      end loop;
+         end loop;
+      
+      else
+      
+         wait until rising_edge(axisClk);
+      
+      end if;
       
    end process;
 

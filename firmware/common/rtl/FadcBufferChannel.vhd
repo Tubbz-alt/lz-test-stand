@@ -532,7 +532,7 @@ begin
                -- internal trigger pre threshold and post threshold crossed in the same cycle
                elsif intTrigFast = '1' then
                   vtrig.trigType(INT_IND_C)  := '1';
-                  vtrig.trigLength           := trig.actPreDelay + preNumber;
+                  vtrig.trigLength           := resize(trig.actPreDelay, TRIG_ADDR_G+2) + preNumber;
                   vtrig.sampleOffset         := sampleOffset;
                   -- write memory address to the FIFO
                   vtrig.addrFifoWr  := '1';
@@ -541,7 +541,7 @@ begin
                -- internal trigger pre threshold crossed
                elsif intTrig = '1' then
                   vtrig.trigType(INT_IND_C)  := '1';
-                  vtrig.trigLength           := trig.actPreDelay + preNumber;
+                  vtrig.trigLength           := resize(trig.actPreDelay, TRIG_ADDR_G+2) + preNumber;
                   vtrig.sampleOffset         := sampleOffset;
                   vtrig.trigPending := '1';
                   vtrig.trigState := TRIG_ARM_S;

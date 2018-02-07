@@ -94,7 +94,6 @@ architecture rtl of FadcBufferChannel is
       enable         : sl;
       reset          : slv(15 downto 0);
       extTrigger     : slv(1 downto 0);
-      adcData        : slv(63 downto 0);
       intPreThresh   : slv(16 downto 0);
       intPostThresh  : slv(16 downto 0);
       intVetoThresh  : slv(16 downto 0);
@@ -153,7 +152,6 @@ architecture rtl of FadcBufferChannel is
       enable         => '0',
       reset          => x"0001",
       extTrigger     => (others=>'0'),
-      adcData        => (others=>'0'),
       intPreThresh   => (others=>'0'),
       intPostThresh  => (others=>'0'),
       intVetoThresh  => (others=>'0'),
@@ -267,11 +265,22 @@ architecture rtl of FadcBufferChannel is
    signal memWrAddr     : slv(ADDR_LEN_C-1 downto 0);
    signal memWrEn       : sl;
    
+   
+   -- only for simulation --- REMOVE -------
+   signal intTrigS        : sl;
+   signal intTrigFastS    : sl;
+   signal postTrigS       : sl;
+   signal extTrigS        : sl;
+   signal sampleOffsetS   : slv(1 downto 0);
+   signal preNumberS      : slv(1 downto 0);
+   signal postNumberS     : slv(1 downto 0);
+   -- only for simulation --- REMOVE -------
+   
 begin
    
    -- register logic (axilClk domain)
    -- trigger and buffer logic (adcClk domian)
-   comb : process (adcRst, axilRst, adcData, adcValid, axilReadMaster, axilWriteMaster, txSlave, reg, trig,
+   comb : process (adcRst, axilRst, adcValid, axilReadMaster, axilWriteMaster, txSlave, reg, trig,
       gTime, extTrigger, preThr, postThr, vetoThr, preThrZero, memRdData, trigFifoFull, trigValid, trigDout,
       addrFifoFull, addrValid, addrDout) is
       variable vreg           : RegType;
@@ -290,7 +299,6 @@ begin
       -- Latch the current value
       vreg := reg;
       vtrig := trig;
-      vtrig.adcData := adcData;
       
       -- keep reset for several clock cycles
       vtrig.reset := trig.reset(14 downto 0) & '0';
@@ -368,9 +376,12 @@ begin
       
       
       -- ignore pre threshold set to 0
-      
+      intTrig := '0';
+      intTrigFast    := '0';
+      sampleOffset := "00";
+      preNumber := "00";
       if preThrZero = '0' then
-      
+         
          -- internal trigger pre threshold crossed
          -- take into account veto threshold
          if preThr(0) = '1' and vetoThr(0) = '0' then
@@ -389,8 +400,6 @@ begin
             intTrig := '1';
             sampleOffset := "11";
             preNumber := "00";
-         else
-            intTrig := '0';
          end if;
          
          -- clear the internal pre threshold if there was post and veto in the same clock cycle
@@ -410,6 +419,7 @@ begin
          
          -- there can be post threshold crossing in the same clock cycle
          -- also take into account veto threshold
+         intTrigFast    := '0';
          if preThr(0) = '1' and postThr(1) = '1' and vetoThr(1 downto 0) = 0 then
             intTrigFast    := '1';
             sampleOffset   := "00";
@@ -434,8 +444,6 @@ begin
             intTrigFast    := '1';
             sampleOffset   := "10";
             preNumber      := "01";
-         else
-            intTrigFast    := '0';
          end if;
          
       end if;
@@ -455,7 +463,18 @@ begin
          postNumber  := "00";
       else 
          postTrig    := '0';
+         postNumber  := "00";
       end if;
+      
+      -- only for simulation --- REMOVE -------
+      intTrigS        <= intTrig     ;
+      intTrigFastS    <= intTrigFast ;
+      postTrigS       <= postTrig    ;
+      extTrigS        <= extTrig     ;
+      sampleOffsetS   <= sampleOffset;
+      preNumberS      <= preNumber   ;
+      postNumberS     <= postNumber  ;
+      -- only for simulation --- REMOVE -------
       
       ----------------------------------------------------------------------
       -- Write address and buffer counter
@@ -533,8 +552,10 @@ begin
             if (trig.reset = 0 and trig.enable = '1') then
                
                -- track the time and sample address for all trigger sources
-               vtrig.gTime       := gTime;
-               vtrig.addrFifoDin := trig.buffSel & trig.preAddress;
+               if (extTrig = '0' and intTrig = '0' and intTrigFast = '0') then
+                  vtrig.gTime       := gTime;
+                  vtrig.addrFifoDin := vtrig.buffSel & vtrig.preAddress;
+               end if;
                -- both sources share the preDelay setting
                vtrig.trigOffset := resize(trig.actPreDelay, 32);
                
@@ -850,8 +871,8 @@ begin
       axilReadSlave  <= reg.axilReadSlave;
       
       memRdAddr      <= vtrig.buffSelRd & vtrig.buffAddrRd;
-      memWrAddr      <= trig.buffSel & trig.buffAddr;
-      memWrEn        <= trig.memWrEn;
+      memWrAddr      <= vtrig.buffSel & vtrig.buffAddr;
+      memWrEn        <= vtrig.memWrEn;
       
    end process comb;
 
@@ -885,7 +906,7 @@ begin
       wea     => memWrEn,
       rsta    => trig.reset(0),
       addra   => memWrAddr,
-      dina    => trig.adcData,
+      dina    => adcData,
       -- Port B
       clkb    => adcClk,
       rstb    => trig.reset(0),

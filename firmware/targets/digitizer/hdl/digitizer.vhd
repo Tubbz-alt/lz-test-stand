@@ -489,11 +489,13 @@ begin
    ------------------------
    -- 1000 MSPS ADCs Buffer
    ------------------------
-   U_FadcBuffer : entity work.FastAdcBuffer
+   U_FadcBuffer : entity work.FadcBuffer
       generic map (
          TPD_G            => TPD_G,
          AXI_BASE_ADDR_G  => AXI_CONFIG_C(FADC_BUFFER_INDEX_C).baseAddr,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G,
+         TRIG_ADDR_G    => TRIG_ADDR_C,
+         BUFF_ADDR_G    => BUFF_ADDR_C)
       port map (
          -- ADC interface
          adcClk          => adcClk,

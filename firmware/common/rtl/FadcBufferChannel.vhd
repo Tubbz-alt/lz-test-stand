@@ -366,10 +366,13 @@ begin
          extTrig := '0';
       end if;
       
-      -- internal trigger pre threshold crossed
+      
       -- ignore pre threshold set to 0
-      -- take into account veto threshold
+      
       if preThrZero = '0' then
+      
+         -- internal trigger pre threshold crossed
+         -- take into account veto threshold
          if preThr(0) = '1' and vetoThr(0) = '0' then
             intTrig := '1';
             sampleOffset := "00";
@@ -389,11 +392,24 @@ begin
          else
             intTrig := '0';
          end if;
-      end if;
-      
-      -- there can be post threshold crossing in the same clock cycle
-      -- also take into account veto threshold
-      if preThrZero = '0' then
+         
+         -- clear the internal pre threshold if there was post and veto in the same clock cycle
+         if preThr(0) = '1' and postThr(1) = '1' and vetoThr(1 downto 0) /= 0 then
+            intTrig := '0';
+         elsif preThr(0) = '1' and postThr(2) = '1' and vetoThr(2 downto 0) /= 0 then
+            intTrig := '0';
+         elsif preThr(0) = '1' and postThr(3) = '1' and vetoThr(3 downto 0) /= 0 then
+            intTrig := '0';
+         elsif preThr(1) = '1' and postThr(2) = '1' and vetoThr(2 downto 1) /= 0 then
+            intTrig := '0';
+         elsif preThr(1) = '1' and postThr(3) = '1' and vetoThr(3 downto 1) /= 0 then
+            intTrig := '0';
+         elsif preThr(2) = '1' and postThr(3) = '1' and vetoThr(3 downto 2) /= 0 then
+            intTrig := '0';
+         end if;
+         
+         -- there can be post threshold crossing in the same clock cycle
+         -- also take into account veto threshold
          if preThr(0) = '1' and postThr(1) = '1' and vetoThr(1 downto 0) = 0 then
             intTrigFast    := '1';
             sampleOffset   := "00";
@@ -421,8 +437,10 @@ begin
          else
             intTrigFast    := '0';
          end if;
+         
       end if;
       
+      -- post trigger only if no veto in preceeding samples
       if postThr(0) = '1' and vetoThr(0 downto 0) = 0 then
          postTrig    := '1';
          postNumber  := "11";

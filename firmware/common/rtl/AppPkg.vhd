@@ -41,8 +41,16 @@ package AppPkg is
 
    constant START_ADDR_C : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '0');
    constant STOP_ADDR_C  : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
-
+   
+   -- address space of the slow ADC single channel
    constant ADDR_BITS_C : integer := 27;
+   
+   -- buffer size of the fast ADC single channel
+   -- 4 samples per address 2**8x4 = 1024 samples = 1us max buffer
+   constant TRIG_ADDR_C  : integer := 8;
+   -- 2**3 = 8 buffers per channel
+   constant BUFF_ADDR_C  : integer := 3;
+   
    constant JESD_LANE_C : integer := 16;
 
    type PwrCtrlInType is record

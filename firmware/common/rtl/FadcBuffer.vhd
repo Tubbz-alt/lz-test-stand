@@ -27,9 +27,9 @@ use work.AxiStreamPkg.all;
 
 entity FadcBuffer is
    generic (
-      TPD_G            : time             := 1 ns;
-      AXI_ERROR_RESP_G : slv(1 downto 0)  := AXI_RESP_DECERR_C;
-      AXI_BASE_ADDR_G  : slv(31 downto 0) := (others => '0'),
+      TPD_G            : time                   := 1 ns;
+      AXI_ERROR_RESP_G : slv(1 downto 0)        := AXI_RESP_DECERR_C;
+      AXI_BASE_ADDR_G  : slv(31 downto 0)       := (others => '0');
       TRIG_ADDR_G       : integer range 8 to 32 := 8;
       BUFF_ADDR_G       : integer range 1 to 6  := 3;
       PGP_LANE_G        : slv(3 downto 0)       := "0000";

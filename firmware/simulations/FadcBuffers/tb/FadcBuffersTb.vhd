@@ -88,10 +88,10 @@ architecture testbed of FadcBuffersTb is
       5  => PRE_THRESHOLD_C+5,
       6  => VETO_THRESHOLD_C+1,
       7  => VETO_THRESHOLD_C,
-      8  => VETO_THRESHOLD_C-1,
-      9  => VETO_THRESHOLD_C-2,
-      10 => VETO_THRESHOLD_C-3,
-      11 => VETO_THRESHOLD_C-4
+      8  => VETO_THRESHOLD_C,
+      9  => VETO_THRESHOLD_C,
+      10 => VETO_THRESHOLD_C,
+      11 => VETO_THRESHOLD_C
    );
    
    constant MED_LOW_PEAK_C   : IntegerArray(3 downto 0) := (
@@ -245,6 +245,7 @@ begin
    variable randSamples : integer;
    variable i : natural := 0;
    variable j : natural := 0;
+   variable initDelay : natural := 5000;
    constant MAX_SAMPLES_C : natural := 1000;
    begin
       if rising_edge(ghzClk) then
@@ -266,15 +267,21 @@ begin
                   if FORCE_EXT_TRIG_C = true then
                      testState <= EXT_TRIG_S;
                   else
+                     initDelay := 5000;
                      testState <= RAND_TIME_S;
                   end if;
                
                when RAND_TIME_S =>
                   -- randomize time
-                  uniform (seed1,seed2,randSamplesRel);
-                  randSamples := integer(randSamplesRel * real(MAX_SAMPLES_C -1));
-                  smplCnt := (others=>'0');
-                  testState <= PSEUDO_NOISE_BASE_S;
+                  if initDelay > 0 then
+                     initDelay := initDelay - 1;
+                  else
+                     uniform (seed1,seed2,randSamplesRel);
+                     randSamples := integer(randSamplesRel * real(MAX_SAMPLES_C -1));
+                     smplCnt := (others=>'0');
+                     testState <= PSEUDO_NOISE_BASE_S;
+                  end if;
+                  adcData0        <= ADC_DATA_BOT_C-1;
                
                when PSEUDO_NOISE_BASE_S =>
                   -- assign samples periodically
@@ -323,7 +330,7 @@ begin
                         else
                            -- end simulation after a delay
                            testState <= END_SIM_S;
-                           smplCnt := (others=>'1');
+                           smplCnt := toSlv(5000, 16);
                         end if;
                      end if;
                      i := 0;
@@ -479,7 +486,7 @@ begin
    process
    begin
       
-      wait for 1 us;
+      wait for 200 ns;
       -- initial setup
       if FORCE_EXT_TRIG_C = true then
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", x"01", false);  -- enable trigger

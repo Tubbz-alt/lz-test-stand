@@ -130,6 +130,7 @@ architecture rtl of FadcBufferChannel is
       addrFifoDin    : slv(ADDR_LEN_C+1 downto 0);
       addrFifoWr     : sl;
       addrRd         : sl;
+      addrDout       : slv(ADDR_LEN_C+1 downto 0);
       sampleOffset   : slv(1 downto 0);
       postCnt        : slv(DELAY_LEN_C downto 0);
       trigPending    : sl;
@@ -185,6 +186,7 @@ architecture rtl of FadcBufferChannel is
       addrFifoDin    => (others=>'0'),
       addrFifoWr     => '0',
       addrRd         => '0',
+      addrDout       => (others=>'0'),
       sampleOffset   => (others=>'0'),
       postCnt        => (others=>'0'),
       trigPending    => '0',
@@ -281,6 +283,8 @@ begin
       -- Latch the current value
       vreg := reg;
       vtrig := trig;
+      
+      vtrig.addrDout := addrDout;
       
       -- keep reset for several clock cycles
       vtrig.reset := trig.reset(14 downto 0) & '0';
@@ -789,10 +793,6 @@ begin
                else
                   vtrig.txMaster.tData(15 downto 0) := trig.trigDout;                           -- gTime
                   vtrig.hdrCnt      := 0;
-                  -- Set the memory address
-                  vtrig.buffSelRd      := addrDout(ADDR_LEN_C+1 downto TRIG_ADDR_G+2);
-                  vtrig.buffAddrRd     := addrDout(TRIG_ADDR_G+1 downto 2);
-                  vtrig.sampleOffsetRd := addrDout(1 downto 0);
                   -- check if the trigger has data
                   if trig.trigSizeRd > 0 and addrValid = '1' then
                      -- Move data
@@ -804,6 +804,10 @@ begin
                end if;
                vtrig.hdrCnt := trig.hdrCnt + 1;
             end if;
+            -- Set the memory address
+            vtrig.buffSelRd      := trig.addrDout(ADDR_LEN_C+1 downto TRIG_ADDR_G+2);
+            vtrig.buffAddrRd     := trig.addrDout(TRIG_ADDR_G+1 downto 2);
+            vtrig.sampleOffsetRd := trig.addrDout(1 downto 0);
          
          when DATA_S =>
             

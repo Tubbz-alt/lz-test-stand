@@ -61,6 +61,9 @@ end FadcBuffer;
 architecture mapping of FadcBuffer is
 
    constant NUM_AXI_MASTERS_C : natural := 8;
+   
+   -- remapping channel numbers to match the PCB names
+   constant CHMAP_C   : IntegerArray(7 downto 0) := (3, 7, 2, 6, 1, 5, 0, 4);
 
    constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, AXI_BASE_ADDR_G, 24, 20);
 
@@ -103,7 +106,7 @@ begin
       U_FadcChannel : entity work.FadcBufferChannel
          generic map (
             TPD_G          => TPD_G,
-            CHANNEL_G      => toSlv(i, 8),
+            CHANNEL_G      => toSlv(CHMAP_C(i), 8),
             TRIG_ADDR_G    => TRIG_ADDR_G,
             BUFF_ADDR_G    => BUFF_ADDR_G,
             PGP_LANE_G     => PGP_LANE_G,
@@ -120,15 +123,15 @@ begin
             -- AXI-Lite Interface for local registers 
             axilClk         => axilClk,
             axilRst         => axilRst,
-            axilReadMaster  => axilReadMasters(i),
-            axilReadSlave   => axilReadSlaves(i),
-            axilWriteMaster => axilWriteMasters(i),
-            axilWriteSlave  => axilWriteSlaves(i),
+            axilReadMaster  => axilReadMasters(CHMAP_C(i)),
+            axilReadSlave   => axilReadSlaves(CHMAP_C(i)),
+            axilWriteMaster => axilWriteMasters(CHMAP_C(i)),
+            axilWriteSlave  => axilWriteSlaves(CHMAP_C(i)),
             -- AxiStream output
             axisClk         => axisClk,
             axisRst         => axisRst,
-            axisMaster      => axisMasters(i),
-            axisSlave       => axisSlaves(i));
+            axisMaster      => axisMasters(CHMAP_C(i)),
+            axisSlave       => axisSlaves(CHMAP_C(i)));
    end generate GEN_VEC;
 
    ---------------------

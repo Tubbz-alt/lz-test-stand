@@ -65,7 +65,7 @@ architecture rtl of FadcBufferChannel is
    constant MAX_TRIG_C        : integer := (2**HDR_ADDR_WIDTH_C)/(HDR_SIZE_C*4) - 2;
    
    constant ADDR_LEN_C        : integer := TRIG_ADDR_G + BUFF_ADDR_G;
-   constant BUF_MAX_C         : integer := (2**BUFF_ADDR_G)-1;
+   constant MAX_BUF_C         : integer := (2**BUFF_ADDR_G)-1;
    constant DELAY_LEN_C       : integer := 7;
    
    constant EXT_IND_C      : integer := 0;
@@ -99,7 +99,6 @@ architecture rtl of FadcBufferChannel is
       intVetoThresh  : slv(16 downto 0);
       intSaveVeto    : sl;
       intPostDelay   : slv(DELAY_LEN_C-1 downto 0);
-      postCnt        : slv(DELAY_LEN_C-1 downto 0);
       intPreDelay    : slv(DELAY_LEN_C-1 downto 0);
       actPreDelay    : slv(DELAY_LEN_C-1 downto 0);
       extTrigSize    : slv(TRIG_ADDR_G+1 downto 0);
@@ -115,7 +114,6 @@ architecture rtl of FadcBufferChannel is
       trigState      : TrigStateType;
       buffSwitch     : sl;
       buffRdDone     : sl;
-      
       memWrEn        : sl;
       trigLength     : slv(TRIG_ADDR_G+1 downto 0);
       trigType       : slv(4 downto 0);
@@ -129,22 +127,21 @@ architecture rtl of FadcBufferChannel is
       trigWrLast     : sl;
       trigRdLast     : sl;
       trigDout       : slv(15 downto 0);
-      addrFifoDin    : slv(ADDR_LEN_C-1 downto 0);
+      addrFifoDin    : slv(ADDR_LEN_C+1 downto 0);
       addrFifoWr     : sl;
       addrRd         : sl;
       sampleOffset   : slv(1 downto 0);
+      postCnt        : slv(DELAY_LEN_C downto 0);
       trigPending    : sl;
-      buffAddr       : slv(TRIG_ADDR_G-1 downto 0);  
-      preAddress     : slv(TRIG_ADDR_G-1 downto 0);  
+      buffAddr       : slv(TRIG_ADDR_G+1 downto 0);  
+      preAddress     : slv(TRIG_ADDR_G+1 downto 0);  
       samplesBuff    : slv(TRIG_ADDR_G+1 downto 0); 
       buffSel        : slv(BUFF_ADDR_G-1 downto 0); 
       buffCnt        : slv(BUFF_ADDR_G-1 downto 0); 
-      
       trigSizeRd     : slv(TRIG_ADDR_G+1 downto 0);
       sampleOffsetRd : slv(1 downto 0);
       buffAddrRd     : slv(TRIG_ADDR_G-1 downto 0); 
       buffSelRd      : slv(BUFF_ADDR_G-1 downto 0); 
-      
       hdrCnt         : integer range 0 to 11;
    end record TrigType;
    
@@ -157,7 +154,6 @@ architecture rtl of FadcBufferChannel is
       intVetoThresh  => (others=>'0'),
       intSaveVeto    => '0',
       intPostDelay   => (others=>'0'),
-      postCnt        => (others=>'0'),
       intPreDelay    => (others=>'0'),
       actPreDelay    => (others=>'0'),
       extTrigSize    => (others=>'0'),
@@ -173,7 +169,6 @@ architecture rtl of FadcBufferChannel is
       trigState      => IDLE_S,
       buffSwitch     => '0',
       buffRdDone     => '0',
-      
       memWrEn        => '0',
       trigLength     => (others=>'0'),
       trigType       => (others=>'0'),
@@ -191,13 +186,13 @@ architecture rtl of FadcBufferChannel is
       addrFifoWr     => '0',
       addrRd         => '0',
       sampleOffset   => (others=>'0'),
+      postCnt        => (others=>'0'),
       trigPending    => '0',
       buffAddr       => (others=>'0'), 
       preAddress     => (others=>'0'), 
       samplesBuff    => (others=>'0'),
       buffSel        => (others=>'0'),
       buffCnt        => (others=>'0'),
-      
       trigSizeRd     => (others=>'0'),
       sampleOffsetRd => (others=>'0'),
       buffAddrRd     => (others=>'0'),
@@ -259,22 +254,11 @@ architecture rtl of FadcBufferChannel is
    signal trigDout      : slv(31 downto 0);
    signal addrFifoFull  : sl;
    signal addrValid     : sl;
-   signal addrDout      : slv(ADDR_LEN_C-1 downto 0);
+   signal addrDout      : slv(ADDR_LEN_C+1 downto 0);
    
    signal memRdAddr     : slv(ADDR_LEN_C-1 downto 0);
    signal memWrAddr     : slv(ADDR_LEN_C-1 downto 0);
    signal memWrEn       : sl;
-   
-   
-   -- only for simulation --- REMOVE -------
-   signal intTrigS        : sl;
-   signal intTrigFastS    : sl;
-   signal postTrigS       : sl;
-   signal extTrigS        : sl;
-   signal sampleOffsetS   : slv(1 downto 0);
-   signal preNumberS      : slv(1 downto 0);
-   signal postNumberS     : slv(1 downto 0);
-   -- only for simulation --- REMOVE -------
    
 begin
    
@@ -290,10 +274,8 @@ begin
       variable postTrig       : sl;
       variable extTrig        : sl;
       variable sampleOffset   : slv(1 downto 0);
-      variable preNumber      : slv(1 downto 0);
-      variable postNumber     : slv(1 downto 0);
-      variable trigLength     : slv(TRIG_ADDR_G+2 downto 0);
-      variable preDelayOffset : slv(DELAY_LEN_C downto 0);
+      variable postSamples     : slv(1 downto 0);
+      variable trigSamples    : slv(2 downto 0);
       variable regCon         : AxiLiteEndPointType;
    begin
       -- Latch the current value
@@ -302,7 +284,6 @@ begin
       
       -- keep reset for several clock cycles
       vtrig.reset := trig.reset(14 downto 0) & '0';
-      
       ------------------------------------------------
       -- cross domian sync
       ------------------------------------------------
@@ -365,41 +346,33 @@ begin
       
       ------------------------------------------------
       -- Combinational trigger variables
-      ------------------------------------------------
+      ------------------------------------------------      
       
-      -- external trigger rising edge and size set to greater than 0
-      if trig.extTrigger(0) = '1' and trig.extTrigger(1) = '0' and trig.extTrigSize > 0 then
-         extTrig := '1';
-      else
-         extTrig := '0';
-      end if;
-      
-      
-      -- ignore pre threshold set to 0
-      intTrig := '0';
+      extTrig        := '0';
+      intTrig        := '0';
       intTrigFast    := '0';
-      sampleOffset := "00";
-      preNumber := "00";
+      postTrig       := '0';
+      sampleOffset   := "00";
+      postSamples    := "00";
+      trigSamples    := "000";
+      
+      -- ignore zero threshold
       if preThrZero = '0' then
-         
+      
          -- internal trigger pre threshold crossed
          -- take into account veto threshold
          if preThr(0) = '1' and vetoThr(0) = '0' then
             intTrig := '1';
             sampleOffset := "00";
-            preNumber := "11";
          elsif preThr(1) = '1' and vetoThr(1) = '0' then
             intTrig := '1';
             sampleOffset := "01";
-            preNumber := "10";
          elsif preThr(2) = '1' and vetoThr(2) = '0' then
             intTrig := '1';
             sampleOffset := "10";
-            preNumber := "01";
          elsif preThr(3) = '1' and vetoThr(3) = '0' then
             intTrig := '1';
             sampleOffset := "11";
-            preNumber := "00";
          end if;
          
          -- clear the internal pre threshold if there was post and veto in the same clock cycle
@@ -417,84 +390,91 @@ begin
             intTrig := '0';
          end if;
          
-         -- there can be post threshold crossing in the same clock cycle
-         -- also take into account veto threshold
-         intTrigFast    := '0';
+      end if;   
+         
+      -- post trigger only if no veto in preceeding samples
+      if postThr(0) = '1' and vetoThr(0 downto 0) = 0 then
+         postTrig    := '1';
+         postSamples := "11";
+         trigSamples := "001";
+      elsif postThr(1) = '1' and vetoThr(1 downto 0) = 0 then
+         postTrig    := '1';
+         postSamples := "10";
+         trigSamples := "010";
+      elsif postThr(2) = '1' and vetoThr(2 downto 0) = 0 then
+         postTrig    := '1';
+         postSamples := "01";
+         trigSamples := "011";
+      elsif postThr(3) = '1' and vetoThr(3 downto 0) = 0 then
+         postTrig    := '1';
+         postSamples := "00";
+         trigSamples := "100";
+      end if;
+      
+      -- there can be post threshold crossing in the same clock cycle
+      -- also take into account veto threshold
+      -- intTrigFast has higher priority than intTrig
+      if preThrZero = '0' then
+         
          if preThr(0) = '1' and postThr(1) = '1' and vetoThr(1 downto 0) = 0 then
             intTrigFast    := '1';
             sampleOffset   := "00";
-            preNumber      := "01";
+            postSamples    := "10";
          elsif preThr(0) = '1' and postThr(2) = '1' and vetoThr(2 downto 0) = 0 then
             intTrigFast    := '1';
             sampleOffset   := "00";
-            preNumber      := "10";
+            postSamples    := "01";
          elsif preThr(0) = '1' and postThr(3) = '1' and vetoThr(3 downto 0) = 0 then
             intTrigFast    := '1';
             sampleOffset   := "00";
-            preNumber      := "11";
+            postSamples    := "00";
          elsif preThr(1) = '1' and postThr(2) = '1' and vetoThr(2 downto 1) = 0 then
             intTrigFast    := '1';
             sampleOffset   := "01";
-            preNumber      := "01";
+            postSamples    := "01";
          elsif preThr(1) = '1' and postThr(3) = '1' and vetoThr(3 downto 1) = 0 then
             intTrigFast    := '1';
             sampleOffset   := "01";
-            preNumber      := "10";
+            postSamples    := "00";
          elsif preThr(2) = '1' and postThr(3) = '1' and vetoThr(3 downto 2) = 0 then
             intTrigFast    := '1';
             sampleOffset   := "10";
-            preNumber      := "01";
+            postSamples    := "00";
          end if;
          
       end if;
       
-      -- post trigger only if no veto in preceeding samples
-      if postThr(0) = '1' and vetoThr(0 downto 0) = 0 then
-         postTrig    := '1';
-         postNumber  := "11";
-      elsif postThr(1) = '1' and vetoThr(1 downto 0) = 0 then
-         postTrig    := '1';
-         postNumber  := "10";
-      elsif postThr(2) = '1' and vetoThr(2 downto 0) = 0 then
-         postTrig    := '1';
-         postNumber  := "01";
-      elsif postThr(3) = '1' and vetoThr(3 downto 0) = 0 then
-         postTrig    := '1';
-         postNumber  := "00";
-      else 
-         postTrig    := '0';
-         postNumber  := "00";
+      -- extTrig has the highest priority
+      -- sample offset for extTrig is always 0
+      if trig.extTrigger(0) = '1' and trig.extTrigger(1) = '0' and trig.extTrigSize > 0 then
+         extTrig := '1';
+         sampleOffset := "00";
+         postSamples  := "11";
       end if;
-      
-      -- only for simulation --- REMOVE -------
-      intTrigS        <= intTrig     ;
-      intTrigFastS    <= intTrigFast ;
-      postTrigS       <= postTrig    ;
-      extTrigS        <= extTrig     ;
-      sampleOffsetS   <= sampleOffset;
-      preNumberS      <= preNumber   ;
-      postNumberS     <= postNumber  ;
-      -- only for simulation --- REMOVE -------
       
       ----------------------------------------------------------------------
       -- Write address and buffer counter
       ----------------------------------------------------------------------
-      if trig.buffCnt < BUF_MAX_C then
+      if trig.buffCnt < MAX_BUF_C then
          if trig.buffSwitch = '1' then
             vtrig.buffAddr    := (others=>'0');
             vtrig.samplesBuff := (others=>'0');
+            -- switch to next buffer
             vtrig.buffSel     := trig.buffSel + 1;
-            vtrig.buffCnt     := trig.buffCnt + 1;
          else
-            vtrig.buffAddr    := trig.buffAddr + 1;
-            vtrig.samplesBuff := trig.samplesBuff + 4;
+            -- track current address (roll)
+            vtrig.buffAddr    := trig.buffAddr + 4;
+            -- count available samples (saturate)
+            if trig.samplesBuff(TRIG_ADDR_G+1 downto 2) /= 2*(TRIG_ADDR_G+2)-4 then
+               vtrig.samplesBuff := trig.samplesBuff + 4;
+            end if;
          end if;
          vtrig.memWrEn := '1';
       else
          vtrig.memWrEn := '0';
       end if;
       
-      
+      -- count available buffers
       if trig.buffSwitch = '1' then
          vtrig.buffCnt := trig.buffCnt + 1;
       end if;
@@ -511,10 +491,8 @@ begin
       end if;
       
       -- track address of the buffer's beginning
-      -- there is 4 samples per address
-      -- divide the pre delay by 4
-      preDelayOffset := resize(trig.actPreDelay+3, DELAY_LEN_C+1);
-      vtrig.preAddress := vtrig.buffAddr - resize(preDelayOffset(DELAY_LEN_C downto 2), TRIG_ADDR_G);
+      -- include sample offset (2 bit address extension)
+      vtrig.preAddress := (trig.buffAddr(TRIG_ADDR_G+1 downto 2) & sampleOffset) - resize(vtrig.actPreDelay, TRIG_ADDR_G+2);
       
       ----------------------------------------------------------------------
       -- Trigger state machine
@@ -552,56 +530,55 @@ begin
             if (trig.reset = 0 and trig.enable = '1') then
                
                -- track the time and sample address for all trigger sources
-               if (extTrig = '0' and intTrig = '0' and intTrigFast = '0') then
-                  vtrig.gTime       := gTime;
-                  vtrig.addrFifoDin := vtrig.buffSel & vtrig.preAddress;
-               end if;
+               vtrig.gTime          := gTime;
+               vtrig.addrFifoDin    := vtrig.buffSel & vtrig.preAddress;
                -- both sources share the preDelay setting
-               vtrig.trigOffset := resize(trig.actPreDelay, 32);
+               vtrig.trigOffset     := resize(vtrig.actPreDelay, 32);
+               vtrig.sampleOffset   := sampleOffset;
                
                -- external trigger rising edge and size set to greater than 0
                if extTrig = '1' then
                   vtrig.trigType(EXT_IND_C)  := '1';
-                  vtrig.trigLength           := resize(trig.actPreDelay, TRIG_ADDR_G+2);
-                  vtrig.sampleOffset         := "00";
-                  -- write memory address to the FIFO
-                  vtrig.addrFifoWr  := '1';
-                  vtrig.trigPending := '1';
-                  vtrig.trigState := TRIG_ARM_S;
+                  vtrig.gTime                := trig.gTime;
+                  vtrig.trigLength           := resize(vtrig.actPreDelay, TRIG_ADDR_G+2) + postSamples;
+                  vtrig.addrFifoWr           := '1';
+                  vtrig.trigPending          := '1';
+                  vtrig.trigState            := TRIG_ARM_S;
                -- internal trigger pre threshold and post threshold crossed in the same cycle
                elsif intTrigFast = '1' then
                   vtrig.trigType(INT_IND_C)  := '1';
-                  vtrig.trigLength           := resize(trig.actPreDelay, TRIG_ADDR_G+2) + preNumber;
-                  vtrig.sampleOffset         := sampleOffset;
-                  -- write memory address to the FIFO
-                  vtrig.addrFifoWr  := '1';
+                  vtrig.gTime                := trig.gTime;
+                  vtrig.trigLength           := resize(vtrig.actPreDelay, TRIG_ADDR_G+2) + postSamples;
+                  vtrig.addrFifoWr           := '1';
+                  vtrig.trigPending          := '1';
                   -- wait for post data
-                  vtrig.trigState   := INT_POST_S;
+                  vtrig.trigState            := INT_POST_S;
                -- internal trigger pre threshold crossed
                elsif intTrig = '1' then
                   vtrig.trigType(INT_IND_C)  := '1';
-                  vtrig.trigLength           := resize(trig.actPreDelay, TRIG_ADDR_G+2) + preNumber;
-                  vtrig.sampleOffset         := sampleOffset;
-                  vtrig.trigPending := '1';
-                  vtrig.trigState := TRIG_ARM_S;
+                  vtrig.gTime                := trig.gTime;
+                  vtrig.trigLength           := resize(vtrig.actPreDelay, TRIG_ADDR_G+2);
+                  vtrig.trigPending          := '1';
+                  vtrig.trigState            := TRIG_ARM_S;
                end if;
                
                -- create empty trigger if not enough buffers
-               if trig.buffCnt >= BUF_MAX_C and (extTrig = '1' or intTrig = '1' or intTrigFast = '1') then
+               if trig.buffCnt >= MAX_BUF_C and (extTrig = '1' or intTrig = '1' or intTrigFast = '1') then
                   vtrig.trigType(EMPTY_IND_C) := '1';
-                  vtrig.trigOffset     := (others=>'0');
-                  vtrig.trigLength     := (others=>'0');
-                  vtrig.sampleOffset   := "00";
-                  vtrig.addrFifoWr     := '0';
-                  vtrig.trigState      := WR_TRIG_S;
+                  vtrig.trigOffset            := (others=>'0');
+                  vtrig.trigLength            := (others=>'0');
+                  vtrig.sampleOffset          := "00";
+                  vtrig.addrFifoWr            := '0';
+                  vtrig.trigPending           := '0';
+                  vtrig.trigState             := WR_TRIG_S;
                end if;
                
             end if;
          
          when TRIG_ARM_S =>
             
-            -- count samples written to the FIFO
-            -- look for missing ADC samples
+            -- count samples
+            -- look for invalid ADC samples
             if adcValid = '1' then
                vtrig.trigLength := trig.trigLength + 4;
             else
@@ -616,8 +593,9 @@ begin
                if postTrig = '1' then
                   -- write memory address to the FIFO
                   vtrig.addrFifoWr  := '1';
-                  -- update post samples count
-                  vtrig.postCnt := resize(postNumber, DELAY_LEN_C);
+                  -- update trigger length depending on the post offset
+                  vtrig.trigLength  := trig.trigLength + trigSamples;
+                  vtrig.postCnt     := resize(postSamples, DELAY_LEN_C+1);
                   -- wait for post data
                   vtrig.trigState   := INT_POST_S;
                -- veto threshold detected
@@ -635,7 +613,7 @@ begin
                   end if;
                -- no veto and no post threshold until maximum buffer is reached
                -- drop the trigger and count
-               elsif trigLength >= 2**trig.trigLength'length-4 then
+               elsif trig.trigLength >= 2**trig.trigLength'length-4 then
                   vtrig.trigLength  := (others=>'0');
                   vtrig.trigOffset  := (others=>'0');
                   vtrig.trigIntDrop := '1';
@@ -646,6 +624,7 @@ begin
             else
                -- wait for external trigger to be in the buffer
                if trig.trigLength >= trig.extTrigSize then
+                  vtrig.trigLength   := trig.extTrigSize-1;
                   vtrig.trigPending  := '0';
                   vtrig.buffSwitch   := '1';
                   vtrig.trigState    := WR_TRIG_S;
@@ -655,26 +634,37 @@ begin
          
          -- wait for internal trigger post data
          when INT_POST_S =>
-            -- count post samples written to the FIFO
+               
+            -- count post samples
+            -- look for invalid ADC samples
             if adcValid = '1' then
-               if trig.postCnt < trig.intPostDelay and trig.trigLength < 2**trig.trigLength'length-4 then
-                  vtrig.trigLength := trig.trigLength + 4;
-                  vtrig.postCnt := trig.postCnt + 4;
-               else
-                  vtrig.postCnt := (others=>'0');
-                  -- start writing header information FIFO
-                  vtrig.trigPending  := '0';
-                  vtrig.buffSwitch   := '1';
-                  vtrig.trigState    := WR_TRIG_S;
-               end if;
+               vtrig.postCnt := trig.postCnt + 4;
             else
                vtrig.trigType(BAD_IND_C) := '1';
+            end if;
+            
+            if trig.postCnt >= trig.intPostDelay then
+               -- start writing header information FIFO
+               if (trig.trigLength + trig.intPostDelay) <= 2**trig.trigLength'length-1 then
+                  vtrig.trigLength := trig.trigLength + trig.intPostDelay;
+               else
+                  vtrig.trigLength := toSlv(2**trig.trigLength'length-2, trig.trigLength'length);
+               end if;
+               
+               vtrig.trigPending  := '0';
+               vtrig.buffSwitch   := '1';
+               vtrig.trigState    := WR_TRIG_S;
             end if;
          
          -- write trigger information into FIFO
          -- lostTriggers will count if new triggers occur while
          -- waiting in this state
          when WR_TRIG_S =>
+            -- add one more sample if the length is odd
+            -- this will avoid zero padding in 32 bit stream
+            if trig.trigLength(0) = '1' then
+               vtrig.trigLength := trig.trigLength + 1;
+            end if;
             -- check if there is space for one more trigger
             if trig.trigAFull = '0' then
                vtrig.trigFifoCnt  := trig.trigFifoCnt + 1;
@@ -685,7 +675,7 @@ begin
                   vtrig.trigFifoDin(24 downto 23)            := trig.sampleOffset;
                   vtrig.trigFifoDin(22)                      := trig.lostTrigFlag;
                   vtrig.trigFifoDin(21 downto TRIG_ADDR_G+2) := (others=>'0');
-                  vtrig.trigFifoDin(TRIG_ADDR_G+1 downto 0)  := trig.trigLength;
+                  vtrig.trigFifoDin(TRIG_ADDR_G+1 downto 0)  := vtrig.trigLength;
                elsif trig.trigFifoCnt = 1 then
                   vtrig.trigFifoDin := trig.trigOffset;
                elsif trig.trigFifoCnt = 2 then
@@ -707,8 +697,6 @@ begin
       -- Lost data counters
       ------------------------------------------------
       
-      -- monitor AXI FIFOs 
-      -- must be ready for the ADC data
       -- count lost ADC samples
       if trig.rstCounters = '1' then
          vtrig.lostSamples := (others=>'0');
@@ -718,11 +706,11 @@ begin
       -- count lost triggers
       if trig.rstCounters = '1' then
          vtrig.lostTriggers := (others=>'0');
-      elsif trig.trigState = WR_TRIG_S and (extTrig = '1' or intTrig = '1') then
+      elsif trig.trigState = WR_TRIG_S and (extTrig = '1' or intTrig = '1' or intTrigFast = '1') then
          vtrig.lostTriggers := trig.lostTriggers + 1;
       end if;
       -- lost triggers flag (auto cleared)
-      if trig.trigState = WR_TRIG_S and (extTrig = '1' or intTrig = '1') then
+      if trig.trigState = WR_TRIG_S and (extTrig = '1' or intTrig = '1' or intTrigFast = '1') then
          vtrig.lostTrigFlag := '1';
       elsif trig.trigState /= WR_TRIG_S then
          vtrig.lostTrigFlag := '0';
@@ -758,7 +746,6 @@ begin
             if trig.reset = 0 then
                if trigValid = '1' then
                   vtrig.trigSizeRd     := trigDout(TRIG_ADDR_G+1 downto 0);      -- store trigSize
-                  vtrig.sampleOffsetRd := trigDout(24 downto 23);                -- store sampleOffset
                   vtrig.dataState      := HDR_S;
                end if;
                vtrig.hdrCnt := 0;
@@ -803,8 +790,9 @@ begin
                   vtrig.txMaster.tData(15 downto 0) := trig.trigDout;                           -- gTime
                   vtrig.hdrCnt      := 0;
                   -- Set the memory address
-                  vtrig.buffAddrRd := addrDout(TRIG_ADDR_G-1 downto 0);
-                  vtrig.buffSelRd  := addrDout(ADDR_LEN_C-1 downto TRIG_ADDR_G);
+                  vtrig.buffSelRd      := addrDout(ADDR_LEN_C+1 downto TRIG_ADDR_G+2);
+                  vtrig.buffAddrRd     := addrDout(TRIG_ADDR_G+1 downto 2);
+                  vtrig.sampleOffsetRd := addrDout(1 downto 0);
                   -- check if the trigger has data
                   if trig.trigSizeRd > 0 and addrValid = '1' then
                      -- Move data
@@ -820,7 +808,7 @@ begin
          when DATA_S =>
             
             -- Check if ready to move data
-            if vtrig.txMaster.tValid = '0' and adcValid = '1' then
+            if vtrig.txMaster.tValid = '0' then
                
                vtrig.sampleOffsetRd := trig.sampleOffsetRd + 1;
                -- stream valid flag and data
@@ -871,7 +859,7 @@ begin
       axilReadSlave  <= reg.axilReadSlave;
       
       memRdAddr      <= vtrig.buffSelRd & vtrig.buffAddrRd;
-      memWrAddr      <= vtrig.buffSel & vtrig.buffAddr;
+      memWrAddr      <= vtrig.buffSel & vtrig.buffAddr(TRIG_ADDR_G+1 downto 2);
       memWrEn        <= vtrig.memWrEn;
       
    end process comb;
@@ -946,7 +934,7 @@ begin
    
    U_AdrFifo : entity work.Fifo 
    generic map (
-      DATA_WIDTH_G      => ADDR_LEN_C,
+      DATA_WIDTH_G      => ADDR_LEN_C+2,
       ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
       FWFT_EN_G         => true,
       GEN_SYNC_FIFO_G   => true

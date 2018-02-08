@@ -149,7 +149,7 @@ architecture testbed of FadcBuffersTb is
    
    constant PGP_VC_C      : slv(3 downto 0) := "0001";
    -- expected clock cycles latency in between the trigger and its capture
-   constant TRIG_LATENCY_C : integer := 1;
+   constant TRIG_LATENCY_C : integer := 0;
    constant MAX_OFFSET_ERR_C  : integer := 1;
    
    signal adcData0      : slv(15 downto 0);
@@ -490,12 +490,13 @@ begin
       -- initial setup
       if FORCE_EXT_TRIG_C = true then
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", x"01", false);  -- enable trigger
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"0000010C", toSlv(5, 7), false);  -- pre delay
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000200", x"100", false); -- size
       else
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000100", toSlv(PRE_THRESHOLD_C, 16), false);  -- 
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000104", toSlv(POST_THRESHOLD_C, 16), false);  -- 
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000108", toSlv(VETO_THRESHOLD_C, 16), false);  -- 
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"0000010C", toSlv(1, 7), false);  -- pre delay
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"0000010C", toSlv(10, 7), false);  -- pre delay
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000110", toSlv(10, 7), false);  -- post delay
          
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", x"01", false);  -- enable trigger

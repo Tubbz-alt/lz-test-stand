@@ -208,6 +208,7 @@ lztsBoard:
       SubClass:       0x1 # Subclass 1 deterministic latency using the SYSREF signal
       ReplaceEnable:  0x1
       SysrefDelay:    0x7
+      InvertAdcData:  0xFFFF
     FadcBufferChannel[:]:
       enable: 'True'
       Enable: 'True'

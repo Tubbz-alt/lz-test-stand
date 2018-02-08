@@ -496,7 +496,7 @@ begin
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000100", toSlv(PRE_THRESHOLD_C, 16), false);  -- 
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000104", toSlv(POST_THRESHOLD_C, 16), false);  -- 
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000108", toSlv(VETO_THRESHOLD_C, 16), false);  -- 
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"0000010C", toSlv(11, 7), false);  -- pre delay
+         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"0000010C", toSlv(100, 7), false);  -- pre delay
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000110", toSlv(10, 7), false);  -- post delay
          
          axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", x"01", false);  -- enable trigger

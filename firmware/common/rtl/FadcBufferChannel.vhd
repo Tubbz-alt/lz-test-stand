@@ -469,7 +469,7 @@ begin
             -- track current address (roll)
             vtrig.buffAddr    := trig.buffAddr + 4;
             -- count available samples (saturate)
-            if trig.samplesBuff(TRIG_ADDR_G+1 downto 2) /= 2*(TRIG_ADDR_G+2)-4 then
+            if trig.samplesBuff(TRIG_ADDR_G+1 downto 2) /= 2**(TRIG_ADDR_G+2)-4 then
                vtrig.samplesBuff := trig.samplesBuff + 4;
             end if;
          end if;

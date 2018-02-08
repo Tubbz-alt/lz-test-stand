@@ -211,4 +211,4 @@ lztsBoard:
     FadcBufferChannel[:]:
       enable: 'True'
       Enable: 'True'
-      ExtTrigSize: '0x1000'
+      ExtTrigSize: '0x3FF'

@@ -170,7 +170,7 @@ class Lzts(pr.Device):
             for i in range(8):
                 self.FadcBufferChannel[i].enable.set(True)
                 self._root.checkBlocks(recurse=True)
-                self.FadcBufferChannel[i].ExtTrigSize.set(0x1000)
+                self.FadcBufferChannel[i].ExtTrigSize.set(0x3FF)
                 self._root.checkBlocks(recurse=True)
                 self.FadcBufferChannel[i].Enable.set(True)
                 self._root.checkBlocks(recurse=True)

@@ -947,35 +947,35 @@ lztsBoard:
     FadcBufferChannel[0]:
       enable: 'True'
       Enable: 'False'
-      ExtTrigSize: '0x1000'
+      ExtTrigSize: '0x3FF'
     FadcBufferChannel[1]:
       enable: 'True'
       Enable: 'False'
-      ExtTrigSize: '0x1000'
+      ExtTrigSize: '0x3FF'
     FadcBufferChannel[2]:
       enable: 'True'
       Enable: 'False'
-      ExtTrigSize: '0x1000'
+      ExtTrigSize: '0x3FF'
     FadcBufferChannel[3]:
       enable: 'True'
       Enable: 'False'
-      ExtTrigSize: '0x1000'
+      ExtTrigSize: '0x3FF'
     FadcBufferChannel[4]:
       enable: 'True'
       Enable: 'False'
-      ExtTrigSize: '0x1000'
+      ExtTrigSize: '0x3FF'
     FadcBufferChannel[5]:
       enable: 'True'
       Enable: 'False'
-      ExtTrigSize: '0x1000'
+      ExtTrigSize: '0x3FF'
     FadcBufferChannel[6]:
       enable: 'True'
       Enable: 'False'
-      ExtTrigSize: '0x1000'
+      ExtTrigSize: '0x3FF'
     FadcBufferChannel[7]:
       enable: 'True'
       Enable: 'False'
-      ExtTrigSize: '0x1000'
+      ExtTrigSize: '0x3FF'
   runControl:
     enable: 'True'
     runState: Stopped

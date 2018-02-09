@@ -129,6 +129,16 @@ architecture testbed of FadcBuffersTb is
       1  => POST_THRESHOLD_C-1
    );
    
+   constant RETRIGGER_PEAKS_C   : IntegerArray(6 downto 0) := (
+      0  => PRE_THRESHOLD_C+5,
+      1  => POST_THRESHOLD_C-1,
+      2  => conv_integer(ADC_DATA_BOT_C)-1,
+      3  => conv_integer(ADC_DATA_BOT_C)-5,
+      4  => conv_integer(ADC_DATA_BOT_C)-3,
+      5  => PRE_THRESHOLD_C+4,
+      6  => POST_THRESHOLD_C-2
+   );
+   
    type TestType is (
       IDLE_S,
       EXT_TRIG_S,
@@ -142,6 +152,7 @@ architecture testbed of FadcBuffersTb is
       SHORT_HIGH_PEAK_S,
       NON_VETO_SHORT_HIGH_PEAK_S,
       VETO_SHORT_HIGH_PEAK_S,
+      RETRIGGER_PEAKS_S,
       END_SIM_S
    );
    
@@ -180,6 +191,17 @@ architecture testbed of FadcBuffersTb is
    signal axilWriteSlave    : AxiLiteWriteSlaveType;
    
    signal triggersGood  : slv(31 downto 0);
+   
+   signal enable         : slv(0 downto 0);
+   signal intSaveVeto    : slv(0 downto 0);
+   signal intPreThresh   : slv(15 downto 0);
+   signal intPostThresh  : slv(15 downto 0);
+   signal intVetoThresh  : slv(15 downto 0);
+   signal intPreDelay    : slv(6 downto 0);
+   signal intPostDelay   : slv(6 downto 0);
+   signal extTrigSize    : slv(9 downto 0);
+   
+   signal set_regs : sl;
    
    constant QUEUE_SIZE_C   : integer := 1024*1024;
    constant QUEUE_BITS_C   : integer := log2(QUEUE_SIZE_C);
@@ -249,6 +271,7 @@ begin
    constant MAX_SAMPLES_C : natural := 1000;
    begin
       if rising_edge(ghzClk) then
+         set_regs <= '0';
          if ghzRst = '1' then
             adcData0        <= ADC_DATA_BOT_C;
             adcData1        <= ADC_DATA_BOT_C;
@@ -259,19 +282,37 @@ begin
             smplCnt         := (others=>'0');
             adcDirection    := '0';
             adcDataG        <= (others=>'0');
+            extTrigSize     <= toSlv(0, 10);
+            enable          <= "0";
+            intSaveVeto     <= "0";
+            intPreThresh    <= toSlv(0, 16);
+            intPostThresh   <= toSlv(0, 16);
+            intVetoThresh   <= toSlv(0, 16);
+            intPreDelay     <= toSlv(0, 7);
+            intPostDelay    <= toSlv(0, 7);
          else
          
             case testState is
                
                when IDLE_S =>
+                  initDelay := 5000;
+                  testState <= RAND_TIME_S;
+                  -- initial settings
+                  enable         <= "1";
                   if FORCE_EXT_TRIG_C = true then
-                     testState <= EXT_TRIG_S;
+                     extTrigSize    <= toSlv(256, 10);
                   else
-                     initDelay := 5000;
-                     testState <= RAND_TIME_S;
+                     extTrigSize    <= toSlv(0, 10);
+                     intSaveVeto    <= "0";
+                     intPreThresh   <= toSlv(PRE_THRESHOLD_C, 16);
+                     intPostThresh  <= toSlv(POST_THRESHOLD_C, 16);
+                     intVetoThresh  <= toSlv(VETO_THRESHOLD_C, 16);
+                     intPreDelay    <= toSlv(10, 7);
+                     intPostDelay   <= toSlv(10, 7);
                   end if;
                
                when RAND_TIME_S =>
+                  set_regs <= '1';
                   -- randomize time
                   if initDelay > 0 then
                      initDelay := initDelay - 1;
@@ -279,7 +320,11 @@ begin
                      uniform (seed1,seed2,randSamplesRel);
                      randSamples := integer(randSamplesRel * real(MAX_SAMPLES_C -1));
                      smplCnt := (others=>'0');
-                     testState <= PSEUDO_NOISE_BASE_S;
+                     if FORCE_EXT_TRIG_C = true then
+                        testState <= EXT_TRIG_S;
+                     else
+                        testState <= PSEUDO_NOISE_BASE_S;
+                     end if;
                   end if;
                   adcData0        <= ADC_DATA_BOT_C-1;
                
@@ -322,10 +367,18 @@ begin
                         testState <= NON_VETO_SHORT_HIGH_PEAK_S;
                         smplCnt := (others=>'0');
                      elsif j = 7 then
+                        j := j + 1;
+                        testState <= VETO_SHORT_HIGH_PEAK_S;
+                        smplCnt := (others=>'0');
+                     elsif j = 8 then
+                        j := j + 1;
+                        testState <= RETRIGGER_PEAKS_S;
+                        smplCnt := (others=>'0');
+                     elsif j = 9 then
+                        j := 1;
                         if TEST_LOOP_C = true then
                            -- repeat all waveforms in a loop
-                           j := 0;
-                           testState <= VETO_SHORT_HIGH_PEAK_S;
+                           testState <= LONG_LOW_PEAK_S;
                            smplCnt := (others=>'0');
                         else
                            -- end simulation after a delay
@@ -422,6 +475,18 @@ begin
                   if i >= VETO_SHORT_HIGH_PEAK_C'high then
                      i := 0;
                      testState <= RAND_TIME_S;
+                     -- change settings for next
+                     intPostDelay   <= toSlv(4, 7);
+                  else
+                     i := i + 1;
+                  end if;
+               
+               when RETRIGGER_PEAKS_S =>
+                  -- assign samples once and move to the next state
+                  adcData0 <= toSlv(RETRIGGER_PEAKS_C(i), 16);
+                  if i >= RETRIGGER_PEAKS_C'high then
+                     i := 0;
+                     testState <= RAND_TIME_S;
                   else
                      i := i + 1;
                   end if;
@@ -486,24 +551,15 @@ begin
    process
    begin
       
-      wait for 200 ns;
-      -- initial setup
-      if FORCE_EXT_TRIG_C = true then
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", x"01", false);  -- enable trigger
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"0000010C", toSlv(5, 7), false);  -- pre delay
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000200", x"100", false); -- size
-      else
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000100", toSlv(PRE_THRESHOLD_C, 16), false);  -- 
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000104", toSlv(POST_THRESHOLD_C, 16), false);  -- 
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000108", toSlv(VETO_THRESHOLD_C, 16), false);  -- 
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"0000010C", toSlv(100, 7), false);  -- pre delay
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000110", toSlv(10, 7), false);  -- post delay
-         
-         axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", x"01", false);  -- enable trigger
-      end if;
+      wait until rising_edge(set_regs);
       
-
-      wait;
+      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", enable, false);  -- enable trigger
+      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000200", extTrigSize, false); -- size
+      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000100", intPreThresh, false);  -- 
+      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000104", intPostThresh, false);  -- 
+      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000108", intVetoThresh, false);  -- 
+      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"0000010C", intPreDelay, false);  -- pre delay
+      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000110", intPostDelay, false);  -- post delay
       
    end process;
    

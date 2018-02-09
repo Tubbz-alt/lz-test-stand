@@ -144,6 +144,7 @@ architecture rtl of FadcBufferChannel is
       buffAddrRd     : slv(TRIG_ADDR_G-1 downto 0); 
       buffSelRd      : slv(BUFF_ADDR_G-1 downto 0); 
       hdrCnt         : integer range 0 to 11;
+      reTrigger      : sl;
    end record TrigType;
    
    constant TRIG_INIT_C : TrigType := (
@@ -199,7 +200,8 @@ architecture rtl of FadcBufferChannel is
       sampleOffsetRd => (others=>'0'),
       buffAddrRd     => (others=>'0'),
       buffSelRd      => (others=>'0'),
-      hdrCnt         => 0
+      hdrCnt         => 0,
+      reTrigger      => '0'
    );
    
    
@@ -530,6 +532,7 @@ begin
             vtrig.trigType := (others=>'0');
             vtrig.postCnt  := (others=>'0');
             vtrig.trigPending := '0';
+            vtrig.reTrigger := '0';
             -- trigger disable
             if (trig.reset = 0 and trig.enable = '1') then
                
@@ -556,6 +559,7 @@ begin
                   vtrig.addrFifoWr           := '1';
                   vtrig.trigPending          := '1';
                   -- wait for post data
+                  vtrig.postCnt              := resize(postSamples, DELAY_LEN_C+1);
                   vtrig.trigState            := INT_POST_S;
                -- internal trigger pre threshold crossed
                elsif intTrig = '1' then
@@ -596,7 +600,9 @@ begin
                -- post threshold detected
                if postTrig = '1' then
                   -- write memory address to the FIFO
-                  vtrig.addrFifoWr  := '1';
+                  if trig.reTrigger = '0' then
+                     vtrig.addrFifoWr  := '1';
+                  end if;
                   -- update trigger length depending on the post offset
                   vtrig.trigLength  := trig.trigLength + trigSamples;
                   vtrig.postCnt     := resize(postSamples, DELAY_LEN_C+1);
@@ -604,25 +610,35 @@ begin
                   vtrig.trigState   := INT_POST_S;
                -- veto threshold detected
                elsif vetoThr /= 0 then
-                  vtrig.trigType(VETO_IND_C) := '1';
-                  vtrig.trigLength     := (others=>'0');
-                  vtrig.trigOffset     := (others=>'0');
-                  vtrig.sampleOffset   := "00";
-                  if trig.intSaveVeto = '1' then
-                     vtrig.trigPending := '0';
-                     vtrig.trigState   := WR_TRIG_S;
+                  if trig.reTrigger = '0' then
+                     vtrig.trigType(VETO_IND_C) := '1';
+                     vtrig.trigLength     := (others=>'0');
+                     vtrig.trigOffset     := (others=>'0');
+                     vtrig.sampleOffset   := "00";
+                     if trig.intSaveVeto = '1' then
+                        vtrig.trigPending := '0';
+                        vtrig.trigState   := WR_TRIG_S;
+                     else
+                        vtrig.trigPending := '0';
+                        vtrig.trigState := IDLE_S;
+                     end if;
                   else
                      vtrig.trigPending := '0';
-                     vtrig.trigState := IDLE_S;
+                     vtrig.trigState   := WR_TRIG_S;
                   end if;
                -- no veto and no post threshold until maximum buffer is reached
                -- drop the trigger and count
                elsif trig.trigLength >= 2**trig.trigLength'length-4 then
-                  vtrig.trigLength  := (others=>'0');
-                  vtrig.trigOffset  := (others=>'0');
-                  vtrig.trigIntDrop := '1';
-                  vtrig.trigPending := '0';
-                  vtrig.trigState   := IDLE_S;
+                  if trig.reTrigger = '0' then
+                     vtrig.trigLength  := (others=>'0');
+                     vtrig.trigOffset  := (others=>'0');
+                     vtrig.trigIntDrop := '1';
+                     vtrig.trigPending := '0';
+                     vtrig.trigState   := IDLE_S;
+                  else
+                     vtrig.trigPending := '0';
+                     vtrig.trigState := IDLE_S;
+                  end if;
                end if;
             
             else
@@ -655,9 +671,20 @@ begin
                   vtrig.trigLength := toSlv(2**trig.trigLength'length-2, trig.trigLength'length);
                end if;
                
-               vtrig.trigPending  := '0';
-               vtrig.buffSwitch   := '1';
-               vtrig.trigState    := WR_TRIG_S;
+               vtrig.trigPending := '0';
+               vtrig.buffSwitch  := '1';
+               vtrig.trigState   := WR_TRIG_S;
+            end if;
+            
+            -- look for re trigger condition in post
+            if intTrigFast = '1' then
+               vtrig.trigLength := trig.trigLength + vtrig.postCnt;
+               vtrig.postCnt     := resize(postSamples, DELAY_LEN_C+1);
+            -- internal trigger pre threshold crossed
+            elsif intTrig = '1' then
+               vtrig.trigLength := trig.trigLength + vtrig.postCnt;
+               vtrig.reTrigger   := '1';
+               vtrig.trigState   := TRIG_ARM_S;
             end if;
          
          -- write trigger information into FIFO

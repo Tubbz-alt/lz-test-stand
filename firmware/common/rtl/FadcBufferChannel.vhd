@@ -264,6 +264,9 @@ architecture rtl of FadcBufferChannel is
    signal memWrAddr     : slv(ADDR_LEN_C-1 downto 0);
    signal memWrEn       : sl;
    
+   attribute keep : string;
+   attribute keep of trig : signal is "true";
+   
 begin
    
    -- register logic (axilClk domain)
@@ -471,7 +474,7 @@ begin
             -- track current address (roll)
             vtrig.buffAddr    := trig.buffAddr + 4;
             -- count available samples (saturate)
-            if trig.samplesBuff(TRIG_ADDR_G+1 downto 2) /= 2**(TRIG_ADDR_G+2)-4 then
+            if trig.samplesBuff(TRIG_ADDR_G+1 downto 0) /= toSlv(2**(TRIG_ADDR_G+2)-4, TRIG_ADDR_G+2) then
                vtrig.samplesBuff := trig.samplesBuff + 4;
             end if;
          end if;
@@ -485,7 +488,7 @@ begin
          vtrig.buffCnt := trig.buffCnt + 1;
       end if;
       if trig.buffRdDone = '1' then
-         vtrig.buffCnt := trig.buffCnt - 1;
+         vtrig.buffCnt := vtrig.buffCnt - 1;
       end if;
       
       

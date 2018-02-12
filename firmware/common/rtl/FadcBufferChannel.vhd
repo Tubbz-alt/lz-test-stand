@@ -646,7 +646,7 @@ begin
             
             else
                -- wait for external trigger to be in the buffer
-               if trig.trigLength >= trig.extTrigSize then
+               if trig.trigLength >= trig.extTrigSize or trig.trigLength >= 2**trig.trigLength'length-4 then
                   vtrig.trigLength   := trig.extTrigSize-1;
                   vtrig.trigPending  := '0';
                   vtrig.buffSwitch   := '1';

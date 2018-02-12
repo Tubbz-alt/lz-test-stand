@@ -126,7 +126,7 @@ class Lzts(pr.Device):
                 self.SlowAdcReadout[i].DMode.set(3)
                 self._root.checkBlocks(recurse=True)
                 #self.SlowAdcReadout[i].Invert.set(1)
-                self.SlowAdcReadout[i].Invert.set(0)
+                self.SlowAdcReadout[i].Invert.set(3)
                 self._root.checkBlocks(recurse=True)
                 self.SlowAdcReadout[i].Convert.set(3)
                 self._root.checkBlocks(recurse=True)

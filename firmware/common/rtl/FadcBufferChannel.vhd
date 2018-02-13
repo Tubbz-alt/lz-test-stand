@@ -113,7 +113,6 @@ architecture rtl of FadcBufferChannel is
       dataState      : DataStateType;
       trigState      : TrigStateType;
       buffSwitch     : sl;
-      buffRdDone     : sl;
       memWrEn        : sl;
       trigLength     : slv(TRIG_ADDR_G+1 downto 0);
       trigType       : slv(4 downto 0);
@@ -170,7 +169,6 @@ architecture rtl of FadcBufferChannel is
       dataState      => IDLE_S,
       trigState      => IDLE_S,
       buffSwitch     => '0',
-      buffRdDone     => '0',
       memWrEn        => '0',
       trigLength     => (others=>'0'),
       trigType       => (others=>'0'),
@@ -484,11 +482,12 @@ begin
       end if;
       
       -- count available buffers
-      if trig.buffSwitch = '1' then
+      if trig.buffSwitch = '1' and trig.addrRd = '1' then
+         vtrig.buffCnt := trig.buffCnt;
+      elsif trig.buffSwitch = '1' and trig.buffCnt < MAX_BUF_C then
          vtrig.buffCnt := trig.buffCnt + 1;
-      end if;
-      if trig.buffRdDone = '1' then
-         vtrig.buffCnt := vtrig.buffCnt - 1;
+      elsif trig.addrRd = '1' and trig.buffCnt > 0 then
+         vtrig.buffCnt := trig.buffCnt - 1;
       end if;
       
       
@@ -510,9 +509,9 @@ begin
       -- count trigger in the FIFOs (trigger FIFO and header FIFO combined)
       if trig.trigWrLast = '1' and trig.trigRdLast = '1' then
          vtrig.trigCnt := trig.trigCnt;
-      elsif trig.trigWrLast = '1' then
+      elsif trig.trigWrLast = '1' and trig.trigCnt < MAX_TRIG_C then
          vtrig.trigCnt := trig.trigCnt + 1;
-      elsif trig.trigRdLast = '1' then
+      elsif trig.trigRdLast = '1' and trig.trigCnt > 0 then
          vtrig.trigCnt := trig.trigCnt - 1;
       end if;
       if trig.trigCnt >= MAX_TRIG_C then
@@ -627,6 +626,7 @@ begin
                      end if;
                   else
                      vtrig.trigPending := '0';
+                     vtrig.buffSwitch  := '1';
                      vtrig.trigState   := WR_TRIG_S;
                   end if;
                -- no veto and no post threshold until maximum buffer is reached
@@ -640,7 +640,8 @@ begin
                      vtrig.trigState   := IDLE_S;
                   else
                      vtrig.trigPending := '0';
-                     vtrig.trigState := IDLE_S;
+                     vtrig.buffSwitch  := '1';
+                     vtrig.trigState   := WR_TRIG_S;
                   end if;
                end if;
             
@@ -734,13 +735,13 @@ begin
       -- count lost ADC samples
       if trig.rstCounters = '1' then
          vtrig.lostSamples := (others=>'0');
-      elsif trig.trigPending = '1' and adcValid = '0' then
+      elsif trig.trigPending = '1' and adcValid = '0' and trig.lostSamples /= x"ffffffff" then
          vtrig.lostSamples := trig.lostSamples + 1;
       end if;
       -- count lost triggers
       if trig.rstCounters = '1' then
          vtrig.lostTriggers := (others=>'0');
-      elsif trig.trigState = WR_TRIG_S and (extTrig = '1' or intTrig = '1' or intTrigFast = '1') then
+      elsif trig.trigState = WR_TRIG_S and (extTrig = '1' or intTrig = '1' or intTrigFast = '1') and trig.lostTriggers /= x"ffffffff" then
          vtrig.lostTriggers := trig.lostTriggers + 1;
       end if;
       -- lost triggers flag (auto cleared)
@@ -752,7 +753,7 @@ begin
       -- count dropped internal triggers
       if trig.rstCounters = '1' then
          vtrig.dropIntTrigs := (others=>'0');
-      elsif trig.trigIntDrop = '1' then
+      elsif trig.trigIntDrop = '1' and trig.dropIntTrigs /= x"ffffffff" then
          vtrig.dropIntTrigs := trig.dropIntTrigs + 1;
       end if;
       
@@ -772,7 +773,6 @@ begin
       vtrig.trigRd      := '0';
       vtrig.trigRdLast  := '0';
       vtrig.addrRd      := '0';
-      vtrig.buffRdDone  := '0';
       
       case trig.dataState is
          
@@ -786,7 +786,7 @@ begin
             end if;
          
          when HDR_S =>
-            if vtrig.txMaster.tValid = '0' and trigValid = '1' then
+            if vtrig.txMaster.tValid = '0' and (trigValid = '1' or trig.hdrCnt = 11) then
                vtrig.txMaster.tValid := '1';
                if trig.hdrCnt = 0 then
                   ssiSetUserSof(SLAVE_AXI_CONFIG_C, vtrig.txMaster, '1');
@@ -864,7 +864,6 @@ begin
                vtrig.trigSizeRd := trig.trigSizeRd - 1;
                if vtrig.trigSizeRd = 0 then
                   vtrig.txMaster.tLast := '1';
-                  vtrig.buffRdDone     := '1';
                   vtrig.addrRd         := '1';
                   vtrig.dataState      := IDLE_S;
                end if;

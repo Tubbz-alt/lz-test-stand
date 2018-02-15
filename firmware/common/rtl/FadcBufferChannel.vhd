@@ -602,6 +602,7 @@ begin
                -- post threshold detected
                if postTrig = '1' then
                   -- write memory address to the FIFO
+                  -- already written if reTrigger flag is set
                   if trig.reTrigger = '0' then
                      vtrig.addrFifoWr  := '1';
                   end if;
@@ -631,6 +632,7 @@ begin
                   end if;
                -- no veto and no post threshold until maximum buffer is reached
                -- drop the trigger and count
+               -- keet the trigger if reTrigger flag is set
                elsif trig.trigLength >= 2**trig.trigLength'length-4 then
                   if trig.reTrigger = '0' then
                      vtrig.trigLength  := (others=>'0');

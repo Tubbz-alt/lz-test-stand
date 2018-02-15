@@ -49,7 +49,7 @@ class FadcBufferChannel(pr.Device):
       self.add((pr.RemoteVariable(name='IntPreDelay',          description='IntPreDelay',          offset=0x0000010C, bitSize=7 , bitOffset=0,  base=pr.UInt, mode='RW')))
       self.add((pr.RemoteVariable(name='IntPostDelay',         description='IntPostDelay',         offset=0x00000110, bitSize=7 , bitOffset=0,  base=pr.UInt, mode='RW')))
       self.add((pr.RemoteVariable(name='IntSaveVeto',          description='IntSaveVeto',          offset=0x00000114, bitSize=1,  bitOffset=0,  base=pr.Bool, mode='RW')))
-      self.add((pr.RemoteVariable(name='ExtTrigSize',          description='ExtTrigSize',          offset=0x00000200, bitSize=10, bitOffset=0,  base=pr.UInt, mode='RW')))
+      self.add((pr.RemoteVariable(name='ExtTrigSize',          description='ExtTrigSize',          offset=0x00000200, bitSize=11, bitOffset=0,  base=pr.UInt, mode='RW')))
       
       #####################################
       # Create commands

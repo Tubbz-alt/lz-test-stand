@@ -125,8 +125,9 @@ class Lzts(pr.Device):
                 self._root.checkBlocks(recurse=True)
                 self.SlowAdcReadout[i].DMode.set(3)
                 self._root.checkBlocks(recurse=True)
-                #self.SlowAdcReadout[i].Invert.set(1)
-                self.SlowAdcReadout[i].Invert.set(3)
+                # Invert 0 is correct setting. Analog polarity is swapped on PCB.
+                # Do not invert here! The PMT pulse is negative.
+                self.SlowAdcReadout[i].Invert.set(0)
                 self._root.checkBlocks(recurse=True)
                 self.SlowAdcReadout[i].Convert.set(3)
                 self._root.checkBlocks(recurse=True)
@@ -138,6 +139,10 @@ class Lzts(pr.Device):
                     self.SlowAdcConfig[i].enable.set(True)
                     self._root.checkBlocks(recurse=True)
                     self.SlowAdcConfig[i].AdcReg_0x0015.set(1)  #Set DDR Mode
+                    self._root.checkBlocks(recurse=True)
+                    self.SlowAdcConfig[i].AdcReg_0x000B.set(0x1C)  #Set channel A digital gain -2dB (2.5Vpp input)
+                    self._root.checkBlocks(recurse=True)
+                    self.SlowAdcConfig[i].AdcReg_0x000C.set(0x1C)  #Set channel B digital gain -2dB (2.5Vpp input)
                     self._root.checkBlocks(recurse=True)
         
         @self.command(description="Reset slow ADCs",)

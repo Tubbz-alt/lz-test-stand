@@ -208,7 +208,9 @@ lztsBoard:
       SubClass:       0x1 # Subclass 1 deterministic latency using the SYSREF signal
       ReplaceEnable:  0x1
       SysrefDelay:    0x7
-      InvertAdcData:  0xFFFF
+      # InvertAdcData 0x0 is correct. Analog polarity is swapped on PCB.
+      # Do not invert here! The PMT pulse is negative.
+      InvertAdcData:  0x0
     FadcBufferChannel[:]:
       enable: 'True'
       Enable: 'True'

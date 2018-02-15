@@ -233,7 +233,8 @@ begin
    generic map (
       CHANNEL_G         => x"00",
       PGP_LANE_G        => "0010",
-      PGP_VC_G          => PGP_VC_C
+      PGP_VC_G          => PGP_VC_C,
+      TRIG_ADDR_G       => 9
    )
    port map (
       -- ADC Clock Domain
@@ -300,8 +301,8 @@ begin
                   -- initial settings
                   enable         <= "1";
                   if FORCE_EXT_TRIG_C = true then
-                     --extTrigSize    <= toSlv(1023, 10);
-                     extTrigSize    <= toSlv(102, 10);
+                     extTrigSize    <= toSlv(1023, 10);
+                     --extTrigSize    <= toSlv(102, 10);
                      intPreDelay    <= toSlv(127, 7);
                      intPostDelay   <= toSlv(0, 7);
                   else

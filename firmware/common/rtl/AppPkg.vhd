@@ -46,7 +46,7 @@ package AppPkg is
    constant ADDR_BITS_C : integer := 27;
    
    -- buffer size of the fast ADC single channel
-   -- 4 samples per address 2**8x4 = 1024 samples = 1us max buffer
+   -- 4 samples per address 2**9x4 = 2048 samples = 2us max buffer
    constant TRIG_ADDR_C  : integer := 9;
    -- 2**3 = 8 buffers per channel
    constant BUFF_ADDR_C  : integer := 3;

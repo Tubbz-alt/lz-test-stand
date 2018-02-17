@@ -237,10 +237,14 @@ begin
                end if;
                
                -- count all data
-               vstr.dataCnt         := str.dataCnt + 4;
+               if str.dataCnt < 2**str.dataCnt'length-1 then
+                  vstr.dataCnt      := str.dataCnt + 4;
+               end if;
                
                -- count header data (reset every rx.tLast)
-               vstr.hdrCnt          := str.hdrCnt + 1;
+               if str.hdrCnt < 2**str.hdrCnt'length-1 then
+                  vstr.hdrCnt       := str.hdrCnt + 1;
+               end if;
                
                -- store required header data
                if str.hdrCnt = 2 then

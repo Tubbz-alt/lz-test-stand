@@ -97,7 +97,8 @@ if ( args.type == 'pgp-gen3' ):
     
 elif ( args.type == 'datadev-pgp2b' ):
     
-    pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+0) # Registers for lzts board
+    #pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+0) # Registers for lzts board
+    pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(7*32)+args.l) # Registers for lzts board
     pgpVc1 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+1) # Data for lzts board
     
     #memBase = rogue.hardware.data.DataMap('/dev/datadev_0')

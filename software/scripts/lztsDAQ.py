@@ -55,15 +55,7 @@ parser.add_argument(
     required = False,
     default  = False,
     help     = "true to show viewer",
-)  
-
-parser.add_argument(
-    "--command_fix", 
-    type     = bool,
-    required = False,
-    default  = True,
-    help     = "disable temporary command fix",
-)  
+)
 
 parser.add_argument(
     "--l", 
@@ -94,7 +86,8 @@ if ( args.type == 'pgp-gen3' ):
     
 elif ( args.type == 'datadev-pgp2b' ):
     
-    pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+0) # Registers for lzts board
+    #pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+0) # Registers for lzts board
+    pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(7*32)+args.l) # Registers for lzts board
     pgpVc1 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+1) # Data for lzts board
     
     #memBase = rogue.hardware.data.DataMap('/dev/datadev_0')
@@ -191,28 +184,16 @@ class LztsBoard(pyrogue.Root):
 
         @self.command()
         def Trigger():
-            if ( args.type == 'datadev-pgp2b' and args.command_fix == True):
-                print('Register Trigger command')
-                self.Lzts.SadcBufferReader._rawWrite(0x100,1)
-            else:
-                cmd.sendCmd(1, 0)
-                cmd.sendCmd(0, 0)
+            cmd.sendCmd(1, 0)
+            cmd.sendCmd(0, 0)
         
         @self.command()
         def GlobalRst():
-            if ( args.type == 'datadev-pgp2b' and args.command_fix == True):
-                print('Register GlobalRst command')
-                self.Lzts.LztsSynchronizer._rawWrite(0x100,1)
-            else:
-                cmd.sendCmd(2, 0)
+            cmd.sendCmd(2, 0)
         
         @self.command()
         def GlobalSync():
-            if ( args.type == 'datadev-pgp2b' and args.command_fix == True):
-                print('Register GlobalSync command')
-                self.Lzts.LztsSynchronizer._rawWrite(0x104,1)
-            else:
-                cmd.sendCmd(3, 0)
+            cmd.sendCmd(3, 0)
         
         self.add(MyRunControl('runControl'))
         #self.add(pyrogue.RunControl(name='runControl', rates={1:'1 Hz', 10:'10 Hz',30:'30 Hz'}, cmd=cmd.sendCmd(0, 0)))

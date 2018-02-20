@@ -63,7 +63,7 @@ architecture rtl of FadcPacketizer is
    
    type StrType is record
       enable         : sl;
-      dataSize       : slv(31 downto 0);
+      dataSize       : slv(29 downto 0);
       timeout        : slv(31 downto 0);
       rxSlave        : AxiStreamSlaveType;
       txMaster       : AxiStreamMasterType;
@@ -71,7 +71,7 @@ architecture rtl of FadcPacketizer is
       gTimeMin       : slv(63 downto 0);
       gTimeMax       : slv(63 downto 0);
       hdrCnt         : slv(15 downto 0);
-      dataCnt        : slv(31 downto 0);
+      dataCnt        : slv(29 downto 0);
       timeCnt        : slv(31 downto 0);
       dnaValue       : slv(127 downto 0);
       lostTrigFlag   : sl;
@@ -144,7 +144,7 @@ begin
       -- cross domian sync
       ------------------------------------------------
       vstr.enable    := reg.enable;
-      vstr.dataSize  := reg.dataSize;
+      vstr.dataSize  := reg.dataSize(31 downto 2);
       vstr.timeout   := reg.timeout;
       vstr.dnaValue  := dnaValue;
       
@@ -210,7 +210,7 @@ begin
                   vstr.txMaster.tData  := axisRxMaster.tData;
                   
                   -- count all data
-                  vstr.dataCnt         := str.dataCnt + 4;
+                  vstr.dataCnt         := str.dataCnt + 1;
                   
                   -- count header data (reset every rx.tLast)
                   vstr.hdrCnt          := str.hdrCnt + 1;
@@ -238,7 +238,7 @@ begin
                
                -- count all data
                if str.dataCnt < 2**str.dataCnt'length-1 then
-                  vstr.dataCnt      := str.dataCnt + 4;
+                  vstr.dataCnt      := str.dataCnt + 1;
                end if;
                
                -- count header data (reset every rx.tLast)

@@ -27,6 +27,7 @@ use work.AxiStreamPkg.all;
 use work.AppPkg.all;
 use work.I2cPkg.all;
 use work.AxiI2cMasterPkg.all;
+use work.SsiPkg.all;
 
 library unisim;
 use unisim.vcomponents.all;
@@ -89,9 +90,9 @@ entity SystemCore is
       axiAdcWriteSlaves  : out   AxiWriteSlaveArray(7 downto 0);
       axiDoutReadMaster  : in    AxiReadMasterType;
       axiDoutReadSlave   : out   AxiReadSlaveType;
-      -- MB Streaming Interface (axilClk domain)
-      mbTxMaster         : out   AxiStreamMasterType;
-      mbTxSlave          : in    AxiStreamSlaveType;
+      -- PRBS Streaming Interface (axilClk domain)
+      prbsTxMaster       : out   AxiStreamMasterType;
+      prbsTxSlave        : in    AxiStreamSlaveType;
       -- AXI-Lite Register Interface (axilClk domain)
       mAxilReadMaster    : in    AxiLiteReadMasterType;
       mAxilReadSlave     : out   AxiLiteReadSlaveType;
@@ -108,7 +109,7 @@ end SystemCore;
 
 architecture top_level of SystemCore is
 
-   constant NUM_AXI_MASTERS_C : natural := 7;
+   constant NUM_AXI_MASTERS_C : natural := 8;
 
    constant VERSION_INDEX_C  : natural := 0;
    constant SYSMON_INDEX_C   : natural := 1;
@@ -117,6 +118,7 @@ architecture top_level of SystemCore is
    constant MMCM_INDEX_C     : natural := 4;
    constant SYNC_INDEX_C     : natural := 5;
    constant TEMP_SNS_INDEX_C : natural := 6;
+   constant PRBS_INDEX_C     : natural := 7;
 
    constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 24, 20);
 
@@ -266,9 +268,6 @@ begin
          mAxilWriteSlave  => mbWriteSlave,
          mAxilReadMaster  => mbReadMaster,
          mAxilReadSlave   => mbReadSlave,
-         -- Streaming
-         mAxisMaster      => mbTxMaster,
-         mAxisSlave       => mbTxSlave,
          -- IRQ
          interrupt        => mbIrq,
          -- Clock and Reset
@@ -550,6 +549,28 @@ begin
       axiWriteSlave  => axilWriteSlaves(TEMP_SNS_INDEX_C),
       axiClk         => axilClk,
       axiRst         => axilRst
+   );
+   
+   
+   ------------------------------------------------
+   -- PRBS Tx generator
+   ------------------------------------------------
+   U_SsiPrbsTx: entity work.SsiPrbsTx
+   generic map (
+      MASTER_AXI_STREAM_CONFIG_G => ssiAxiStreamConfig(4, TKEEP_COMP_C)
+   )
+   port map (
+      mAxisClk        => axilClk,
+      mAxisRst        => axilRst,
+      mAxisMaster     => prbsTxMaster,
+      mAxisSlave      => prbsTxSlave,
+      locClk          => axilClk,
+      locRst          => axilRst,
+      trig            => '0',
+      axilReadMaster  => axilReadMasters(PRBS_INDEX_C),
+      axilReadSlave   => axilReadSlaves(PRBS_INDEX_C),
+      axilWriteMaster => axilWriteMasters(PRBS_INDEX_C),
+      axilWriteSlave  => axilWriteSlaves(PRBS_INDEX_C)
    );
 
 end top_level;

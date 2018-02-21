@@ -40,9 +40,9 @@ entity PgpVcMapping is
       -- Data Interface
       dataTxMaster    : in  AxiStreamMasterType;
       dataTxSlave     : out AxiStreamSlaveType;
-      -- MB Interface
-      mbTxMaster      : in  AxiStreamMasterType;
-      mbTxSlave       : out AxiStreamSlaveType;
+      -- PRBS Interface
+      prbsTxMaster    : in  AxiStreamMasterType;
+      prbsTxSlave     : out AxiStreamSlaveType;
       -- AXI-Lite Interface
       axilWriteMaster : out AxiLiteWriteMasterType;
       axilWriteSlave  : in  AxiLiteWriteSlaveType;
@@ -212,7 +212,7 @@ begin
          locClk      => swClk,
          locRst      => swRst);
    
-   -- VC2 TX, MB
+   -- VC2 TX, PRBS
    rxCtrl(2) <= AXI_STREAM_CTRL_UNUSED_C;
    U_VC2 : entity work.AxiStreamFifo
       generic map (
@@ -236,8 +236,8 @@ begin
          -- Slave Port
          sAxisClk    => clk,
          sAxisRst    => rst,
-         sAxisMaster => mbTxMaster,
-         sAxisSlave  => mbTxSlave,
+         sAxisMaster => prbsTxMaster,
+         sAxisSlave  => prbsTxSlave,
          -- Master Port
          mAxisClk    => clk,
          mAxisRst    => rst,

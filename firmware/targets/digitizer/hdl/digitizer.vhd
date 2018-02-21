@@ -153,8 +153,8 @@ architecture top_level of digitizer is
    signal axilReadSlave   : AxiLiteReadSlaveType;
    signal axilReadMaster  : AxiLiteReadMasterType;
 
-   signal mbTxMaster    : AxiStreamMasterType;
-   signal mbTxSlave     : AxiStreamSlaveType;
+   signal prbsTxMaster  : AxiStreamMasterType;
+   signal prbsTxSlave   : AxiStreamSlaveType;
    signal axisMuxMaster : AxiStreamMasterType;
    signal axisMuxSlave  : AxiStreamSlaveType;
    signal dataTxMaster  : AxiStreamMasterType;
@@ -234,9 +234,9 @@ begin
          -- Data Streaming Interface
          dataTxMaster     => dataTxMaster,
          dataTxSlave      => dataTxSlave,
-         -- Microblaze Streaming Interface
-         mbTxMaster       => mbTxMaster,
-         mbTxSlave        => mbTxSlave,
+         -- PRBS Streaming Interface
+         prbsTxMaster     => prbsTxMaster,
+         prbsTxSlave      => prbsTxSlave,
          -- AXI-Lite Register Interface
          mAxilReadMaster  => axilReadMaster,
          mAxilReadSlave   => axilReadSlave,
@@ -323,9 +323,9 @@ begin
          axiAdcWriteSlaves  => axiAdcWriteSlaves,
          axiDoutReadMaster  => axiDoutReadMaster,
          axiDoutReadSlave   => axiDoutReadSlave,
-         -- MB Streaming Interface
-         mbTxMaster         => mbTxMaster,
-         mbTxSlave          => mbTxSlave,
+         -- PRBS Streaming Interface
+         prbsTxMaster       => prbsTxMaster,
+         prbsTxSlave        => prbsTxSlave,
          -- AXI-Lite Register Interface (axilClk domain)
          mAxilReadMaster    => axilReadMaster,
          mAxilReadSlave     => axilReadSlave,

@@ -40,9 +40,9 @@ entity LzDigitizerPgpCore is
       -- Data Streaming Interface
       dataTxMaster     : in  AxiStreamMasterType;
       dataTxSlave      : out AxiStreamSlaveType;
-      -- Microblaze Streaming Interface
-      mbTxMaster       : in  AxiStreamMasterType;
-      mbTxSlave        : out AxiStreamSlaveType;
+      -- PRBS Streaming Interface
+      prbsTxMaster     : in  AxiStreamMasterType;
+      prbsTxSlave      : out AxiStreamSlaveType;
       -- AXI-Lite Register Interface
       mAxilReadMaster  : out AxiLiteReadMasterType;
       mAxilReadSlave   : in  AxiLiteReadSlaveType;
@@ -220,9 +220,9 @@ begin
          -- Data Interface
          dataTxMaster    => dataTxMaster,
          dataTxSlave     => dataTxSlave,
-         -- MB Interface
-         mbTxMaster      => mbTxMaster,
-         mbTxSlave       => mbTxSlave,
+         -- PRBS Interface
+         prbsTxMaster    => prbsTxMaster,
+         prbsTxSlave     => prbsTxSlave,
          -- AXI-Lite Interface
          axilWriteMaster => mAxilWriteMaster,
          axilWriteSlave  => mAxilWriteSlave,

@@ -40,6 +40,7 @@ from surf.devices.ti._ads54J60          import *
 from surf.devices.ti._Lmk04828          import *
 from surf.protocols.jesd204b            import *
 from surf.protocols.pgp._pgp2baxi       import *
+from surf.protocols.ssi._SsiPrbsTx      import *
 from surf.xilinx._AxiSysMonUltraScale   import *
 
 ################################################################################################
@@ -68,6 +69,7 @@ class Lzts(pr.Device):
         self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False, hidden=False,))
         self.add(LztsPacketizer(     name='Packet',     offset=0x07000000, expand=False, hidden=False,enabled=False,))
         self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False, hidden=False,enabled=False,))
+        self.add(SsiPrbsTx(          name='SsiPrbsTx',  offset=0x00700000, expand=False, hidden=False,enabled=False,))
         for i in range(4):
             self.add(Ads42Lbx9Readout(
                 name    = ('SlowAdcReadout[%d]'%i),

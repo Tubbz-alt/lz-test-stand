@@ -60,15 +60,6 @@ end PgpVcMapping;
 
 architecture mapping of PgpVcMapping is
 
-   constant MB_STREAM_CONFIG_C : AxiStreamConfigType := (
-      TSTRB_EN_C    => false,
-      TDATA_BYTES_C => 4,
-      TDEST_BITS_C  => 4,
-      TID_BITS_C    => 4,
-      TKEEP_MODE_C  => TKEEP_NORMAL_C,
-      TUSER_BITS_C  => 4,
-      TUSER_MODE_C  => TUSER_LAST_C);
-
    signal ssiCmd : SsiCmdMasterType;
 
 begin
@@ -230,7 +221,7 @@ begin
          FIFO_FIXED_THRESH_G => true,
          FIFO_PAUSE_THRESH_G => 128,
          -- AXI Stream Port Configurations
-         SLAVE_AXI_CONFIG_G  => MB_STREAM_CONFIG_C,
+         SLAVE_AXI_CONFIG_G  => ssiAxiStreamConfig(4, TKEEP_COMP_C),
          MASTER_AXI_CONFIG_G => SSI_PGP2B_CONFIG_C)
       port map (
          -- Slave Port

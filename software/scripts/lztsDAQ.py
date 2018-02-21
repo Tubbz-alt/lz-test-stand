@@ -36,6 +36,7 @@ import PyQt4.QtCore
 import lztsFpga as fpga
 import lztsViewer as vi
 from AdmPcieKu3Pgp2b import *
+import pyrogue.utilities.prbs
 
 # Set the argument parser
 parser = argparse.ArgumentParser()
@@ -80,6 +81,7 @@ if ( args.type == 'pgp-gen3' ):
     # Create the PGP interfaces for ePix hr camera
     pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,0) # Registers for lzts board
     pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,1) # Data for lzts board
+    pgpVc2 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,2) # PRBS stream
 
     print("")
     print("PGP Card Version: %x" % (pgpVc0.getInfo().version))
@@ -89,6 +91,7 @@ elif ( args.type == 'datadev-pgp2b' ):
     #pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+0) # Registers for lzts board
     pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(7*32)+args.l) # Registers for lzts board
     pgpVc1 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+1) # Data for lzts board
+    pgpVc2 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+2) # PRBS stream
     
     #memBase = rogue.hardware.data.DataMap('/dev/datadev_0')
     
@@ -108,6 +111,7 @@ else:
 dataWriter = pyrogue.utilities.fileio.StreamWriter(name='dataWriter')
 
 pyrogue.streamConnect(pgpVc1, dataWriter.getChannel(0x1))
+pyrogue.streamConnect(pgpVc2, dataWriter.getChannel(0x2))
 ## Add pseudoscope to file writer
 #pyrogue.streamConnect(pgpVc2, dataWriter.getChannel(0x2))
 #pyrogue.streamConnect(pgpVc3, dataWriter.getChannel(0x3))
@@ -173,7 +177,7 @@ class MyRunControl(pyrogue.RunControl):
 # Set base
 ##############################
 class LztsBoard(pyrogue.Root):
-    def __init__(self, cmd, dataWriter, srp, args, **kwargs):
+    def __init__(self, cmd, dataWriter, srp, prbsVc, args, **kwargs):
         
         pyrogue.Root.__init__(self, name='lztsBoard', description='LZTS Board')
         
@@ -199,15 +203,17 @@ class LztsBoard(pyrogue.Root):
         #self.add(pyrogue.RunControl(name='runControl', rates={1:'1 Hz', 10:'10 Hz',30:'30 Hz'}, cmd=cmd.sendCmd(0, 0)))
         
         #if ( args.type == 'datadev-pgp2b' ):
-        #    self.add(AdmPcieKu3Pgp2b(name='PCIE',memBase=memBase))        
+        #    self.add(AdmPcieKu3Pgp2b(name='PCIE',memBase=memBase))  
+
+        prbsRx = pyrogue.utilities.prbs.PrbsRx(name='PrbsRx')
+        pyrogue.streamConnect(prbsVc,prbsRx)
+        self.add(prbsRx)        
         
         # Export remote objects
         self.start(pyroGroup='lztsGui')
         
 # Create board
-LztsBoard = LztsBoard(cmd, dataWriter, srp, args)
-
-
+LztsBoard = LztsBoard(cmd, dataWriter, srp, pgpVc2, args)
 
 # Create GUI
 if (args.start_gui):
@@ -220,7 +226,7 @@ if (args.start_gui):
 if (args.start_viewer):
     gui = vi.Window()
     pyrogue.streamTap(pgpVc1, gui.eventReaderData)
-
+    
 ## Create mesh node (this is for remote control only, no data is shared with this)
 #mNode = pyrogue.mesh.MeshNode('rogueEpix100a',iface='eth0',root=None)
 #mNode.setNewTreeCb(guiTop.addTree)

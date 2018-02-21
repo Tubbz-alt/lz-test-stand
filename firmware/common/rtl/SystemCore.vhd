@@ -567,6 +567,7 @@ begin
       locClk          => axilClk,
       locRst          => axilRst,
       trig            => '0',
+      packetLength    => X"00000000",
       axilReadMaster  => axilReadMasters(PRBS_INDEX_C),
       axilReadSlave   => axilReadSlaves(PRBS_INDEX_C),
       axilWriteMaster => axilWriteMasters(PRBS_INDEX_C),

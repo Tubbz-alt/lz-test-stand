@@ -15,7 +15,7 @@ import rogue.hardware.data
 
 from DataLib.DataDev import *
 from surf.xilinx import *
-from AdmPcieKu3Pgp2b.PgpLane import *
+from surf.protocols.pgp import *
 
 class AdmPcieKu3Pgp2b(pr.Device):
     def __init__(   self,       
@@ -27,15 +27,14 @@ class AdmPcieKu3Pgp2b(pr.Device):
         # Add axi-pcie-core 
         self.add(DataDev(            
             offset       = 0x00000000, 
-            useBpi       = True,
             expand       = False,
         ))  
 
         # Add PGP Core 
-        for i in range(8):
-            self.add(PgpLane(            
+        for i in range(7):
+            self.add(Pgp2bAxi(            
                 name         = ('Lane[%i]' % i), 
-                offset       = (0x00800000 + i*0x00010000), 
-                useEvr       = False,
+                offset       = (0x00801000 + i*0x00010000), 
                 expand       = False,
-            ))  
+            ))
+            

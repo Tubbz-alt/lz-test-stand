@@ -91,7 +91,7 @@ begin
          mAxilWriteSlave  => axilWriteSlave);
 
    -- VC1 TX, Data
-   U_VC1_TX : entity work.AxiStreamFifo
+   U_VC1_TX : entity work.AxiStreamFifoV2
       generic map (
          -- General Configurations
          TPD_G               => TPD_G,
@@ -205,7 +205,7 @@ begin
    
    -- VC2 TX, PRBS
    rxCtrl(2) <= AXI_STREAM_CTRL_UNUSED_C;
-   U_VC2 : entity work.AxiStreamFifo
+   U_VC2 : entity work.AxiStreamFifoV2
       generic map (
          -- General Configurations
          TPD_G               => TPD_G,
@@ -236,7 +236,7 @@ begin
          mAxisSlave  => txSlaves(2));
 
    -- VC3 TX, Loopback
-   U_VC3 : entity work.AxiStreamFifo
+   U_VC3 : entity work.AxiStreamFifoV2
       generic map (
          -- General Configurations
          TPD_G               => TPD_G,

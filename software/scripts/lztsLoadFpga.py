@@ -215,16 +215,21 @@ LztsBoard = LztsBoard(cmd, dataWriter, srp)
 LztsBoard.Lzts.JesdRx.enable.set(False)
 
 
+print ('Old firmware:')
+LztsBoard.Lzts.AxiVersion.printStatus()
+
 # program flash
 LztsBoard.Lzts.MicronN25Q.LoadMcsFile(args.f)
 
 #reload FPGA
 print('Reloading FPGA')
-# use raw write to avoid verify errors
-LztsBoard.Lzts.AxiVersion._rawWrite(0x104,1)
-
+LztsBoard.Lzts.AxiVersion.FpgaReload()
 time.sleep(5)
 print('Reloading FPGA done')
+
+
+print ('New firmware:')
+LztsBoard.Lzts.AxiVersion.printStatus()
 
 LztsBoard.stop()
 exit()

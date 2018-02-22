@@ -40,7 +40,7 @@ from surf.devices.ti._ads54J60          import *
 from surf.devices.ti._Lmk04828          import *
 from surf.protocols.jesd204b            import *
 from surf.protocols.pgp._pgp2baxi       import *
-from surf.protocols.ssi._SsiPrbsTx       import *
+from surf.protocols.ssi._SsiPrbsTx      import *
 from surf.xilinx._AxiSysMonUltraScale   import *
 
 ################################################################################################
@@ -69,7 +69,7 @@ class Lzts(pr.Device):
         self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False, hidden=False,))
         self.add(LztsPacketizer(     name='Packet',     offset=0x07000000, expand=False, hidden=False,enabled=False,))
         self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False, hidden=False,enabled=False,))
-        self.add(SsiPrbsTx(           name='SsiPrbsTx',   offset=0x00700000, expand=False, hidden=False,enabled=False,))
+        self.add(SsiPrbsTx(          name='SsiPrbsTx',  offset=0x00700000, expand=False, hidden=False,enabled=False,))
         for i in range(4):
             self.add(Ads42Lbx9Readout(
                 name    = ('SlowAdcReadout[%d]'%i),
@@ -98,15 +98,12 @@ class Lzts(pr.Device):
         self.add(SadcPatternTester( name='SadcPatternTester',   offset=0x04900000, enabled=False, expand=False,  hidden=True,))      
         self.add(JesdRx(            name='JesdRx',              offset=0x05000000, enabled=True,  expand=False,  numRxLanes=16, hidden=False,))      
         self.add(Lmk04828(          name='LMK',                 offset=0x05100000, expand=False,                 hidden=False,))  
-        #self.add(Lmk04828(          name='LMK',                 offset=0x00700000, expand=False,                 hidden=False,))  
         self.add(FadcDebug(         name='FadcDebug',           offset=0x05700000, enabled=False, expand=False,  hidden=False,))  
-        #self.add(FadcDebug(         name='FadcDebug',           offset=0x05600000, enabled=False, expand=False,  hidden=False,))  
         
         for i in range(4):
             self.add(Ads54J60(
                 name      = ('FastAdcConfig[%d]'%i),
                 offset    = (0x05200000 + i*0x100000), 
-                #offset    = (0x05100000 + i*0x100000), 
                 expand    = False, 
                 hidden    = False,
             ))
@@ -130,7 +127,8 @@ class Lzts(pr.Device):
                 self._root.checkBlocks(recurse=True)
                 self.SlowAdcReadout[i].DMode.set(3)
                 self._root.checkBlocks(recurse=True)
-                #self.SlowAdcReadout[i].Invert.set(1)
+                # Invert 0 is correct setting. Analog polarity is swapped on PCB.
+                # Do not invert here! The PMT pulse is negative.
                 self.SlowAdcReadout[i].Invert.set(0)
                 self._root.checkBlocks(recurse=True)
                 self.SlowAdcReadout[i].Convert.set(3)
@@ -143,6 +141,10 @@ class Lzts(pr.Device):
                     self.SlowAdcConfig[i].enable.set(True)
                     self._root.checkBlocks(recurse=True)
                     self.SlowAdcConfig[i].AdcReg_0x0015.set(1)  #Set DDR Mode
+                    self._root.checkBlocks(recurse=True)
+                    self.SlowAdcConfig[i].AdcReg_0x000B.set(0x1C)  #Set channel A digital gain -2dB (2.5Vpp input)
+                    self._root.checkBlocks(recurse=True)
+                    self.SlowAdcConfig[i].AdcReg_0x000C.set(0x1C)  #Set channel B digital gain -2dB (2.5Vpp input)
                     self._root.checkBlocks(recurse=True)
         
         @self.command(description="Reset slow ADCs",)
@@ -175,7 +177,7 @@ class Lzts(pr.Device):
             for i in range(8):
                 self.FadcBufferChannel[i].enable.set(True)
                 self._root.checkBlocks(recurse=True)
-                self.FadcBufferChannel[i].ExtTrigSize.set(0x1000)
+                self.FadcBufferChannel[i].ExtTrigSize.set(0x3FF)
                 self._root.checkBlocks(recurse=True)
                 self.FadcBufferChannel[i].Enable.set(True)
                 self._root.checkBlocks(recurse=True)
@@ -228,12 +230,11 @@ class Lzts(pr.Device):
             self.JesdRx.CmdClearErrors()
             self.checkBlocks(recurse=True)   
             
-            
     def writeBlocks(self, force=False, recurse=True, variable=None, checkEach=False):
         """
         Write all of the blocks held by this Device to memory
         """
-        self._log.debug(f'Calling {self.path}._writeBlocks')
+        if not self.enable.get(): return
 
         # Process local blocks.
         if variable is not None:
@@ -283,4 +284,3 @@ class Lzts(pr.Device):
         self.SadcInit()
         
         
-

@@ -185,6 +185,8 @@ begin
       axilReadSlave     => axilReadSlaves(SYNC_INDEX_C),
       axilWriteMaster   => axilWriteMasters(SYNC_INDEX_C),
       axilWriteSlave    => axilWriteSlaves(SYNC_INDEX_C),
+      -- PLL clock input
+      pllClk            => adcClock,
       -- local clock input/output
       locClk            => clk250ddr,
       -- Master command inputs (synchronous to clkOut)
@@ -200,7 +202,7 @@ begin
       cmdOutP           => cmdOutP,
       cmdOutN           => cmdOutN,
       -- globally synchronized outputs
-      clkOut            => muxClk,
+      muxClk            => muxClk,
       rstOut            => open,
       gTime             => gTime,
       -- status LEDs

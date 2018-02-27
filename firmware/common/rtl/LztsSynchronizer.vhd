@@ -40,9 +40,11 @@ entity LztsSynchronizer is
       axilReadSlave     : out AxiLiteReadSlaveType;
       axilWriteMaster   : in  AxiLiteWriteMasterType;
       axilWriteSlave    : out AxiLiteWriteSlaveType;
-      -- local clock input/output
+      -- PLL clock input
+      pllClk            : in  sl;
+      -- local oscillator clock input
       locClk            : in  sl;
-      -- Master command inputs (synchronous to clkOut)
+      -- Master command inputs (synchronous to pllClk)
       syncCmd           : in  sl;
       rstCmd            : in  sl;
       -- Inter-board clock and command
@@ -55,7 +57,7 @@ entity LztsSynchronizer is
       cmdOutP           : out sl;
       cmdOutN           : out sl;
       -- globally synchronized outputs
-      clkOut            : out sl;
+      muxClk            : out sl;
       rstOut            : out sl;
       gTime             : out slv(63 downto 0);
       -- status LEDs
@@ -154,11 +156,9 @@ architecture rtl of LztsSynchronizer is
    signal cmdIn            : sl;
    signal cmdInBuf         : sl;
    signal cmdOutBuf        : sl;
-   signal muxClk           : sl;
-   signal muxClkB          : sl;
+   signal pllClkB          : sl;
    
    attribute keep : string;                        -- for chipscope
-   attribute keep of muxClk : signal is "true";    -- for chipscope
    attribute keep of mux    : signal is "true";    -- for chipscope
    
 begin
@@ -178,7 +178,6 @@ begin
       S  => reg.slaveDev
    );
    
-   clkOut <= muxClk;
    
    U_IBUFDS_1 : IBUFDS
    port map (
@@ -189,26 +188,26 @@ begin
    
    U_IDDRE_1 : IDDRE1
    port map (
-      C  => muxClk,
-      CB => muxClkB,
+      C  => pllClk,
+      CB => pllClkB,
       R  => '0',
       D  => cmdInBuf,
       Q1 => cmdIn,
       Q2 => open
    );
-   muxClkB <= not muxClk;   
+   pllClkB <= not pllClk;   
    
    U_ClkOutBufDiff_1 : entity work.ClkOutBufDiff
    generic map (
       XIL_DEVICE_G => "ULTRASCALE")
    port map (
-      clkIn   => muxClk,
+      clkIn   => pllClk,
       clkOutP => clkOutP,
       clkOutN => clkOutN
    );
    
    -- register logic (axilClk domain)
-   -- patern serdes logic (muxClk domain)
+   -- patern serdes logic (pllClk domain)
    comb : process (axilRst, axilReadMaster, axilWriteMaster, reg, mux, cmdIn, syncCmd, rstCmd) is
       variable vreg        : RegType := REG_INIT_C;
       variable vmux        : MuxType := MUX_INIT_C;
@@ -258,7 +257,7 @@ begin
       axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
       
       ------------------------------------------------
-      -- Serial pattern in/out logic (muxClk domain)
+      -- Serial pattern in/out logic (pllClk domain)
       ------------------------------------------------
       
       -- clear strobes
@@ -421,9 +420,9 @@ begin
       end if;
    end process seqR;
    
-   seqM : process (muxClk) is
+   seqM : process (pllClk) is
    begin
-      if (rising_edge(muxClk)) then
+      if (rising_edge(pllClk)) then
          mux <= muxIn after TPD_G;
       end if;
    end process seqM;
@@ -434,7 +433,7 @@ begin
       IS_C_INVERTED  => '1'
    )
    port map (
-      C  => muxClk,
+      C  => pllClk,
       SR => '0',
       D1 => mux.cmdOut,
       D2 => mux.cmdOut,

@@ -50,6 +50,9 @@ class SadcBufferReader(pr.Device):
             stride       =  4,            
             mode         = "RO",
         )
+        
+      #optional register trigger
+      self.add((pr.RemoteVariable(name='Trigger',     description='Trigger',     offset=0x00000100, bitSize=1, bitOffset=0,  base=pr.Bool, mode='RW')))
       
       #####################################
       # Create commands

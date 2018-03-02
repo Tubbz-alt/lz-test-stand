@@ -36,7 +36,7 @@ entity FadcBuffersTb is end FadcBuffersTb;
 
 architecture testbed of FadcBuffersTb is
    
-   constant FORCE_EXT_TRIG_C : boolean := true;
+   constant FORCE_EXT_TRIG_C : boolean := false;
    constant TEST_LOOP_C : boolean := false;
    
    
@@ -301,7 +301,7 @@ begin
                   -- initial settings
                   enable         <= "1";
                   if FORCE_EXT_TRIG_C = true then
-                     extTrigSize    <= toSlv(1023, 10);
+                     extTrigSize    <= toSlv(1015, 10);
                      --extTrigSize    <= toSlv(102, 10);
                      intPreDelay    <= toSlv(127, 7);
                      intPostDelay   <= toSlv(0, 7);

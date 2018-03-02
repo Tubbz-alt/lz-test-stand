@@ -279,8 +279,9 @@ begin
       variable postTrig       : sl;
       variable extTrig        : sl;
       variable sampleOffset   : slv(1 downto 0);
-      variable postSamples     : slv(1 downto 0);
+      variable postSamples    : slv(1 downto 0);
       variable trigSamples    : slv(2 downto 0);
+      variable trigLengthNext : slv(TRIG_ADDR_G+2 downto 0);
       variable regCon         : AxiLiteEndPointType;
    begin
       -- Latch the current value
@@ -476,7 +477,14 @@ begin
                vtrig.samplesBuff := trig.samplesBuff + 4;
             end if;
          end if;
-         vtrig.memWrEn := '1';
+         
+         trigLengthNext := resize(trig.trigLength, TRIG_ADDR_G+3) + 4;
+         if trigLengthNext(TRIG_ADDR_G+2) = '0' or trig.trigPending = '0' then
+            vtrig.memWrEn := '1';
+         else
+            vtrig.memWrEn := '0';
+         end if;
+         
       else
          vtrig.memWrEn := '0';
       end if;
@@ -589,10 +597,15 @@ begin
             
             -- count samples
             -- look for invalid ADC samples
-            if adcValid = '1' then
-               vtrig.trigLength := trig.trigLength + 4;
-            else
-               vtrig.trigType(BAD_IND_C) := '1';
+            
+            trigLengthNext := resize(trig.trigLength, TRIG_ADDR_G+3) + 4;
+            
+            if trigLengthNext(TRIG_ADDR_G+2) /= '1' then
+               if adcValid = '1' then
+                  vtrig.trigLength := trigLengthNext(TRIG_ADDR_G+1 downto 0);
+               else
+                  vtrig.trigType(BAD_IND_C) := '1';
+               end if;
             end if;
             
             -- distinguish internal or external trigger
@@ -607,6 +620,7 @@ begin
                      vtrig.addrFifoWr  := '1';
                   end if;
                   -- update trigger length depending on the post offset
+                  -- trigSamples is less or equal to 4
                   vtrig.trigLength  := trig.trigLength + trigSamples;
                   vtrig.postCnt     := resize(postSamples, DELAY_LEN_C+1);
                   -- wait for post data
@@ -669,28 +683,49 @@ begin
                vtrig.trigType(BAD_IND_C) := '1';
             end if;
             
-            if trig.postCnt >= trig.intPostDelay then
-               -- start writing header information FIFO
-               if (trig.trigLength + trig.intPostDelay) <= 2**trig.trigLength'length-1 then
-                  vtrig.trigLength := trig.trigLength + trig.intPostDelay;
+            -- look for re trigger condition in post
+            if intTrigFast = '1' then
+               
+               trigLengthNext := resize(trig.trigLength, TRIG_ADDR_G+3) + vtrig.postCnt;
+               
+               if trigLengthNext(TRIG_ADDR_G+2) /= '1' then
+                  vtrig.trigLength := trigLengthNext(TRIG_ADDR_G+1 downto 0);
                else
-                  vtrig.trigLength := toSlv(2**trig.trigLength'length-2, trig.trigLength'length);
+                  vtrig.trigLength := (others=>'1');
                end if;
                
+               vtrig.postCnt     := resize(postSamples, DELAY_LEN_C+1);
+               
+            -- internal trigger pre threshold crossed
+            elsif intTrig = '1' then
+               
+               trigLengthNext := resize(trig.trigLength, TRIG_ADDR_G+3) + vtrig.postCnt;
+               
+               if trigLengthNext(TRIG_ADDR_G+2) /= '1' then
+                  vtrig.trigLength := trigLengthNext(TRIG_ADDR_G+1 downto 0);
+                  vtrig.reTrigger   := '1';
+                  vtrig.trigState   := TRIG_ARM_S;
+               else
+                  vtrig.trigLength := (others=>'1');
+               end if;
+               
+            end if;
+            
+            -- postCnt ending has higher priority and re trigger will be lost (+1 cycle dead time)
+            if trig.postCnt >= trig.intPostDelay or trig.trigLength >= 2**trig.trigLength'length-4 then
+               
+               trigLengthNext := resize(trig.trigLength, TRIG_ADDR_G+3) + trig.intPostDelay;
+               
+               if trigLengthNext(TRIG_ADDR_G+2) /= '1' then
+                  vtrig.trigLength := trigLengthNext(TRIG_ADDR_G+1 downto 0);
+               else
+                  vtrig.trigLength    := (others=>'1');
+               end if;
+               
+               -- start writing header information FIFO
                vtrig.trigPending := '0';
                vtrig.buffSwitch  := '1';
                vtrig.trigState   := WR_TRIG_S;
-            end if;
-            
-            -- look for re trigger condition in post
-            if intTrigFast = '1' then
-               vtrig.trigLength := trig.trigLength + vtrig.postCnt;
-               vtrig.postCnt     := resize(postSamples, DELAY_LEN_C+1);
-            -- internal trigger pre threshold crossed
-            elsif intTrig = '1' then
-               vtrig.trigLength := trig.trigLength + vtrig.postCnt;
-               vtrig.reTrigger   := '1';
-               vtrig.trigState   := TRIG_ARM_S;
             end if;
          
          -- write trigger information into FIFO
@@ -699,8 +734,13 @@ begin
          when WR_TRIG_S =>
             -- add one more sample if the length is odd
             -- this will avoid zero padding in 32 bit stream
+            trigLengthNext := resize(trig.trigLength, TRIG_ADDR_G+3) + 1;
             if trig.trigLength(0) = '1' then
-               vtrig.trigLength := trig.trigLength + 1;
+               if trigLengthNext(TRIG_ADDR_G+2) /= '1' then
+                  vtrig.trigLength := trig.trigLength + 1;
+               else
+                  vtrig.trigLength := trig.trigLength - 1;
+               end if;
             end if;
             -- check if there is space for one more trigger
             if trig.trigAFull = '0' then

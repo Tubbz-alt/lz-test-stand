@@ -877,6 +877,11 @@ begin
          
       end case;
       
+      -- Combinatorial outputs before the reset
+      memRdAddr      <= vtrig.buffSelRd & vtrig.buffAddrRd;
+      memWrAddr      <= vtrig.buffSel & vtrig.buffAddr(TRIG_ADDR_G+1 downto 2);
+      memWrEn        <= vtrig.memWrEn;
+      
       -- Reset      
       if (adcRst = '1') then
          vtrig := TRIG_INIT_C;
@@ -885,17 +890,13 @@ begin
          vreg := REG_INIT_C;
       end if;
 
-      -- Register the variable for next clock cycle      
+      -- Assign variable back to signal   
       regIn <= vreg;
       trigIn <= vtrig;
 
-      -- Outputs
+      -- Registered Outputs
       axilWriteSlave <= reg.axilWriteSlave;
       axilReadSlave  <= reg.axilReadSlave;
-      
-      memRdAddr      <= vtrig.buffSelRd & vtrig.buffAddrRd;
-      memWrAddr      <= vtrig.buffSel & vtrig.buffAddr(TRIG_ADDR_G+1 downto 2);
-      memWrEn        <= vtrig.memWrEn;
       
    end process comb;
 
@@ -927,12 +928,10 @@ begin
       -- Port A     
       clka    => adcClk,
       wea     => memWrEn,
-      rsta    => trig.reset(0),
       addra   => memWrAddr,
       dina    => adcData,
       -- Port B
       clkb    => adcClk,
-      rstb    => trig.reset(0),
       addrb   => memRdAddr,
       doutb   => memRdData
    );
@@ -947,15 +946,14 @@ begin
       DATA_WIDTH_G      => 32,
       ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
       FWFT_EN_G         => true,
-      GEN_SYNC_FIFO_G   => true,
-      FULL_THRES_G      => 2**HDR_ADDR_WIDTH_C-HDR_SIZE_C-8
+      GEN_SYNC_FIFO_G   => true
    )
    port map ( 
       rst               => trig.reset(0),
       wr_clk            => adcClk,
       wr_en             => trig.trigFifoWr,
       din               => trig.trigFifoDin,
-      full              => trigFifoFull,
+      almost_full       => trigFifoFull,
       rd_clk            => adcClk,
       rd_en             => trig.trigRd,
       dout              => trigDout,
@@ -979,7 +977,7 @@ begin
       wr_clk            => adcClk,
       wr_en             => trig.addrFifoWr,
       din               => trig.addrFifoDin,
-      full              => addrFifoFull,
+      almost_full       => addrFifoFull,
       rd_clk            => adcClk,
       rd_en             => trig.addrRd,
       dout              => addrDout,

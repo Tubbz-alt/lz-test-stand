@@ -536,7 +536,7 @@ begin
             vtrig.trigPending := '0';
             vtrig.reTrigger := '0';
             -- trigger disable
-            if (trig.reset = 0 and trig.enable = '1') then
+            if (trig.reset = 0) and (trig.enable = '1') and (addrFifoFull = '0') then
                
                -- track the time and sample address for all trigger sources
                vtrig.gTime          := gTime;
@@ -687,7 +687,7 @@ begin
                vtrig.trigLength := trig.trigLength + vtrig.postCnt;
                vtrig.postCnt     := resize(postSamples, DELAY_LEN_C+1);
             -- internal trigger pre threshold crossed
-            elsif intTrig = '1' then
+            elsif (intTrig = '1')  and (addrFifoFull = '0') then
                vtrig.trigLength := trig.trigLength + vtrig.postCnt;
                vtrig.reTrigger   := '1';
                vtrig.trigState   := TRIG_ARM_S;
@@ -703,7 +703,7 @@ begin
                vtrig.trigLength := trig.trigLength + 1;
             end if;
             -- check if there is space for one more trigger
-            if trig.trigAFull = '0' then
+            if (trig.trigAFull = '0') and (trigFifoFull = '0') then
                vtrig.trigFifoCnt  := trig.trigFifoCnt + 1;
                vtrig.trigFifoWr   := '1';
                if trig.trigFifoCnt = 0 then
@@ -946,14 +946,15 @@ begin
       DATA_WIDTH_G      => 32,
       ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
       FWFT_EN_G         => true,
-      GEN_SYNC_FIFO_G   => true
+      GEN_SYNC_FIFO_G   => true,
+      FULL_THRES_G      => (2**HDR_ADDR_WIDTH_C-8)
    )
    port map ( 
       rst               => trig.reset(0),
       wr_clk            => adcClk,
       wr_en             => trig.trigFifoWr,
       din               => trig.trigFifoDin,
-      almost_full       => trigFifoFull,
+      prog_full         => trigFifoFull,
       rd_clk            => adcClk,
       rd_en             => trig.trigRd,
       dout              => trigDout,
@@ -970,14 +971,15 @@ begin
       DATA_WIDTH_G      => ADDR_LEN_C+2,
       ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
       FWFT_EN_G         => true,
-      GEN_SYNC_FIFO_G   => true
+      GEN_SYNC_FIFO_G   => true,
+      FULL_THRES_G      => (2**HDR_ADDR_WIDTH_C-8)
    )
    port map ( 
       rst               => trig.reset(0),
       wr_clk            => adcClk,
       wr_en             => trig.addrFifoWr,
       din               => trig.addrFifoDin,
-      almost_full       => addrFifoFull,
+      prog_full         => addrFifoFull,
       rd_clk            => adcClk,
       rd_en             => trig.addrRd,
       dout              => addrDout,

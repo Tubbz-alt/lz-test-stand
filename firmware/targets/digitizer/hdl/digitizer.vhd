@@ -119,9 +119,11 @@ entity digitizer is
       pgpRxN           : in    sl;
       pgpTxP           : out   sl;
       pgpTxN           : out   sl;
-      -- temperature sensors
-      tmpScl           : inout sl;
-      tmpSda           : inout sl;
+      -- power/temperature sensors
+      tmpScl             : inout sl;
+      tmpSda             : inout sl;
+      pwrScl             : inout sl;
+      pwrSda             : inout sl;
       -- SYSMON Ports
       vPIn             : in    sl;
       vNIn             : in    sl);
@@ -296,9 +298,11 @@ begin
          clkLed             => leds(2),
          cmdLed             => leds(1),
          mstLed             => leds(0),
-         -- temperature sensors
+         -- power/temperature sensors
          tmpScl             => tmpScl,
          tmpSda             => tmpSda,
+         pwrScl             => pwrScl,
+         pwrSda             => pwrSda,
          -- DNA output
          dnaValue           => dnaValue,
          -- DRR Memory interface ports

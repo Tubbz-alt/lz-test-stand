@@ -2,7 +2,7 @@
 -- File       : AppPkg.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-02-04
--- Last update: 2017-10-05
+-- Last update: 2018-03-13
 -------------------------------------------------------------------------------
 -- Description: 
 -------------------------------------------------------------------------------
@@ -24,14 +24,6 @@ use work.I2cPkg.all;
 
 package AppPkg is
 
-   constant I2C_TEMP_CONFIG_C : I2cAxiLiteDevArray(3 downto 0) := (
-      0 => (MakeI2cAxiLiteDevType("1001000", 8, 8, '0')),
-      1 => (MakeI2cAxiLiteDevType("1001001", 8, 8, '0')),
-      2 => (MakeI2cAxiLiteDevType("1001011", 8, 8, '0')),
-      3 => (MakeI2cAxiLiteDevType("1001111", 8, 8, '0'))
-   );
-   
-   
    constant DDR_WIDTH_C : positive := 32;
    constant DDR_AXI_CONFIG_C : AxiConfigType := axiConfig(
       ADDR_WIDTH_C => 30,
@@ -41,19 +33,20 @@ package AppPkg is
 
    constant START_ADDR_C : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '0');
    constant STOP_ADDR_C  : slv(DDR_AXI_CONFIG_C.ADDR_WIDTH_C-1 downto 0) := (others => '1');
-   
+
    -- address space of the slow ADC single channel
    constant ADDR_BITS_C : integer := 27;
-   
+
    -- buffer size of the fast ADC single channel
    -- 4 samples per address 2**9x4 = 2048 samples = 2us max buffer
-   constant TRIG_ADDR_C  : integer := 9;
+   constant TRIG_ADDR_C : integer := 9;
    -- 2**3 = 8 buffers per channel
-   constant BUFF_ADDR_C  : integer := 3;
-   
+   constant BUFF_ADDR_C : integer := 3;
+
    constant JESD_LANE_C : integer := 16;
 
    type PwrCtrlInType is record
+      tempAlertL      : slv(1 downto 0);
       -- power OK ins
       pokDcDcDp6V     : sl;
       pokDcDcAp6V     : sl;

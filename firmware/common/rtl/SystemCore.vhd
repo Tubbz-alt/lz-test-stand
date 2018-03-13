@@ -63,9 +63,11 @@ entity SystemCore is
       clkLed             : out sl;
       cmdLed             : out sl;
       mstLed             : out sl;
-      -- temperature sensors
+      -- power/temperature sensors
       tmpScl             : inout sl;
       tmpSda             : inout sl;
+      pwrScl             : inout sl;
+      pwrSda             : inout sl;
       -- DNA output
       dnaValue           : out   slv(127 downto 0);
       -- DDR PHY Ref clk
@@ -109,7 +111,20 @@ end SystemCore;
 
 architecture top_level of SystemCore is
 
-   constant NUM_AXI_MASTERS_C : natural := 8;
+   constant I2C_TEMP_CONFIG_C : I2cAxiLiteDevArray(3 downto 0) := (
+      0 => (MakeI2cAxiLiteDevType("1001000", 8, 8, '0')),
+      1 => (MakeI2cAxiLiteDevType("1001001", 8, 8, '0')),
+      2 => (MakeI2cAxiLiteDevType("1001011", 8, 8, '0')),
+      3 => (MakeI2cAxiLiteDevType("1001111", 8, 8, '0'))
+   );
+   
+   constant I2C_PWR_CONFIG_C : I2cAxiLiteDevArray(2 downto 0) := (
+      0 => (MakeI2cAxiLiteDevType("1001000", 8, 8, '0')),
+      1 => (MakeI2cAxiLiteDevType("1100111", 8, 8, '0')),
+      2 => (MakeI2cAxiLiteDevType("1101111", 8, 8, '0'))
+   );   
+
+   constant NUM_AXI_MASTERS_C : natural := 9;
 
    constant VERSION_INDEX_C  : natural := 0;
    constant SYSMON_INDEX_C   : natural := 1;
@@ -119,6 +134,7 @@ architecture top_level of SystemCore is
    constant SYNC_INDEX_C     : natural := 5;
    constant TEMP_SNS_INDEX_C : natural := 6;
    constant PRBS_INDEX_C     : natural := 7;
+   constant PWR_SNS_INDEX_C  : natural := 8;
 
    constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 24, 20);
 
@@ -534,7 +550,7 @@ begin
    ddrRstOut <= ddrReset;
    
    ------------------------------------------------
-   --Temperature sensors readout
+   -- Temperature sensors readout
    ------------------------------------------------
    U_TempI2C : entity work.AxiI2cMasterCore
    generic map (
@@ -553,6 +569,25 @@ begin
       axiRst         => axilRst
    );
    
+   ------------------------------------------------
+   -- Power sensors readout
+   ------------------------------------------------
+   U_PowerI2C : entity work.AxiI2cMasterCore
+   generic map (
+      DEVICE_MAP_G     => I2C_PWR_CONFIG_C,
+      AXI_CLK_FREQ_G   => 156.25E+6,
+      I2C_SCL_FREQ_G   => 100.0E+3
+   )
+   port map (
+      i2cInOut.scl   => pwrScl,
+      i2cInOut.sda   => pwrSda,
+      axiReadMaster  => axilReadMasters(PWR_SNS_INDEX_C),
+      axiReadSlave   => axilReadSlaves(PWR_SNS_INDEX_C),
+      axiWriteMaster => axilWriteMasters(PWR_SNS_INDEX_C),
+      axiWriteSlave  => axilWriteSlaves(PWR_SNS_INDEX_C),
+      axiClk         => axilClk,
+      axiRst         => axilRst
+   );   
    
    ------------------------------------------------
    -- PRBS Tx generator

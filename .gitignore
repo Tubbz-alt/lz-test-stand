@@ -31,3 +31,4 @@ build*
 *.mcs
 *.bin
 *.gz
+*.ltx

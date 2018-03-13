@@ -2,7 +2,7 @@
 -- File       : PowerController.vhd
 -- Company    : SLAC National Accelerator Laboratory
 -- Created    : 2017-06-09
--- Last update: 2017-10-05
+-- Last update: 2018-03-13
 -------------------------------------------------------------------------------
 -- Description:
 -------------------------------------------------------------------------------
@@ -58,6 +58,9 @@ end PowerController;
 architecture RTL of PowerController is
 
    type RegType is record
+      tempFault       : sl;
+      latchTempFault  : sl;
+      ignTempAlert    : slv(1 downto 0);
       powerEnAll      : slv(7 downto 0);
       powerOkAll      : slv(19 downto 0);
       leds            : slv(3 downto 0);
@@ -82,6 +85,9 @@ architecture RTL of PowerController is
    end record RegType;
 
    constant REG_INIT_C : RegType := (
+      tempFault       => '0',
+      latchTempFault  => '0',
+      ignTempAlert    => (others => '0'),
       powerEnAll      => (others => '0'),
       powerOkAll      => (others => '0'),
       leds            => (others => '0'),
@@ -109,6 +115,7 @@ architecture RTL of PowerController is
    signal rin : RegType;
 
    signal powerOkAll : slv(19 downto 0);
+   signal tempAlert  : slv(1 downto 0);
 
 begin
 
@@ -148,24 +155,38 @@ begin
    powerOkAll(18) <= pwrCtrlIn.pokLdoA0p5V0;
    powerOkAll(19) <= pwrCtrlIn.pokLdoA1p5V0;
 
-
-   pwrCtrlOut.enDcDcAm6V  <= r.powerEnAll(0);
-   pwrCtrlOut.enDcDcAp5V4 <= r.powerEnAll(1);
-   pwrCtrlOut.enDcDcAp3V7 <= r.powerEnAll(2);
-   pwrCtrlOut.enDcDcAp2V3 <= r.powerEnAll(3);
-   pwrCtrlOut.enDcDcAp1V6 <= r.powerEnAll(4);
-   pwrCtrlOut.enLdoSlow   <= r.powerEnAll(5);
-   pwrCtrlOut.enLdoFast   <= r.powerEnAll(6);
-   pwrCtrlOut.enLdoAm5V   <= r.powerEnAll(7);
+   pwrCtrlOut.enDcDcAm6V  <= r.powerEnAll(0) and not r.tempFault;
+   pwrCtrlOut.enDcDcAp5V4 <= r.powerEnAll(1) and not r.tempFault;
+   pwrCtrlOut.enDcDcAp3V7 <= r.powerEnAll(2) and not r.tempFault;
+   pwrCtrlOut.enDcDcAp2V3 <= r.powerEnAll(3) and not r.tempFault;
+   pwrCtrlOut.enDcDcAp1V6 <= r.powerEnAll(4) and not r.tempFault;
+   pwrCtrlOut.enLdoSlow   <= r.powerEnAll(5) and not r.tempFault;
+   pwrCtrlOut.enLdoFast   <= r.powerEnAll(6) and not r.tempFault;
+   pwrCtrlOut.enLdoAm5V   <= r.powerEnAll(7) and not r.tempFault;
 
    leds <= r.leds;
 
+   GEN_VEC :
+   for i in 1 downto 0 generate
+      U_Debouncer : entity work.Debouncer
+         generic map(
+            TPD_G             => TPD_G,
+            INPUT_POLARITY_G  => '0',   -- active LOW
+            OUTPUT_POLARITY_G => '1',   -- active HIGH
+            FILTER_SIZE_G     => 16,
+            SYNCHRONIZE_G     => true)  -- Run input through 2 FFs before filtering
+         port map(
+            clk => axilClk,
+            i   => pwrCtrlIn.tempAlertL(i),
+            o   => tempAlert(i));
+   end generate GEN_VEC;
 
    --------------------------------------------------
    -- AXI Lite register logic
    --------------------------------------------------
 
-   comb : process (axilRst, powerOkAll, r, sAxilReadMaster, sAxilWriteMaster) is
+   comb : process (axilRst, powerOkAll, r, sAxilReadMaster, sAxilWriteMaster,
+                   tempAlert) is
       variable v      : RegType;
       variable regCon : AxiLiteEndPointType;
    begin
@@ -177,12 +198,28 @@ begin
       -- sync inputs
       v.powerOkAll := powerOkAll;
 
+      -- Generate the tempFault
+      if (r.latchTempFault = '0') then
+         v.tempFault := '0';
+      end if;
+      for i in 1 downto 0 loop
+         if (r.ignTempAlert(i) = '0') and (tempAlert(i) = '1') then
+            v.tempFault := '1';
+         end if;
+      end loop;
+
+      -- Determine the AXI-Lite transaction
       v.sAxilReadSlave.rdata := (others => '0');
       axiSlaveWaitTxn(regCon, sAxilWriteMaster, sAxilReadMaster, v.sAxilWriteSlave, v.sAxilReadSlave);
 
       axiSlaveRegister (regCon, x"000", 0, v.powerEnAll);
       axiSlaveRegisterR(regCon, x"004", 0, r.powerOkAll);
       axiSlaveRegister (regCon, x"008", 0, v.sysRstShift(0));
+
+      axiSlaveRegisterR(regCon, x"010", 0, tempAlert);
+      axiSlaveRegisterR(regCon, x"014", 0, r.tempFault);
+      axiSlaveRegister (regCon, x"018", 0, v.ignTempAlert);
+      axiSlaveRegister (regCon, x"01C", 0, v.latchTempFault);
 
       axiSlaveRegister (regCon, x"100", 0, v.leds);
 
@@ -204,6 +241,7 @@ begin
          axiSlaveRegister(regCon, x"600"+toSlv(i*4, 12), 0, v.syncPhase(i));
       end loop;
 
+      -- Close out the AXI-Lite transaction
       axiSlaveDefault(regCon, v.sAxilWriteSlave, v.sAxilReadSlave, AXIL_ERR_RESP_G);
 
       -- DCDC sync logic
@@ -232,7 +270,7 @@ begin
             v.syncOut(i) := '0';
          end if;
       end loop;
-      
+
       -- software reset logic
       v.sysRstShift := r.sysRstShift(6 downto 0) & '0';
       if r.sysRstShift /= 0 then

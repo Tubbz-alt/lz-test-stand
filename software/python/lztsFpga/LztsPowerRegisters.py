@@ -49,6 +49,46 @@ class LztsPowerRegisters(pr.Device):
          pr.RemoteVariable(name='EnLdoFast',    description='PowerEnAll', offset=0x00000000, bitSize=1, bitOffset=6,  base=pr.Bool, mode='RW'),
          pr.RemoteVariable(name='EnLdoAm5V',    description='PowerEnAll', offset=0x00000000, bitSize=1, bitOffset=7,  base=pr.Bool, mode='RW')))
       
+      self.add(pr.RemoteVariable(
+         name       = 'TempAlert',     
+         description= 'External Temperature Alerts from I2C devices',     
+         offset     = 0x00000010, 
+         bitSize    = 2, 
+         bitOffset  = 0,  
+         base       = pr.UInt, 
+         mode       = 'RO',
+      ))
+      
+      self.add(pr.RemoteVariable(
+         name       = 'TempFault',     
+         description= 'Temperature Fault State',     
+         offset     = 0x00000014, 
+         bitSize    = 1, 
+         bitOffset  = 0,  
+         base       = pr.Bool, 
+         mode       = 'RO',
+      ))   
+
+      self.add(pr.RemoteVariable(
+         name       = 'IgnTempAlert',     
+         description= 'Mask for ignoring the External Temperature Alerts',     
+         offset     = 0x00000018, 
+         bitSize    = 2, 
+         bitOffset  = 0,  
+         base       = pr.UInt, 
+         mode       = 'RW',
+      ))  
+
+      self.add(pr.RemoteVariable(
+         name       = 'LatchTempFault',     
+         description= 'Flag to latch the TempFault event',     
+         offset     = 0x0000001C, 
+         bitSize    = 1, 
+         bitOffset  = 0,  
+         base       = pr.Bool, 
+         mode       = 'RW',
+      ))        
+      
       self.add((
          pr.RemoteVariable(name='PokDcDcDp6V',     description='PowerOkAll', offset=0x00000004, bitSize=1, bitOffset=0,  base=pr.Bool, mode='RO'),
          pr.RemoteVariable(name='PokDcDcAp6V',     description='PowerOkAll', offset=0x00000004, bitSize=1, bitOffset=1,  base=pr.Bool, mode='RO'),

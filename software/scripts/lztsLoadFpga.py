@@ -27,6 +27,7 @@ import pyrogue.gui
 import PyQt4.QtGui
 import argparse
 import time
+import rogue.hardware
 import lztsFpga as fpga
 
 #################################################################
@@ -36,11 +37,11 @@ parser = argparse.ArgumentParser()
 
 # Add arguments
 parser.add_argument(
-    "--mcs", 
+    "--type", 
     type     = str,
     required = True,
-    help     = "path to mcs file",
-)
+    help     = "define the PCIe card type (either pgp-gen3 or datadev-pgp2b)",
+)  
 
 parser.add_argument(
     "--l", 
@@ -50,11 +51,11 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--type", 
+    "--mcs", 
     type     = str,
     required = True,
-    help     = "define the PCIe card type (either pgp-gen3 or datadev-pgp2b)",
-)  
+    help     = "path to mcs file",
+)
 
 # Get the arguments
 args = parser.parse_args()

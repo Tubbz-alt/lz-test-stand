@@ -180,15 +180,18 @@ architecture testbed of FadcBuffersTb is
    signal axisClk       : sl := '0';
    signal ghzRst        : sl := '1';
    signal axisRst       : sl := '1';
-   signal axisMaster    : AxiStreamMasterType;
-   signal axisSlave     : AxiStreamSlaveType;
    signal adcClk        : sl := '0';
    signal adcRst        : sl := '1';
    
-   signal axilReadMaster    : AxiLiteReadMasterType;
-   signal axilReadSlave     : AxiLiteReadSlaveType;
-   signal axilWriteMaster   : AxiLiteWriteMasterType;
-   signal axilWriteSlave    : AxiLiteWriteSlaveType;
+   signal axilWriteMasters : AxiLiteWriteMasterArray(7 downto 0);
+   signal axilWriteSlaves  : AxiLiteWriteSlaveArray(7 downto 0);
+   signal axilReadMasters  : AxiLiteReadMasterArray(7 downto 0);
+   signal axilReadSlaves   : AxiLiteReadSlaveArray(7 downto 0);
+
+   signal axisMasters : AxiStreamMasterArray(7 downto 0);
+   signal axisSlaves  : AxiStreamSlaveArray(7 downto 0);
+   signal axisMaster    : AxiStreamMasterType;
+   signal axisSlave     : AxiStreamSlaveType;
    
    signal triggersGood  : slv(31 downto 0);
    
@@ -205,12 +208,20 @@ architecture testbed of FadcBuffersTb is
    
    constant QUEUE_SIZE_C   : integer := 1024*1024;
    constant QUEUE_BITS_C   : integer := log2(QUEUE_SIZE_C);
-   shared variable triggerCnt     : integer := 0;
-   shared variable triggerRdPtr   : slv(QUEUE_BITS_C-1 downto 0) := (others=>'0');
-   type TrigTimeType is array (QUEUE_SIZE_C-1 downto 0) of slv(63 downto 0);
-   shared variable triggerTime : TrigTimeType := (others=>(others=>'0'));
-   type TrigSampleType is array (QUEUE_SIZE_C-1 downto 0) of slv(15 downto 0);
-   shared variable triggerSample  : TrigSampleType := (others=>(others=>'0'));
+   shared variable triggerCnt     : IntegerArray(7 downto 0) := (others=>0);
+   --shared variable triggerRdPtr   : slv(QUEUE_BITS_C-1 downto 0) := (others=>'0');
+   type trigPtrArray is array (natural range <>) of slv(QUEUE_BITS_C-1 downto 0);
+   shared variable triggerRdPtr   : trigPtrArray(7 downto 0) := (others=>(others=>'0'));
+   
+   --type TrigTimeType is array (QUEUE_SIZE_C-1 downto 0) of slv(63 downto 0);
+   --shared variable triggerTime : TrigTimeType := (others=>(others=>'0'));
+   --type TrigSampleType is array (QUEUE_SIZE_C-1 downto 0) of slv(15 downto 0);
+   --shared variable triggerSample  : TrigSampleType := (others=>(others=>'0'));
+   
+   type TrigTimeType is array (7 downto 0, QUEUE_SIZE_C-1 downto 0) of slv(63 downto 0);
+   shared variable triggerTime : TrigTimeType := (others=>(others=>(others=>'0')));
+   type TrigSampleType is array (7 downto 0, QUEUE_SIZE_C-1 downto 0) of slv(15 downto 0);
+   shared variable triggerSample  : TrigSampleType := (others=>(others=>(others=>'0')));
 
 begin
    
@@ -229,33 +240,52 @@ begin
    ------------------------------------------------
    -- Fast ADC Buffer UUT
    ------------------------------------------------
-   UUT: entity work.FadcBufferChannel
-   generic map (
-      CHANNEL_G         => x"00",
-      PGP_LANE_G        => "0010",
-      PGP_VC_G          => PGP_VC_C,
-      TRIG_ADDR_G       => 8
+   GEN_VEC : for i in 7 downto 0 generate
+      UUT: entity work.FadcBufferChannel
+      generic map (
+         CHANNEL_G         => toSlv(i,8),
+         PGP_LANE_G        => "0010",
+         PGP_VC_G          => PGP_VC_C,
+         TRIG_ADDR_G       => 8
+      )
+      port map (
+         -- ADC Clock Domain
+         adcClk            => adcClk,
+         adcRst            => adcRst,
+         adcData           => adcData,
+         adcValid          => '1',
+         gTime             => gTime,
+         extTrigger        => extTrigger,
+         -- AXI-Lite Interface for local registers 
+         axilClk           => axilClk,
+         axilRst           => axilRst,
+         axilReadMaster    => axilReadMasters(i),
+         axilReadSlave     => axilReadSlaves(i),
+         axilWriteMaster   => axilWriteMasters(i),
+         axilWriteSlave    => axilWriteSlaves(i),
+         -- AxiStream output
+         axisClk           => axisClk,
+         axisRst           => axisRst,
+         axisMaster        => axisMasters(i),
+         axisSlave         => axisSlaves(i)
+      );
+   end generate GEN_VEC;
+   
+   ---------------------
+   -- Fast ADC stream mux
+   ---------------------
+   U_AxiStreamMux : entity work.AxiStreamMux
+   generic map(
+      NUM_SLAVES_G  => 8,
+      PIPE_STAGES_G => 1
    )
-   port map (
-      -- ADC Clock Domain
-      adcClk            => adcClk,
-      adcRst            => adcRst,
-      adcData           => adcData,
-      adcValid          => '1',
-      gTime             => gTime,
-      extTrigger        => extTrigger,
-      -- AXI-Lite Interface for local registers 
-      axilClk           => axilClk,
-      axilRst           => axilRst,
-      axilReadMaster    => axilReadMaster,
-      axilReadSlave     => axilReadSlave,
-      axilWriteMaster   => axilWriteMaster,
-      axilWriteSlave    => axilWriteSlave,
-      -- AxiStream output
-      axisClk           => axisClk,
-      axisRst           => axisRst,
-      axisMaster        => axisMaster,
-      axisSlave         => axisSlave
+   port map(
+      axisClk      => axisClk,
+      axisRst      => axisRst,
+      sAxisMasters => axisMasters,
+      sAxisSlaves  => axisSlaves,
+      mAxisMaster  => axisMaster,
+      mAxisSlave   => axisSlave
    );
    
    process(ghzClk)
@@ -301,8 +331,8 @@ begin
                   -- initial settings
                   enable         <= "1";
                   if FORCE_EXT_TRIG_C = true then
-                     extTrigSize    <= toSlv(1015, 10);
-                     --extTrigSize    <= toSlv(102, 10);
+                     --extTrigSize    <= toSlv(1015, 10);
+                     extTrigSize    <= toSlv(102, 10);
                      intPreDelay    <= toSlv(127, 7);
                      intPostDelay   <= toSlv(0, 7);
                   else
@@ -552,20 +582,23 @@ begin
    -----------------------------------------------------------------------
    -- Setup trigger registers
    -----------------------------------------------------------------------
-   process
-   begin
-      
-      wait until rising_edge(set_regs);
-      
-      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000000", enable, false);  -- enable trigger
-      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000200", extTrigSize, false); -- size
-      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000100", intPreThresh, false);  -- 
-      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000104", intPostThresh, false);  -- 
-      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000108", intVetoThresh, false);  -- 
-      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"0000010C", intPreDelay, false);  -- pre delay
-      axiLiteBusSimWrite(axilClk, axilWriteMaster, axilWriteSlave, x"00000110", intPostDelay, false);  -- post delay
-      
-   end process;
+   SET_GEN: for i in 0 to 7 generate 
+      process
+      begin
+         
+         wait until rising_edge(set_regs);
+         
+         axiLiteBusSimWrite(axilClk, axilWriteMasters(i), axilWriteSlaves(i), x"00000000", enable, false);  -- enable trigger
+         axiLiteBusSimWrite(axilClk, axilWriteMasters(i), axilWriteSlaves(i), x"00000200", extTrigSize, false); -- size
+         axiLiteBusSimWrite(axilClk, axilWriteMasters(i), axilWriteSlaves(i), x"00000100", intPreThresh, false);  -- 
+         axiLiteBusSimWrite(axilClk, axilWriteMasters(i), axilWriteSlaves(i), x"00000104", intPostThresh, false);  -- 
+         axiLiteBusSimWrite(axilClk, axilWriteMasters(i), axilWriteSlaves(i), x"00000108", intVetoThresh, false);  -- 
+         axiLiteBusSimWrite(axilClk, axilWriteMasters(i), axilWriteSlaves(i), x"0000010C", intPreDelay, false);  -- pre delay
+         axiLiteBusSimWrite(axilClk, axilWriteMasters(i), axilWriteSlaves(i), x"00000110", intPostDelay, false);  -- post delay
+         
+      end process;
+   end generate;
+   
    
    -----------------------------------------------------------------------
    -- Generate external trigger
@@ -612,32 +645,33 @@ begin
    -----------------------------------------------------------------------
    -- Store the trigger time and sample for verification
    -----------------------------------------------------------------------
-   
-   process
-      variable triggerWrPtr   : slv(QUEUE_BITS_C-1 downto 0) := (others=>'0');
-   begin
-      
-      loop
+   TR_MEM_GEN: for i in 0 to 7 generate 
+      process
+         variable triggerWrPtr   : slv(QUEUE_BITS_C-1 downto 0) := (others=>'0');
+      begin
          
-         wait until rising_edge(extTrigger);
-         
-         wait until rising_edge(adcClk);
-         
-         -- writing
-         if extTrigger = '1' then
-            if triggerCnt < QUEUE_SIZE_C-1 then
-               triggerTime(conv_integer(triggerWrPtr))   := gTime;
-               triggerSample(conv_integer(triggerWrPtr)) := adcData(15 downto 0);   -- external trigger sample offset should be always 0
-               triggerWrPtr                              := triggerWrPtr + 1;
-               triggerCnt                                := triggerCnt + 1;
-            else
-               report "Too many triggers. Verification FIFO overflow." severity failure;
+         loop
+            
+            wait until rising_edge(extTrigger);
+            
+            wait until rising_edge(adcClk);
+            
+            -- writing
+            if extTrigger = '1' then
+               if triggerCnt(i) < QUEUE_SIZE_C-1 then
+                  triggerTime(i, conv_integer(triggerWrPtr))   := gTime;
+                  triggerSample(i, conv_integer(triggerWrPtr)) := adcData(15 downto 0);   -- external trigger sample offset should be always 0
+                  triggerWrPtr                              := triggerWrPtr + 1;
+                  triggerCnt(i)                             := triggerCnt(i) + 1;
+               else
+                  report "Too many triggers. Verification FIFO overflow." severity failure;
+               end if;
             end if;
-         end if;
+            
+         end loop;
          
-      end loop;
-      
-   end process;
+      end process;
+   end generate;
    
    
    -----------------------------------------------------------------------
@@ -713,14 +747,14 @@ begin
                   trigTime := conv_integer(trigTimeVect(31 downto 0));
                   
                   -- count and remove lost triggers from the trigger verification queue
-                  while triggerTime(conv_integer(triggerRdPtr)) + TRIG_LATENCY_C < trigTime loop
+                  while triggerTime(trigCh, conv_integer(triggerRdPtr(trigCh))) + TRIG_LATENCY_C < trigTime loop
                      
                      -- report missed timestamps
-                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": missed timestamp " & integer'image(conv_integer(triggerTime(conv_integer(triggerRdPtr))(31 downto 0))) severity warning;
+                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": missed timestamp " & integer'image(conv_integer(triggerTime(trigCh, conv_integer(triggerRdPtr(trigCh)))(31 downto 0))) severity warning;
                      
-                     if triggerCnt > 0 then
-                        triggerRdPtr := triggerRdPtr + 1;
-                        triggerCnt   := triggerCnt - 1;
+                     if triggerCnt(trigCh) > 0 then
+                        triggerRdPtr(trigCh) := triggerRdPtr(trigCh) + 1;
+                        triggerCnt(trigCh)   := triggerCnt(trigCh) - 1;
                         lostTriggerCnt := lostTriggerCnt + 1;
                      else
                         report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": timestamp verification queue underflow." severity failure;
@@ -731,8 +765,8 @@ begin
                   -- report received timestamp
                   report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": timestamp " & integer'image(trigTime);
                   -- verify timestamp
-                  assert triggerTime(conv_integer(triggerRdPtr)) + TRIG_LATENCY_C = trigTime 
-                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad timestamp. Expected " & integer'image(conv_integer(triggerTime(conv_integer(triggerRdPtr)))) & " received " & integer'image(trigTime)
+                  assert triggerTime(trigCh, conv_integer(triggerRdPtr(trigCh))) + TRIG_LATENCY_C = trigTime 
+                     report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad timestamp. Expected " & integer'image(conv_integer(triggerTime(trigCh, conv_integer(triggerRdPtr(trigCh))))) & " received " & integer'image(trigTime)
                      severity failure;
                      
                -- all other words contain 2 samples
@@ -747,27 +781,27 @@ begin
                         --report "wordCnt: " & integer'image(wordCnt) & " trigOffset: " & integer'image(trigOffset);
                         
                         if trigOffset = 0 then
-                           offsetError := abs(conv_integer(triggerSample(conv_integer(triggerRdPtr))) - conv_integer(axisMaster.tData(15 downto 0)));
+                           offsetError := abs(conv_integer(triggerSample(trigCh,  conv_integer(triggerRdPtr(trigCh)))) - conv_integer(axisMaster.tData(15 downto 0)));
                            assert offsetError <= MAX_OFFSET_ERR_C
-                              report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad offset. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0)))
+                              report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad offset. Expected " & integer'image(conv_integer(triggerSample(trigCh, conv_integer(triggerRdPtr(trigCh))))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0)))
                               severity warning;
                            if VERBOSE_PRINT then 
                               if offsetError = 0 then
-                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset ok. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0)));
+                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset ok. Expected " & integer'image(conv_integer(triggerSample(trigCh, conv_integer(triggerRdPtr(trigCh))))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0)));
                               else
-                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset with error. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0))) severity warning;
+                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset with error. Expected " & integer'image(conv_integer(triggerSample(trigCh, conv_integer(triggerRdPtr(trigCh))))) & " received " & integer'image(conv_integer(axisMaster.tData(15 downto 0))) severity warning;
                               end if;
                            end if;
                         else -- trigOffset = 1
-                           offsetError := abs(conv_integer(triggerSample(conv_integer(triggerRdPtr))) - conv_integer(axisMaster.tData(31 downto 16)));
+                           offsetError := abs(conv_integer(triggerSample(trigCh, conv_integer(triggerRdPtr(trigCh)))) - conv_integer(axisMaster.tData(31 downto 16)));
                            assert offsetError <= MAX_OFFSET_ERR_C
-                              report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad offset. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16)))
+                              report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": bad offset. Expected " & integer'image(conv_integer(triggerSample(trigCh, conv_integer(triggerRdPtr(trigCh))))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16)))
                               severity warning;
                            if VERBOSE_PRINT then 
                               if offsetError = 0 then
-                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset ok. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16)));
+                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset ok. Expected " & integer'image(conv_integer(triggerSample(trigCh, conv_integer(triggerRdPtr(trigCh))))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16)));
                               else
-                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset with error. Expected " & integer'image(conv_integer(triggerSample(conv_integer(triggerRdPtr)))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16))) severity warning;
+                                 report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) &  ": offset with error. Expected " & integer'image(conv_integer(triggerSample(trigCh, conv_integer(triggerRdPtr(trigCh))))) & " received " & integer'image(conv_integer(axisMaster.tData(31 downto 16))) severity warning;
                               end if;
                            end if;
                         end if;
@@ -833,9 +867,9 @@ begin
                -- validate and report trigger size at last word
                if axisMaster.tLast = '1' then
                   
-                  if triggerCnt > 0 then
-                     triggerRdPtr := triggerRdPtr + 1;
-                     triggerCnt   := triggerCnt - 1;
+                  if triggerCnt(trigCh) > 0 then
+                     triggerRdPtr(trigCh) := triggerRdPtr(trigCh) + 1;
+                     triggerCnt(trigCh)   := triggerCnt(trigCh) - 1;
                   else
                      report "CH" & integer'image(trigCh) & ":TRIG" & integer'image(goodTriggerCnt) & ": timestamp verification queue underflow." severity failure;
                   end if;

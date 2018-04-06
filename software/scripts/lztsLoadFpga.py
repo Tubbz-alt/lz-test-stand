@@ -22,7 +22,6 @@
 
 import sys
 import pyrogue as pr
-import pyrogue.epics
 import pyrogue.gui
 import PyQt4.QtGui
 import argparse

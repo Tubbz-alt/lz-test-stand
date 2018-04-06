@@ -10,7 +10,6 @@
 ##############################################################################
 
 import pyrogue as pr
-import pyrogue.simulation
 import rogue.hardware.data
 
 from DataLib.DataDev import *

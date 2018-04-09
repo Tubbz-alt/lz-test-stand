@@ -44,13 +44,6 @@ set_clock_groups -asynchronous -group [get_clocks {lmkRefClk}] -group [get_clock
 set_clock_groups -asynchronous -group [get_clocks {ddrIntClk0}] -group [get_clocks {ddrClkP}]
 set_clock_groups -asynchronous -group [get_clocks {ddrIntClk1}] -group [get_clocks {ddrClkP}]
 
-# Lock slow ADC interfaces to clock regions to avoid timing changes that require to re-train the ADC
-# Can comment out temporarily to find better placement if it causes timing closure issues
-set_property CLOCK_REGION X0Y4 [get_cells U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
-set_property CLOCK_REGION X2Y3 [get_cells U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
-set_property CLOCK_REGION X2Y4 [get_cells U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
-set_property CLOCK_REGION X2Y2 [get_cells U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1]
-
 ############################
 ## Pinout Configuration   ##
 ############################
@@ -405,6 +398,275 @@ set_property -dict { IOSTANDARD LVCMOS33 PULLTYPE PULLUP PACKAGE_PIN H26 } [get_
 set_property -dict { IOSTANDARD LVCMOS33 PULLTYPE PULLUP PACKAGE_PIN J24 } [get_ports {lmkSdio}]
 set_property -dict { IOSTANDARD LVCMOS33 PULLTYPE PULLUP PACKAGE_PIN J25 } [get_ports {lmkRst}]
 set_property -dict { IOSTANDARD LVCMOS33 PULLTYPE PULLUP PACKAGE_PIN K26 } [get_ports {lmkSync}]
+
+###########################
+## Placement Constraints ##
+###########################
+
+set_property LOC BUFGCE_X0Y110 [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1}]
+set_property LOC BUFGCE_X1Y80  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1}]
+set_property LOC BUFGCE_X1Y98  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1}]
+set_property LOC BUFGCE_X1Y48  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/AxiAds42lb69Pll_Inst/GEN_ULTRASCALE_NO_PLL.BUFG_1}]
+
+# IC[0]
+set_property LOC BITSLICE_RX_TX_X0Y257  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y257  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y257  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y255  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y255  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y255  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y253  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y253  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y253  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y251  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y251  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y251  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y249  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y249  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y249  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y247  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y247  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y247  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y244  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y244  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y244  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y242  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y242  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y242  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y240  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y240  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y240  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y238  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y238  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y238  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y236  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y236  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y236  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y227  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y227  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y227  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y225  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y225  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y225  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y223  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y223  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y223  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y221  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y221  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y221  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X0Y218  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X0Y218  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X0Y218  [get_cells {U_SadcPhy/GEN_VEC[0].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+# IC[1]
+set_property LOC BITSLICE_RX_TX_X1Y205  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y205  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y205  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y203  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y203  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y203  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y201  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y201  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y201  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y199  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y199  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y199  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y197  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y197  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y197  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y195  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y195  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y195  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y192  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y192  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y192  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y190  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y190  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y190  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y188  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y188  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y188  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y186  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y186  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y186  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y184  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y184  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y184  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y175  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y175  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y175  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y173  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y173  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y173  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y171  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y171  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y171  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y169  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y169  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y169  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y166  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y166  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y166  [get_cells {U_SadcPhy/GEN_VEC[1].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+# IC[2]
+set_property LOC BITSLICE_RX_TX_X1Y257  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y257  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y257  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y255  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y255  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y255  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y253  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y253  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y253  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y251  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y251  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y251  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y249  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y249  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y249  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y247  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y247  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y247  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y244  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y244  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y244  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y242  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y242  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y242  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y240  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y240  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y240  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y238  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y238  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y238  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y236  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y236  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y236  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y227  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y227  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y227  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y225  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y225  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y225  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y223  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y223  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y223  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y221  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y221  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y221  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y218  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y218  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y218  [get_cells {U_SadcPhy/GEN_VEC[2].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+# IC[3]
+set_property LOC BITSLICE_RX_TX_X1Y153  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y153  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y153  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y151  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y151  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y151  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y149  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y149  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y149  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y147  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y147  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y147  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y145  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y145  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y145  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y143  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y143  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y143  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y140  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y140  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y140  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y138  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y138  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y138  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[0].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y136  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y136  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y136  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[0].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y134  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y134  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y134  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[1].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y132  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y132  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y132  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[2].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y123  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y123  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y123  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[3].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y121  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y121  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y121  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[4].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y119  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y119  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y119  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[5].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y117  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y117  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y117  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[6].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
+
+set_property LOC BITSLICE_RX_TX_X1Y114  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDDR_Inst}]
+set_property LOC BITSLICE_RX_TX_X1Y114  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.IDELAYE3_inst}]
+set_property LOC BITSLICE_RX_TX_X1Y114  [get_cells {U_SadcPhy/GEN_VEC[3].U_Phy/AxiAds42lb69Deser_Inst/GEN_CH[1].GEN_DAT[7].AxiAds42lb69DeserBit_Inst/GEN_ULTRASCALE.ODELAYE3_inst}]
 
 ##########################
 ## Misc. Configurations ##

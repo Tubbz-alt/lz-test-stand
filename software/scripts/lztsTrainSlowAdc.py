@@ -49,17 +49,35 @@ parser.add_argument(
     default  = 0,
     help     = "PGP lane number",
 )
+
+parser.add_argument(
+    "--type", 
+    type     = str,
+    required = True,
+    help     = "define the PCIe card type (either pgp-gen3 or datadev-pgp2b)",
+)  
+
 # Get the arguments
 args = parser.parse_args()
 
-# Create the PGP interfaces for ePix camera
-pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,0) # Registers for lzts board
-pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,1) # Data for lzts board
-#pgpVc2 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,2) # PseudoScope
-#pgpVc3 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',0,3) # Monitoring (Slow ADC)
+if ( args.type == 'pgp-gen3' ):
+    pgpVc0 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,0) # Registers for lzts board
+    pgpVc1 = rogue.hardware.pgp.PgpCard('/dev/pgpcard_0',args.l,1) # Data for lzts board
+    print("")
+    print("PGP Card Version: %x" % (pgpVc0.getInfo().version))
+    
+elif ( args.type == 'datadev-pgp2b' ):
+    
+    #pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+0) # Registers for lzts board
+    pgpVc0 = rogue.hardware.data.DataCard('/dev/datadev_0',(7*32)+args.l) # Registers for lzts board
+    pgpVc1 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+1) # Data for lzts board
+    pgpVc2 = rogue.hardware.data.DataCard('/dev/datadev_0',(args.l*32)+2) # PRBS stream
+    
+    #memBase = rogue.hardware.data.DataMap('/dev/datadev_0')
+else:
+    raise ValueError("Invalid type (%s)" % (args.type) )
 
-print("")
-print("PGP Card Version: %x" % (pgpVc0.getInfo().version))
+
 
 # Add data stream to file as channel 1
 # File writer
@@ -194,14 +212,15 @@ for reg in invertRegs:
    reg.set(0x0)      # do not invert data for pattern testing
 for reg in convertRegs:
    reg.set(0x0)      # do not convert data for pattern testing
-for reg in adcRegs8:
-   reg.set(0x10)     # ADC binary data format
+#for reg in adcRegs8:
+#   reg.set(0x10)     # ADC binary data format
 for reg in adcRegsF:
    reg.set(0x66)     # ADC single pattern
 for reg in adcRegs15:
    reg.set(0x1)      # ADC DDR mode
 
 LztsBoard.Lzts.SadcPatternTester.Samples.set(0xffff)
+LztsBoard.Lzts.SadcPatternTester.Mask.set(0xffff)
 
 delays = [0 for x in range(512)]
 
@@ -288,8 +307,13 @@ for adcNo in range(0, 8):
             stops.append(i-1)
       
       # find the longest vector of ones
-      index, value = max(enumerate(lengths), key=operator.itemgetter(1))
-      setDelay = int(starts[index]+(stops[index]-starts[index])/2)
+      if len(lengths) > 0:
+         index, value = max(enumerate(lengths), key=operator.itemgetter(1))
+         setDelay = int(starts[index]+(stops[index]-starts[index])/2)
+      else:
+         print('ADC %d, Lane %d FAILED!' %(adcNo, lane))
+         setDelay = 0
+      
       print('Delay %d' %(setDelay))
       f.write('%d,' %(setDelay))
       

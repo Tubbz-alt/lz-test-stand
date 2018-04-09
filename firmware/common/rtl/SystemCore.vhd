@@ -180,7 +180,7 @@ architecture top_level of SystemCore is
    signal adcClock      : sl;
    signal adcReset      : sl;
    
-   signal muxClk        : sl;
+   signal muxClk        : slv(2 downto 0);
 
    signal mbIrq : slv(7 downto 0) := (others => '0');  -- unused 
 
@@ -218,7 +218,7 @@ begin
       cmdOutP           => cmdOutP,
       cmdOutN           => cmdOutN,
       -- globally synchronized outputs
-      muxClk            => muxClk,
+      muxClk            => muxClk(0),
       rstOut            => open,
       gTime             => gTime,
       -- status LEDs
@@ -228,9 +228,47 @@ begin
    );
    
    
-   ----------------
-   -- Clock Manager
-   ----------------
+   ------------------------------------------------
+   -- Clock Managers Cascade (clock cleaner)
+   ------------------------------------------------
+   U_PLL0 : entity work.ClockManagerUltraScale
+      generic map(
+         TPD_G             => TPD_G,
+         TYPE_G            => "PLL",
+         INPUT_BUFG_G      => false,
+         FB_BUFG_G         => true,
+         RST_IN_POLARITY_G => '1',
+         NUM_CLOCKS_G      => 1,
+         -- MMCM attributes
+         CLKIN_PERIOD_G    => 4.0,      -- 250 MHz
+         DIVCLK_DIVIDE_G   => 1,        -- 250 MHz/1
+         CLKFBOUT_MULT_G   => 4,        -- 1 GHz = 250 MHz x 4
+         CLKOUT0_DIVIDE_G  => 4)        -- 250 MHz = 1 GHz /4
+      port map(
+         -- Clock Input
+         clkIn           => muxClk(0),
+         -- Clock Outputs
+         clkOut(0)       => muxClk(1));
+   
+   U_PLL1 : entity work.ClockManagerUltraScale
+      generic map(
+         TPD_G             => TPD_G,
+         TYPE_G            => "PLL",
+         INPUT_BUFG_G      => false,
+         FB_BUFG_G         => true,
+         RST_IN_POLARITY_G => '1',
+         NUM_CLOCKS_G      => 1,
+         -- MMCM attributes
+         CLKIN_PERIOD_G    => 4.0,      -- 250 MHz
+         DIVCLK_DIVIDE_G   => 1,        -- 250 MHz/1
+         CLKFBOUT_MULT_G   => 4,        -- 1 GHz = 250 MHz x 4
+         CLKOUT0_DIVIDE_G  => 4)        -- 250 MHz = 1 GHz /4
+      port map(
+         -- Clock Input
+         clkIn           => muxClk(1),
+         -- Clock Outputs
+         clkOut(0)       => muxClk(2));
+   
    U_PLL : entity work.ClockManagerUltraScale
       generic map(
          TPD_G             => TPD_G,
@@ -247,7 +285,7 @@ begin
          CLKOUT1_DIVIDE_G  => 100)      -- 10 MHz = 1 GHz /100
       port map(
          -- Clock Input
-         clkIn           => muxClk,
+         clkIn           => muxClk(2),
          -- Clock Outputs
          clkOut(0)       => adcClock,
          clkOut(1)       => lmkRefClk,

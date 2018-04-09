@@ -31,8 +31,7 @@ use unisim.vcomponents.all;
 
 entity FastAdcJesd204b is
    generic (
-      TPD_G            : time            := 1 ns;
-      AXI_ERROR_RESP_G : slv(1 downto 0) := AXI_RESP_SLVERR_C);
+      TPD_G            : time            := 1 ns);
    port (
       -- DRP Interface
       drpClk          : in  slv(JESD_LANE_C-1 downto 0);
@@ -174,7 +173,6 @@ begin
       generic map (
          TPD_G            => TPD_G,
          TEST_G           => false,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G,
          F_G              => 2,
          K_G              => 32,
          L_G              => JESD_LANE_C)

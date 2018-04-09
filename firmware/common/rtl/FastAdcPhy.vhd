@@ -32,7 +32,6 @@ use unisim.vcomponents.all;
 entity FastAdcPhy is
    generic (
       TPD_G            : time             := 1 ns;
-      AXI_ERROR_RESP_G : slv(1 downto 0)  := AXI_RESP_DECERR_C;
       AXI_BASE_ADDR_G  : slv(31 downto 0) := (others => '0'));
    port (
       -- JESD ADC Ports
@@ -217,7 +216,6 @@ begin
    U_XBAR : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
-         DEC_ERROR_RESP_G   => AXI_ERROR_RESP_G,
          NUM_SLAVE_SLOTS_G  => 1,
          NUM_MASTER_SLOTS_G => NUM_AXI_MASTERS_C,
          MASTERS_CONFIG_G   => AXI_CONFIG_C)
@@ -238,8 +236,7 @@ begin
    -------------
    U_Jesd : entity work.FastAdcJesd204b
       generic map (
-         TPD_G            => TPD_G,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+         TPD_G            => TPD_G)
       port map (
          -- DRP Interface
          drpClk          => drpClk,
@@ -285,7 +282,6 @@ begin
    SPI_LMK : entity work.AxiSpiMaster
       generic map (
          TPD_G             => TPD_G,
-         AXI_ERROR_RESP_G  => AXI_ERROR_RESP_G,
          ADDRESS_SIZE_G    => 15,
          DATA_SIZE_G       => 8,
          CLK_PERIOD_G      => (1.0/156.25E+6),
@@ -319,7 +315,6 @@ begin
       U_SPI : entity work.ads54j60
          generic map (
             TPD_G             => TPD_G,
-            AXI_ERROR_RESP_G  => AXI_ERROR_RESP_G,
             CLK_PERIOD_G      => (1.0/156.25E+6),
             SPI_SCLK_PERIOD_G => 10.0E-6)
          port map (
@@ -371,7 +366,6 @@ begin
    U_GT_XBAR : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
-         DEC_ERROR_RESP_G   => AXI_ERROR_RESP_G,
          NUM_SLAVE_SLOTS_G  => 1,
          NUM_MASTER_SLOTS_G => JESD_LANE_C,
          MASTERS_CONFIG_G   => GTH_CONFIG_C)
@@ -393,7 +387,6 @@ begin
       U_AxiLiteToDrp : entity work.AxiLiteToDrp
          generic map (
             TPD_G            => TPD_G,
-            AXI_ERROR_RESP_G => AXI_ERROR_RESP_G,
             COMMON_CLK_G     => true,
             EN_ARBITRATION_G => false,
             TIMEOUT_G        => 4096,
@@ -426,7 +419,6 @@ begin
    U_DBG_XBAR : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
-         DEC_ERROR_RESP_G   => AXI_ERROR_RESP_G,
          NUM_SLAVE_SLOTS_G  => 1,
          NUM_MASTER_SLOTS_G => JESD_LANE_C,
          MASTERS_CONFIG_G   => DBG_CONFIG_C)
@@ -450,8 +442,7 @@ begin
             BRAM_EN_G        => true,
             REG_EN_G         => true,
             DATA_WIDTH_G     => 32,
-            RAM_ADDR_WIDTH_G => 10,
-            AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+            RAM_ADDR_WIDTH_G => 10)
          port map (
             -- Data to store in ring buffer
             dataClk         => adcClk,

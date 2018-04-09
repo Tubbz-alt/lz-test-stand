@@ -31,8 +31,7 @@ use unisim.vcomponents.all;
 entity LzDigitizerPgpCore is
    generic (
       TPD_G            : time            := 1 ns;
-      SIM_SPEEDUP_G    : boolean         := false;
-      AXI_ERROR_RESP_G : slv(1 downto 0) := AXI_RESP_SLVERR_C);
+      SIM_SPEEDUP_G    : boolean         := false);
    port (
       -- Clock and Reset
       axilClk          : out sl;
@@ -240,7 +239,6 @@ begin
    U_PgpMon : entity work.Pgp2bAxi
       generic map (
          TPD_G              => TPD_G,
-         AXI_ERROR_RESP_G   => AXI_ERROR_RESP_G,
          COMMON_TX_CLK_G    => true,
          COMMON_RX_CLK_G    => true,
          WRITE_EN_G         => false,

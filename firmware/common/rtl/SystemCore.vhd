@@ -37,8 +37,7 @@ entity SystemCore is
       TPD_G              : time            := 1 ns;
       BUILD_INFO_G       : BuildInfoType;
       NUM_AXI_MASTERS_G  : positive;
-      AXI_CONFIG_G       : AxiLiteCrossbarMasterConfigArray;
-      AXI_ERROR_RESP_G   : slv(1 downto 0) := AXI_RESP_SLVERR_C);
+      AXI_CONFIG_G       : AxiLiteCrossbarMasterConfigArray);
    port (
       -- Clock and Reset
       axilClk            : in    sl;
@@ -336,7 +335,6 @@ begin
    U_XBAR0 : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
-         DEC_ERROR_RESP_G   => AXI_ERROR_RESP_G,
          NUM_SLAVE_SLOTS_G  => 2,
          NUM_MASTER_SLOTS_G => NUM_AXI_MASTERS_G,
          MASTERS_CONFIG_G   => AXI_CONFIG_G)
@@ -365,7 +363,6 @@ begin
    U_XBAR1 : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
-         DEC_ERROR_RESP_G   => AXI_ERROR_RESP_G,
          NUM_SLAVE_SLOTS_G  => 1,
          NUM_MASTER_SLOTS_G => NUM_AXI_MASTERS_C,
          MASTERS_CONFIG_G   => AXI_CONFIG_C)
@@ -409,8 +406,7 @@ begin
    --------------------------
    U_SysMon : entity work.LzDigitizerSysMon
       generic map (
-         TPD_G            => TPD_G,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+         TPD_G            => TPD_G)
       port map (
          -- SYSMON Ports
          vPIn            => vPIn,
@@ -430,7 +426,6 @@ begin
    U_BootProm : entity work.AxiMicronN25QCore
       generic map (
          TPD_G            => TPD_G,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G,
          MEM_ADDR_MASK_G  => x"00000000",  -- Using hardware write protection
          AXI_CLK_FREQ_G   => 156.25E+6,    -- units of Hz
          SPI_CLK_FREQ_G   => (156.25E+6/4.0))  -- units of Hz

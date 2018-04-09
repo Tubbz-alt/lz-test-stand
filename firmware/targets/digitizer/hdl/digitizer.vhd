@@ -227,8 +227,7 @@ begin
    U_PGP : entity work.LzDigitizerPgpCore
       generic map (
          TPD_G            => TPD_G,
-         SIM_SPEEDUP_G    => SIM_SPEEDUP_G,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+         SIM_SPEEDUP_G    => SIM_SPEEDUP_G)
       port map (
          -- Clock and Reset
          axilClk          => axilClk,
@@ -272,8 +271,7 @@ begin
          TPD_G             => TPD_G,
          BUILD_INFO_G      => BUILD_INFO_G,
          NUM_AXI_MASTERS_G => NUM_AXI_MASTERS_C,
-         AXI_CONFIG_G      => AXI_CONFIG_C,
-         AXI_ERROR_RESP_G  => AXI_ERROR_RESP_G)
+         AXI_CONFIG_G      => AXI_CONFIG_C)
       port map (
          -- Clock and Reset
          axilClk            => axilClk,
@@ -446,8 +444,7 @@ begin
    U_FadcPhy : entity work.FastAdcPhy
       generic map (
          TPD_G            => TPD_G,
-         AXI_BASE_ADDR_G  => AXI_CONFIG_C(FADC_PHY_INDEX_C).baseAddr,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+         AXI_BASE_ADDR_G  => AXI_CONFIG_C(FADC_PHY_INDEX_C).baseAddr)
       port map (
          -- JESD ADC Ports
          jesdClkP        => jesdClkP,

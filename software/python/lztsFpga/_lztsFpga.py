@@ -38,6 +38,8 @@ from surf.devices.micron._AxiMicronN25Q import *
 from surf.devices.ti._Ads42Lbx9         import *
 from surf.devices.ti._ads54J60          import *
 from surf.devices.ti._Lmk04828          import *
+from surf.devices.linear._Ltc2945       import *
+from surf.devices.nxp._Sa56004x         import *
 from surf.protocols.jesd204b            import *
 from surf.protocols.pgp._pgp2baxi       import *
 from surf.protocols.ssi._SsiPrbsTx      import *
@@ -66,6 +68,9 @@ class Lzts(pr.Device):
         self.add(LztsTemperature(    name='Temp1',      offset=0x00600400, expand=False, hidden=False,))
         self.add(LztsTemperature(    name='Temp2',      offset=0x00600800, expand=False, hidden=False,))
         self.add(LztsTemperature(    name='Temp3',      offset=0x00600C00, expand=False, hidden=False,))
+        self.add(Sa56004x(           name='TempMon',    offset=0x00800000, expand=False, hidden=False,))
+        self.add(Ltc2945(            name='PwrMonDig',  offset=0x00800400, expand=False, hidden=False,))
+        self.add(Ltc2945(            name='PwrMonAna',  offset=0x00800800, expand=False, hidden=False,))
         self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False, hidden=False,))
         self.add(LztsPacketizer(     name='Packet',     offset=0x07000000, expand=False, hidden=False,enabled=False,))
         self.add(Pgp2bAxi(           name='Pgp2bAxi',   offset=0x02000000, expand=False, hidden=False,enabled=False,))
@@ -119,6 +124,17 @@ class Lzts(pr.Device):
         
         self.sadcDelays = [142,143,118,123,122,125,121,150,139,121,135,129,139,128,120,140,80,88,83,80,82,80,88,92,85,84,86,82,82,86,84,85,115,128,116,120,121,110,102,116,107,113,107,103,115,115,118,101,73,80,76,75,72,77,77,83,80,75,74,75,79,83,85,83]
         self.delayRegs = self.find(name="DelayAdc*")        
+        
+        @self.command(description="Clear temperature fault",)
+        def TempFaultClear():
+            self.TempMon.ConfigurationRegisterWrite.set(0x80)
+            self._root.checkBlocks(recurse=True)
+            self.TempMon.ConfigurationRegisterWrite.set(0x0)
+            self._root.checkBlocks(recurse=True)
+            self.PwrReg.LatchTempFault.set(False)
+            self._root.checkBlocks(recurse=True)
+            self.PwrReg.LatchTempFault.set(True)
+            self._root.checkBlocks(recurse=True)
         
         @self.command(description="Initialization for slow ADC idelayes",)
         def SadcInit():

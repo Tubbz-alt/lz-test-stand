@@ -119,8 +119,8 @@ architecture top_level of SystemCore is
    
    constant I2C_PWR_CONFIG_C : I2cAxiLiteDevArray(2 downto 0) := (
       0 => (MakeI2cAxiLiteDevType("1001000", 8, 8, '0')),
-      1 => (MakeI2cAxiLiteDevType("1100111", 8, 8, '0')),
-      2 => (MakeI2cAxiLiteDevType("1101111", 8, 8, '0'))
+      1 => (MakeI2cAxiLiteDevType("1100111", 8, 8, '0', '1')),
+      2 => (MakeI2cAxiLiteDevType("1101111", 8, 8, '0', '1'))
    );   
 
    constant NUM_AXI_MASTERS_C : natural := 9;

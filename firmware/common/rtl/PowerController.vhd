@@ -38,7 +38,6 @@ entity PowerController is
       sAxilReadSlave   : out AxiLiteReadSlaveType;
       -- System Ports
       sysRst           : out sl;
-      leds             : out slv(3 downto 0);
       pwrCtrlIn        : in  PwrCtrlInType;
       pwrCtrlOut       : out PwrCtrlOutType;
       -- slow ADC signals
@@ -63,7 +62,6 @@ architecture RTL of PowerController is
       ignTempAlert    : slv(1 downto 0);
       powerEnAll      : slv(7 downto 0);
       powerOkAll      : slv(19 downto 0);
-      leds            : slv(3 downto 0);
       sadcRst         : slv(3 downto 0);
       sadcCtrl1       : slv(3 downto 0);
       sadcCtrl2       : slv(3 downto 0);
@@ -90,7 +88,6 @@ architecture RTL of PowerController is
       ignTempAlert    => (others => '0'),
       powerEnAll      => (others => '0'),
       powerOkAll      => (others => '0'),
-      leds            => (others => '0'),
       sadcRst         => (others => '0'),
       sadcCtrl1       => (others => '1'),
       sadcCtrl2       => (others => '1'),
@@ -164,8 +161,6 @@ begin
    pwrCtrlOut.enLdoFast   <= r.powerEnAll(6) and not r.tempFault;
    pwrCtrlOut.enLdoAm5V   <= r.powerEnAll(7) and not r.tempFault;
 
-   leds <= r.leds;
-
    GEN_VEC :
    for i in 1 downto 0 generate
       U_Debouncer : entity work.Debouncer
@@ -220,8 +215,6 @@ begin
       axiSlaveRegisterR(regCon, x"014", 0, r.tempFault);
       axiSlaveRegister (regCon, x"018", 0, v.ignTempAlert);
       axiSlaveRegister (regCon, x"01C", 0, v.latchTempFault);
-
-      axiSlaveRegister (regCon, x"100", 0, v.leds);
 
       -- add FSM to reset slow ADC after power ramp (see doc)
       axiSlaveRegister (regCon, x"200", 0, v.sadcRst);

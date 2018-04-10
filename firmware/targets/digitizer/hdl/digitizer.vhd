@@ -185,7 +185,6 @@ architecture top_level of digitizer is
    signal swArmTrig : sl;
    signal syncCmd   : sl;
    signal rstCmd    : sl;
-   signal pwrLed    : slv(3 downto 0);
    signal gTime     : slv(63 downto 0);
    signal dnaValue  : slv(127 downto 0);
    
@@ -354,7 +353,6 @@ begin
          sAxilReadMaster  => axilReadMasters(PWR_SYNC_INDEX_C),
          sAxilReadSlave   => axilReadSlaves(PWR_SYNC_INDEX_C),
          sysRst           => sysRst,
-         leds             => pwrLed,
          pwrCtrlIn        => pwrCtrlIn,
          pwrCtrlOut       => pwrCtrlOut,
          sadcRst          => sadcRst,

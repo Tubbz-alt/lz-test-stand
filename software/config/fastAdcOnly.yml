@@ -24,10 +24,6 @@ lztsBoard:
       EnLdoSlow: False
       EnLdoFast: True
       EnLdoAm5V: True
-      Led0: True
-      Led1: False
-      Led2: True
-      Led3: False
       SADCRst: 0x0
       SADCCtrl1: 0x0
       SADCCtrl2: 0x0

@@ -30,7 +30,6 @@ entity SadcBufferReader is
    generic (
       TPD_G             : time                     := 1 ns;
       ADDR_BITS_G       : integer range 12 to 27   := 14;
-      AXI_ERROR_RESP_G  : slv(1 downto 0)          := AXI_RESP_DECERR_C;
       PGP_LANE_G        : slv(3 downto 0)          := "0000";
       PGP_VC_G          : slv(3 downto 0)          := "0001"
    );
@@ -208,7 +207,7 @@ begin
       axiSlaveRegister (regCon, x"100", 0, vreg.regTrig);
       
       -- Closeout the transaction
-      axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
+      axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_RESP_DECERR_C);
       
       ------------------------------------------------
       -- AXI read buffer transactions

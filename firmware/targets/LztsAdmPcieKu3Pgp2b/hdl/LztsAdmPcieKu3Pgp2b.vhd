@@ -148,7 +148,6 @@ begin
    U_Hardware : entity work.Hardware
       generic map (
          TPD_G            => TPD_G,
-         AXI_ERROR_RESP_G => BAR0_ERROR_RESP_C,
          AXI_BASE_ADDR_G  => BAR0_BASE_ADDR_C)
       port map (
          ------------------------      

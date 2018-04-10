@@ -29,7 +29,6 @@ entity SadcBuffer is
    generic (
       TPD_G            : time                   := 1 ns;
       ADDR_BITS_G      : integer range 12 to 31 := 14;
-      AXI_ERROR_RESP_G : slv(1 downto 0)        := AXI_RESP_DECERR_C;
       AXI_BASE_ADDR_G  : slv(31 downto 0)       := (others => '0'));
    port (
       -- ADC interface
@@ -99,7 +98,6 @@ begin
    U_XBAR : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
-         DEC_ERROR_RESP_G   => AXI_ERROR_RESP_G,
          NUM_SLAVE_SLOTS_G  => 1,
          NUM_MASTER_SLOTS_G => NUM_AXI_MASTERS_C,
          MASTERS_CONFIG_G   => AXI_CONFIG_C)

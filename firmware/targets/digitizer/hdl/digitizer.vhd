@@ -33,8 +33,7 @@ entity digitizer is
    generic (
       TPD_G            : time            := 1 ns;
       BUILD_INFO_G     : BuildInfoType;
-      SIM_SPEEDUP_G    : boolean         := false;
-      AXI_ERROR_RESP_G : slv(1 downto 0) := AXI_RESP_SLVERR_C);
+      SIM_SPEEDUP_G    : boolean         := false);
    port (
       -- System Ports
       leds             : out   slv(3 downto 0);
@@ -370,8 +369,7 @@ begin
    U_SadcPhy : entity work.SadcPhy
       generic map (
          TPD_G            => TPD_G,
-         AXI_BASE_ADDR_G  => AXI_CONFIG_C(SADC_PHY_INDEX_C).baseAddr,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+         AXI_BASE_ADDR_G  => AXI_CONFIG_C(SADC_PHY_INDEX_C).baseAddr)
       port map (
          -- Clocks and Resets
          axilClk         => axilClk,
@@ -411,8 +409,7 @@ begin
       generic map (
          TPD_G            => TPD_G,
          ADDR_BITS_G      => ADDR_BITS_C,
-         AXI_BASE_ADDR_G  => AXI_CONFIG_C(SADC_BUFFER_INDEX_C).baseAddr,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+         AXI_BASE_ADDR_G  => AXI_CONFIG_C(SADC_BUFFER_INDEX_C).baseAddr)
       port map (
          -- ADC interface
          adcClk          => adcClk,
@@ -494,7 +491,6 @@ begin
       generic map (
          TPD_G            => TPD_G,
          AXI_BASE_ADDR_G  => AXI_CONFIG_C(FADC_BUFFER_INDEX_C).baseAddr,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G,
          TRIG_ADDR_G    => TRIG_ADDR_C,
          BUFF_ADDR_G    => BUFF_ADDR_C)
       port map (

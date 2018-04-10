@@ -28,7 +28,6 @@ use work.SsiPkg.all;
 entity FadcBufferChannel is
    generic (
       TPD_G             : time                  := 1 ns;
-      AXI_ERROR_RESP_G  : slv(1 downto 0)       := AXI_RESP_DECERR_C;
       CHANNEL_G         : slv(7 downto 0)       := x"00";
       TRIG_ADDR_G       : integer range 8 to 32 := 8;
       BUFF_ADDR_G       : integer range 1 to 6  := 3;
@@ -349,7 +348,7 @@ begin
       
       
       -- Closeout the transaction
-      axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
+      axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_RESP_DECERR_C);
       
       
       ------------------------------------------------

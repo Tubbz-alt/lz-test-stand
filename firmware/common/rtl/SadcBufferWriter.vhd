@@ -28,9 +28,7 @@ entity SadcBufferWriter is
    generic (
       TPD_G             : time                     := 1 ns;
       CHANNEL_G         : slv(2 downto 0)          := "000";
-      ADDR_BITS_G       : integer range 12 to 27   := 14;
-      AXI_ERROR_RESP_G  : slv(1 downto 0)          := AXI_RESP_DECERR_C
-   );
+      ADDR_BITS_G       : integer range 12 to 27   := 14);
    port (
       -- ADC interface
       adcClk            : in  sl;
@@ -374,7 +372,7 @@ begin
       
       
       -- Closeout the transaction
-      axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
+      axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_RESP_DECERR_C);
       
       
       ------------------------------------------------

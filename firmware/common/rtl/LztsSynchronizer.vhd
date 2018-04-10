@@ -29,9 +29,7 @@ use unisim.vcomponents.all;
 entity LztsSynchronizer is
    generic (
       TPD_G             : time            := 1 ns;
-      SIM_SPEEDUP_G     : boolean         := false;
-      AXI_ERROR_RESP_G  : slv(1 downto 0) := AXI_RESP_DECERR_C
-   );
+      SIM_SPEEDUP_G     : boolean         := false);
    port (
       -- AXI-Lite Interface for local registers 
       axilClk           : in  sl;
@@ -254,7 +252,7 @@ begin
       axiSlaveRegister (regCon, x"104", 0, vreg.syncCmd);
       
       -- Closeout the transaction
-      axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
+      axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_RESP_DECERR_C);
       
       ------------------------------------------------
       -- Serial pattern in/out logic (pllClk domain)

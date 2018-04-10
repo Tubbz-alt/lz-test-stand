@@ -27,9 +27,7 @@ use work.SsiPkg.all;
 
 entity FadcPacketizer is
    generic (
-      TPD_G             : time                     := 1 ns;
-      AXI_ERROR_RESP_G  : slv(1 downto 0)          := AXI_RESP_DECERR_C
-   );
+      TPD_G             : time                     := 1 ns);
    port (
       -- AXI-Lite Interface for local registers 
       axilClk           : in  sl;
@@ -162,7 +160,7 @@ begin
       axiSlaveRegister (regCon, x"008", 0, vreg.timeout);
       
       -- Closeout the transaction
-      axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_ERROR_RESP_G);
+      axiSlaveDefault(regCon, vreg.axilWriteSlave, vreg.axilReadSlave, AXI_RESP_DECERR_C);
       
       ----------------------------------------------------------------------
       -- Data stream state machine

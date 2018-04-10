@@ -111,12 +111,6 @@ class LztsPowerRegisters(pr.Device):
          pr.RemoteVariable(name='PokLdoA0p5V0',    description='PowerOkAll', offset=0x00000004, bitSize=1, bitOffset=18, base=pr.Bool, mode='RO'),
          pr.RemoteVariable(name='PokLdoA1p5V0',    description='PowerOkAll', offset=0x00000004, bitSize=1, bitOffset=19, base=pr.Bool, mode='RO')))
       
-      self.add((
-         pr.RemoteVariable(name='Led0',   description='Leds', offset=0x00000100, bitSize=1, bitOffset=0,  base=pr.Bool, mode='RW'),
-         pr.RemoteVariable(name='Led1',   description='Leds', offset=0x00000100, bitSize=1, bitOffset=1,  base=pr.Bool, mode='RW'),
-         pr.RemoteVariable(name='Led2',   description='Leds', offset=0x00000100, bitSize=1, bitOffset=2,  base=pr.Bool, mode='RW'),
-         pr.RemoteVariable(name='Led3',   description='Leds', offset=0x00000100, bitSize=1, bitOffset=3,  base=pr.Bool, mode='RW')))
-      
       self.add((pr.RemoteVariable(name='SADCRst',     description='SADCRst',     offset=0x00000200, bitSize=4, bitOffset=0,  base=pr.UInt, mode='RW')))
       self.add((pr.RemoteVariable(name='SADCCtrl1',   description='SADCCtrl1',   offset=0x00000204, bitSize=4, bitOffset=0,  base=pr.UInt, mode='RW')))
       self.add((pr.RemoteVariable(name='SADCCtrl2',   description='SADCCtrl2',   offset=0x00000208, bitSize=4, bitOffset=0,  base=pr.UInt, mode='RW')))

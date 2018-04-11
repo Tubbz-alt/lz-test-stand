@@ -122,7 +122,7 @@ class Lzts(pr.Device):
                 hidden  = False,
             ))    
         
-        self.sadcDelays = [142,143,118,123,122,125,121,150,139,121,135,129,139,128,120,140,80,88,83,80,82,80,88,92,85,84,86,82,82,86,84,85,115,128,116,120,121,110,102,116,107,113,107,103,115,115,118,101,73,80,76,75,72,77,77,83,80,75,74,75,79,83,85,83]
+        self.sadcDelays = [85,88,73,79,79,79,76,91,88,80,86,84,89,81,81,89,80,83,78,76,79,78,84,91,85,84,83,81,83,85,83,83,80,88,79,81,83,79,75,82,73,81,75,69,78,79,78,71,80,86,80,77,79,80,81,88,79,77,75,75,79,85,86,84]
         self.delayRegs = self.find(name="DelayAdc*")        
         
         @self.command(description="Clear temperature fault",)
@@ -326,4 +326,6 @@ class Lzts(pr.Device):
         
         # set alarm thresholds
         self.SetMonAlarms()
+        # clear fault in case it occured before
+        self.TempFaultClear()
         

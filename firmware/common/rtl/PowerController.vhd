@@ -27,6 +27,7 @@ use work.AppPkg.all;
 entity PowerController is
    generic (
       TPD_G           : time            := 1 ns;
+      USE_DCDC_SYNC_G : boolean         := false;
       AXIL_ERR_RESP_G : slv(1 downto 0) := AXI_RESP_DECERR_C);
    port (
       -- AXI lite slave port for register access
@@ -57,7 +58,7 @@ end PowerController;
 architecture RTL of PowerController is
 
    type RegType is record
-      tempFault       : sl;
+      tempFault       : slv(1 downto 0);
       latchTempFault  : sl;
       ignTempAlert    : slv(1 downto 0);
       powerEnAll      : slv(7 downto 0);
@@ -83,7 +84,7 @@ architecture RTL of PowerController is
    end record RegType;
 
    constant REG_INIT_C : RegType := (
-      tempFault       => '0',
+      tempFault       => "00",
       latchTempFault  => '0',
       ignTempAlert    => (others => '0'),
       powerEnAll      => (others => '0'),
@@ -152,14 +153,14 @@ begin
    powerOkAll(18) <= pwrCtrlIn.pokLdoA0p5V0;
    powerOkAll(19) <= pwrCtrlIn.pokLdoA1p5V0;
 
-   pwrCtrlOut.enDcDcAm6V  <= r.powerEnAll(0) and not r.tempFault;
-   pwrCtrlOut.enDcDcAp5V4 <= r.powerEnAll(1) and not r.tempFault;
-   pwrCtrlOut.enDcDcAp3V7 <= r.powerEnAll(2) and not r.tempFault;
-   pwrCtrlOut.enDcDcAp2V3 <= r.powerEnAll(3) and not r.tempFault;
-   pwrCtrlOut.enDcDcAp1V6 <= r.powerEnAll(4) and not r.tempFault;
-   pwrCtrlOut.enLdoSlow   <= r.powerEnAll(5) and not r.tempFault;
-   pwrCtrlOut.enLdoFast   <= r.powerEnAll(6) and not r.tempFault;
-   pwrCtrlOut.enLdoAm5V   <= r.powerEnAll(7) and not r.tempFault;
+   pwrCtrlOut.enDcDcAm6V  <= '1' when r.powerEnAll(0) = '1' and r.tempFault = 0 else '0';
+   pwrCtrlOut.enDcDcAp5V4 <= '1' when r.powerEnAll(1) = '1' and r.tempFault = 0 else '0';
+   pwrCtrlOut.enDcDcAp3V7 <= '1' when r.powerEnAll(2) = '1' and r.tempFault = 0 else '0';
+   pwrCtrlOut.enDcDcAp2V3 <= '1' when r.powerEnAll(3) = '1' and r.tempFault = 0 else '0';
+   pwrCtrlOut.enDcDcAp1V6 <= '1' when r.powerEnAll(4) = '1' and r.tempFault = 0 else '0';
+   pwrCtrlOut.enLdoSlow   <= '1' when r.powerEnAll(5) = '1' and r.tempFault = 0 else '0';
+   pwrCtrlOut.enLdoFast   <= '1' when r.powerEnAll(6) = '1' and r.tempFault = 0 else '0';
+   pwrCtrlOut.enLdoAm5V   <= '1' when r.powerEnAll(7) = '1' and r.tempFault = 0 else '0';
 
    GEN_VEC :
    for i in 1 downto 0 generate
@@ -195,11 +196,11 @@ begin
 
       -- Generate the tempFault
       if (r.latchTempFault = '0') then
-         v.tempFault := '0';
+         v.tempFault := "00";
       end if;
       for i in 1 downto 0 loop
          if (r.ignTempAlert(i) = '0') and (tempAlert(i) = '1') then
-            v.tempFault := '1';
+            v.tempFault(i) := '1';
          end if;
       end loop;
 
@@ -239,28 +240,36 @@ begin
 
       -- DCDC sync logic
       for i in 13 downto 0 loop
-         -- phase counters
-         if r.syncAll = '1' then
+         if USE_DCDC_SYNC_G = true then
+            -- phase counters
+            if r.syncAll = '1' then
+               v.syncPhaseCnt(i) := (others => '0');
+               v.sync(i)         := '1';
+            elsif r.syncPhaseCnt(i) < r.syncPhase(i) then
+               v.syncPhaseCnt(i) := r.syncPhaseCnt(i) + 1;
+            else
+               v.sync(i) := '0';
+            end if;
+            -- clock counters
+            if r.sync(i) = '1' then
+               v.syncClkCnt(i) := (others => '0');
+               v.syncOut(i)    := '0';
+            elsif r.syncClkCnt(i) = r.syncHalfClk(i) then
+               v.syncClkCnt(i) := (others => '0');
+               v.syncOut(i)    := not r.syncOut(i);
+            else
+               v.syncClkCnt(i) := r.syncClkCnt(i) + 1;
+            end if;
+            -- disable sync if resister is zero
+            if r.syncHalfClk(i) = 0 then
+               v.syncOut(i) := '0';
+            end if;
+         else
+            -- remove sync functionality if not required
             v.syncPhaseCnt(i) := (others => '0');
-            v.sync(i)         := '1';
-         elsif r.syncPhaseCnt(i) < r.syncPhase(i) then
-            v.syncPhaseCnt(i) := r.syncPhaseCnt(i) + 1;
-         else
-            v.sync(i) := '0';
-         end if;
-         -- clock counters
-         if r.sync(i) = '1' then
-            v.syncClkCnt(i) := (others => '0');
-            v.syncOut(i)    := '0';
-         elsif r.syncClkCnt(i) = r.syncHalfClk(i) then
-            v.syncClkCnt(i) := (others => '0');
-            v.syncOut(i)    := not r.syncOut(i);
-         else
-            v.syncClkCnt(i) := r.syncClkCnt(i) + 1;
-         end if;
-         -- disable sync if resister is zero
-         if r.syncHalfClk(i) = 0 then
-            v.syncOut(i) := '0';
+            v.syncClkCnt(i)   := (others => '0');
+            v.sync(i)         := '0';
+            v.syncOut(i)      := '0';
          end if;
       end loop;
 

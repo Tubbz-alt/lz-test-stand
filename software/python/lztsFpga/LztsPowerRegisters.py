@@ -63,9 +63,9 @@ class LztsPowerRegisters(pr.Device):
          name       = 'TempFault',     
          description= 'Temperature Fault State',     
          offset     = 0x00000014, 
-         bitSize    = 1, 
+         bitSize    = 2, 
          bitOffset  = 0,  
-         base       = pr.Bool, 
+         base       = pr.UInt, 
          mode       = 'RO',
       ))   
 

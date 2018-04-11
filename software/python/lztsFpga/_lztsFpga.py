@@ -135,6 +135,30 @@ class Lzts(pr.Device):
             self._root.checkBlocks(recurse=True)
             self.PwrReg.LatchTempFault.set(True)
             self._root.checkBlocks(recurse=True)
+         
+        @self.command(description="Set monitoring alarms",)
+        def SetMonAlarms():
+            # enable thermal fault latching
+            # analog power will be kept off when 70C alert threshold is crossed
+            # this has to be cleared in power regs and monitor (TempFaultClear command)
+            # this is before critical shutdown at 85C
+            self.PwrReg.LatchTempFault.set(True) 
+            self._root.checkBlocks(recurse=True)
+            
+            # set power monitors to alarm when the 6V DCDC is shut off (ADIN below 0.5V)
+            # look at Fault register to see the alarm
+            self.PwrMonAna.Alert.set(0x1)
+            self._root.checkBlocks(recurse=True)
+            self.PwrMonAna.MinAdinThresholdMsb.set(0x3E)
+            self._root.checkBlocks(recurse=True)
+            self.PwrMonAna.MinAdinThresholdLsb.set(0x80)
+            self._root.checkBlocks(recurse=True)
+            self.PwrMonDig.Alert.set(0x1)
+            self._root.checkBlocks(recurse=True)
+            self.PwrMonDig.MinAdinThresholdMsb.set(0x3E)
+            self._root.checkBlocks(recurse=True)
+            self.PwrMonDig.MinAdinThresholdLsb.set(0x80)
+            self._root.checkBlocks(recurse=True)
         
         @self.command(description="Initialization for slow ADC idelayes",)
         def SadcInit():
@@ -296,7 +320,10 @@ class Lzts(pr.Device):
             
         self.JesdReset()
         
+        # initialize slow ADC
         self.SadcReset()
         self.SadcInit()
         
+        # set alarm thresholds
+        self.SetMonAlarms()
         

@@ -137,11 +137,6 @@ architecture top_level of SystemCore is
 
    constant AXI_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 24, 20);
 
-   signal mbReadMaster  : AxiLiteReadMasterType;
-   signal mbReadSlave   : AxiLiteReadSlaveType;
-   signal mbWriteMaster : AxiLiteWriteMasterType;
-   signal mbWriteSlave  : AxiLiteWriteSlaveType;
-
    signal regWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_G-1 downto 0);
    signal regWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_G-1 downto 0);
    signal regReadMasters  : AxiLiteReadMasterArray(NUM_AXI_MASTERS_G-1 downto 0);
@@ -180,8 +175,6 @@ architecture top_level of SystemCore is
    signal adcReset      : sl;
    
    signal muxClk        : slv(2 downto 0);
-
-   signal mbIrq : slv(7 downto 0) := (others => '0');  -- unused 
 
 begin
    
@@ -310,45 +303,22 @@ begin
 
    adcClk <= adcClock;
 
-   --------------------------------
-   -- Microblaze Embedded Processor
-   --------------------------------
-   U_CPU : entity work.MicroblazeBasicCoreWrapper
-      generic map (
-         TPD_G           => TPD_G,
-         AXIL_ADDR_MSB_C => false)      -- false = [0x00000000:0xFFFFFFFF]
-      port map (
-         -- Master AXI-Lite Interface: [0x00000000:0xFFFFFFFF]
-         mAxilWriteMaster => mbWriteMaster,
-         mAxilWriteSlave  => mbWriteSlave,
-         mAxilReadMaster  => mbReadMaster,
-         mAxilReadSlave   => mbReadSlave,
-         -- IRQ
-         interrupt        => mbIrq,
-         -- Clock and Reset
-         clk              => axilClk,
-         rst              => axilRst);
-
    ---------------------
    -- AXI-Lite: Crossbar
    ---------------------
    U_XBAR0 : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
-         NUM_SLAVE_SLOTS_G  => 2,
+         NUM_SLAVE_SLOTS_G  => 1,
          NUM_MASTER_SLOTS_G => NUM_AXI_MASTERS_G,
          MASTERS_CONFIG_G   => AXI_CONFIG_G)
       port map (
          axiClk              => axilClk,
          axiClkRst           => axilRst,
          sAxiWriteMasters(0) => mAxilWriteMaster,
-         sAxiWriteMasters(1) => mbWriteMaster,
          sAxiWriteSlaves(0)  => mAxilWriteSlave,
-         sAxiWriteSlaves(1)  => mbWriteSlave,
          sAxiReadMasters(0)  => mAxilReadMaster,
-         sAxiReadMasters(1)  => mbReadMaster,
          sAxiReadSlaves(0)   => mAxilReadSlave,
-         sAxiReadSlaves(1)   => mbReadSlave,
          mAxiWriteMasters    => regWriteMasters,
          mAxiWriteSlaves     => regWriteSlaves,
          mAxiReadMasters     => regReadMasters,

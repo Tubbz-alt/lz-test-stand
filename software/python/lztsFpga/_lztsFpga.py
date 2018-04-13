@@ -159,6 +159,13 @@ class Lzts(pr.Device):
             self._root.checkBlocks(recurse=True)
             self.PwrMonDig.MinAdinThresholdLsb.set(0x80)
             self._root.checkBlocks(recurse=True)
+            
+            #set alert threshold to 90C
+            self.TempMon.RemoteHighSetpointHighByteWrite.set(90)
+            self._root.checkBlocks(recurse=True)
+            #set critical threshold to 100C
+            self.TempMon.RemoteTCritSetpoint.set(100)
+            self._root.checkBlocks(recurse=True)
         
         @self.command(description="Initialization for slow ADC idelayes",)
         def SadcInit():
@@ -324,6 +331,7 @@ class Lzts(pr.Device):
         self.SadcReset()
         self.SadcInit()
         
+        self.TempMon.writeBlocks(  force=force, recurse=recurse, variable=variable)
         # set alarm thresholds
         self.SetMonAlarms()
         # clear fault in case it occured before

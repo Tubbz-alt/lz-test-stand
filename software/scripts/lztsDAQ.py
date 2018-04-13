@@ -35,7 +35,7 @@ import PyQt4.QtGui
 import PyQt4.QtCore
 import lztsFpga as fpga
 import lztsViewer as vi
-from AdmPcieKu3Pgp2b import *
+#from AdmPcieKu3Pgp2b import *
 import pyrogue.utilities.prbs
 
 # Set the argument parser

@@ -324,18 +324,21 @@ class EventReader(rogue.interfaces.stream.Slave):
         if (VcNum == self.VIEW_DATA_CHANNEL_ID):
             
             # print basic info
+            debugInfo = 0
             trigSamples = 0
             trigOffset = 0
             trigTime = 0
             if (PRINT_VERBOSE): print('Received packet size is %d' %(len(p)))
             if len(p) >= 24:
                 header = np.frombuffer(p, dtype='uint16', count=12)
+                debugInfo = header[1]
                 trigSamples = ((header[5] << 16) | header[4])&0x3fffff
                 trigOffset = (header[7] << 16) | header[6]
                 trigTime = (header[11] << 48) | (header[10] << 32) | (header[9] << 16) | header[8]
                 if (PRINT_VERBOSE): print('Trigger size is %d samples' %(trigSamples))
                 if (PRINT_VERBOSE): print('Trigger offset is %d samples' %(trigOffset))
                 if (PRINT_VERBOSE): print('Trigger time is %f' %(trigTime/250000000.0))
+                if (PRINT_VERBOSE): print('Trigger debug info %x' %(debugInfo))
                 # check if footer exists and print its content
                 if (header[3] & 0x1) == 1:
                     footer = np.frombuffer(p, dtype='uint16', count=24, offset=len(p)-24*2)

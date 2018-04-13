@@ -107,6 +107,7 @@ begin
             CHANNEL_G      => toSlv(CHMAP_C(i), 8),
             TRIG_ADDR_G    => TRIG_ADDR_G,
             BUFF_ADDR_G    => BUFF_ADDR_G,
+            FSM_DEBUG_G    => true,
             PGP_LANE_G     => PGP_LANE_G,
             PGP_VC_G       => PGP_VC_G
          )

@@ -144,7 +144,11 @@ architecture rtl of FadcBufferChannel is
       buffSelRd      : slv(BUFF_ADDR_G-1 downto 0); 
       hdrCnt         : integer range 0 to 11;
       reTrigger      : sl;
-      trigStQueue    : Slv2Array(5 downto 0);
+      trigStQueue    : Slv2Array(7 downto 0);
+      dbgFifoWr      : sl;
+      dbgFifoDin     : slv(31 downto 0);
+      dbgRd          : sl;
+      dbgDout        : slv(31 downto 0);
    end record TrigType;
    
    constant TRIG_INIT_C : TrigType := (
@@ -201,7 +205,11 @@ architecture rtl of FadcBufferChannel is
       buffSelRd      => (others=>'0'),
       hdrCnt         => 0,
       reTrigger      => '0',
-      trigStQueue    => (others=>(others=>'0'))
+      trigStQueue    => (others=>(others=>'0')),
+      dbgFifoWr      => '0',
+      dbgFifoDin     => (others=>'0'),
+      dbgRd          => '0',
+      dbgDout        => (others=>'0')
    );
    
    
@@ -264,6 +272,9 @@ architecture rtl of FadcBufferChannel is
    signal memWrAddr     : slv(ADDR_LEN_C-1 downto 0);
    signal memWrEn       : sl;
    
+   signal dbgDout       : slv(31 downto 0);
+   signal dbgValid      : sl;
+   
    attribute keep : string;
    attribute keep of trig : signal is "true";
    
@@ -273,7 +284,7 @@ begin
    -- trigger and buffer logic (adcClk domian)
    comb : process (adcRst, axilRst, adcValid, axilReadMaster, axilWriteMaster, txSlave, reg, trig,
       gTime, extTrigger, preThr, postThr, vetoThr, preThrZero, memRdData, trigFifoFull, trigValid, trigDout,
-      addrFifoFull, addrValid, addrDout) is
+      addrFifoFull, addrValid, addrDout, dbgDout, dbgValid) is
       variable vreg           : RegType;
       variable vtrig          : TrigType;
       variable intTrig        : sl;
@@ -292,6 +303,7 @@ begin
       vtrig := trig;
       
       vtrig.addrDout := addrDout;
+      vtrig.dbgDout  := dbgDout;
       
       -- keep reset for several clock cycles
       vtrig.reset := trig.reset(14 downto 0) & '0';
@@ -537,6 +549,7 @@ begin
       vtrig.trigIntDrop := '0';
       vtrig.buffSwitch  := '0';
       vtrig.addrFifoWr  := '0';
+      vtrig.dbgFifoWr   := '0';
       
       case trig.trigState is
          
@@ -750,23 +763,24 @@ begin
                vtrig.trigFifoCnt  := trig.trigFifoCnt + 1;
                vtrig.trigFifoWr   := '1';
                if trig.trigFifoCnt = 0 then
-                  -- temporarly use empty bits
-                  -- plan for dedicated debug entry in the fifo
-                  if FSM_DEBUG_G = false then
-                     vtrig.trigFifoDin(26 downto 25)            := (others=>'0');
-                     vtrig.trigFifoDin(21 downto TRIG_ADDR_G+2) := (others=>'0');
-                  else
-                     vtrig.trigFifoDin(26 downto 25)  := trig.trigStQueue(0);
-                     vtrig.trigFifoDin(21 downto 20)  := trig.trigStQueue(1);
-                     vtrig.trigFifoDin(19 downto 18)  := trig.trigStQueue(2);
-                     vtrig.trigFifoDin(17 downto 16)  := trig.trigStQueue(3);
-                     vtrig.trigFifoDin(15 downto 14)  := trig.trigStQueue(4);
-                     vtrig.trigFifoDin(13 downto 12)  := trig.trigStQueue(5);
-                     vtrig.trigFifoDin(11)            := '0';
+                  -- store debug information (optional)
+                  if FSM_DEBUG_G = true then
+                     vtrig.dbgFifoWr                  := '1';
+                     vtrig.dbgFifoDin(15 downto 14)   := trig.trigStQueue(0);
+                     vtrig.dbgFifoDin(13 downto 12)   := trig.trigStQueue(1);
+                     vtrig.dbgFifoDin(11 downto 10)   := trig.trigStQueue(2);
+                     vtrig.dbgFifoDin(9 downto 8)     := trig.trigStQueue(3);
+                     vtrig.dbgFifoDin(7 downto 6)     := trig.trigStQueue(4);
+                     vtrig.dbgFifoDin(5 downto 4)     := trig.trigStQueue(5);
+                     vtrig.dbgFifoDin(3 downto 2)     := trig.trigStQueue(6);
+                     vtrig.dbgFifoDin(1 downto 0)     := trig.trigStQueue(7);
                   end if;
+                  -- save trigger data
                   vtrig.trigFifoDin(31 downto 27)            := trig.trigType;
+                  vtrig.trigFifoDin(26 downto 25)            := (others=>'0');
                   vtrig.trigFifoDin(24 downto 23)            := trig.sampleOffset;
                   vtrig.trigFifoDin(22)                      := trig.lostTrigFlag;
+                  vtrig.trigFifoDin(21 downto TRIG_ADDR_G+2) := (others=>'0');
                   vtrig.trigFifoDin(TRIG_ADDR_G+1 downto 0)  := vtrig.trigLength;
                elsif trig.trigFifoCnt = 1 then
                   vtrig.trigFifoDin := trig.trigOffset;
@@ -801,6 +815,8 @@ begin
       
       -- move the queue when new state
       if vtrig.trigState /= trig.trigState then
+         vtrig.trigStQueue(7) := trig.trigStQueue(6);
+         vtrig.trigStQueue(6) := trig.trigStQueue(5);
          vtrig.trigStQueue(5) := trig.trigStQueue(4);
          vtrig.trigStQueue(4) := trig.trigStQueue(3);
          vtrig.trigStQueue(3) := trig.trigStQueue(2);
@@ -855,6 +871,7 @@ begin
       vtrig.trigRd      := '0';
       vtrig.trigRdLast  := '0';
       vtrig.addrRd      := '0';
+      vtrig.dbgRd       := '0';
       
       case trig.dataState is
          
@@ -877,33 +894,15 @@ begin
                   if FSM_DEBUG_G = false then
                      vtrig.txMaster.tData(15 downto 0)  := x"0000";                             -- reserved
                   else
-                     vtrig.txMaster.tData(1 downto 0)   := trigDout(13 downto 12);              -- debug data
-                     vtrig.txMaster.tData(3 downto 2)   := trigDout(15 downto 14);              -- debug data
-                     vtrig.txMaster.tData(5 downto 4)   := trigDout(17 downto 16);              -- debug data
-                     vtrig.txMaster.tData(7 downto 6)   := trigDout(19 downto 18);              -- debug data
-                     vtrig.txMaster.tData(9 downto 8)   := trigDout(21 downto 20);              -- debug data
-                     vtrig.txMaster.tData(11 downto 10) := trigDout(26 downto 25);              -- debug data
-                     vtrig.txMaster.tData(15 downto 12) := (others=>'0');                       -- zero
+                     vtrig.txMaster.tData(15 downto 0)  := trig.dbgDout(15 downto 0);           -- debug data
                   end if;
                elsif trig.hdrCnt = 2 then
                   vtrig.txMaster.tData(15 downto 0) := x"00" & CHANNEL_G;                       -- Fast ADC channel number
                elsif trig.hdrCnt = 3 then
                   vtrig.txMaster.tData(15 downto 0) := x"0000";                                 -- reserved
                elsif trig.hdrCnt = 4 then
-                  if FSM_DEBUG_G = false then
-                     -- unused bits are guaranteed to be zero without debug logic
-                     vtrig.trigDout                     := trigDout(31 downto 16);
-                     vtrig.txMaster.tData(15 downto 0)  := trigDout(15 downto 0);               -- trigSize
-                  else
-                     -- zeros used by debug data must be removed from these header words
-                     vtrig.trigDout(15 downto 11)       := trigDout(31 downto 27);              -- trigType
-                     vtrig.trigDout(10 downto 9)        := (others=>'0');                       -- zero
-                     vtrig.trigDout(8 downto 7)         := trigDout(24 downto 23);              -- sampleOffset
-                     vtrig.trigDout(6)                  := trigDout(22);                        -- lostTrigFlag
-                     vtrig.trigDout(5 downto 0)         := (others=>'0');                       -- zero
-                     vtrig.txMaster.tData(15 downto 11) := (others=>'0');                       -- zero
-                     vtrig.txMaster.tData(10 downto 0)  := trigDout(10 downto 0);               -- trigSize
-                  end if;
+                  vtrig.trigDout                     := trigDout(31 downto 16);
+                  vtrig.txMaster.tData(15 downto 0)  := trigDout(15 downto 0);                  -- trigSize
                   vtrig.trigRd                      := '1';
                elsif trig.hdrCnt = 5 then
                   vtrig.txMaster.tData(15 downto 0) := trig.trigDout;                           -- trigSize
@@ -970,6 +969,9 @@ begin
                   vtrig.txMaster.tLast := '1';
                   vtrig.addrRd         := '1';
                   vtrig.dataState      := IDLE_S;
+                  if FSM_DEBUG_G = true then
+                     vtrig.dbgRd       := '1';
+                  end if;
                end if;
             
             end if;
@@ -1087,6 +1089,36 @@ begin
       dout              => addrDout,
       valid             => addrValid
    );
+   
+   ----------------------------------------------------------------------
+   -- Optional debug information FIFO
+   ----------------------------------------------------------------------
+   G_Dbg: if FSM_DEBUG_G = true generate
+   
+      U_DbgFifo : entity work.Fifo 
+      generic map (
+         DATA_WIDTH_G      => 32,
+         ADDR_WIDTH_G      => HDR_ADDR_WIDTH_C,
+         FWFT_EN_G         => true,
+         GEN_SYNC_FIFO_G   => true
+      )
+      port map ( 
+         rst               => trig.reset(0),
+         wr_clk            => adcClk,
+         wr_en             => trig.dbgFifoWr,
+         din               => trig.dbgFifoDin,
+         rd_clk            => adcClk,
+         rd_en             => trig.dbgRd,
+         dout              => dbgDout,
+         valid             => dbgValid
+      );
+      
+   end generate;
+   
+   G_NoDbg: if FSM_DEBUG_G = false generate
+      dbgValid       <= '0';
+      dbgDout        <= (others=>'0');
+   end generate;
    
    ----------------------------------------------------------------------
    -- Streaming out FIFO

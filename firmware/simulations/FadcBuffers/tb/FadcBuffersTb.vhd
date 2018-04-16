@@ -36,7 +36,7 @@ entity FadcBuffersTb is end FadcBuffersTb;
 
 architecture testbed of FadcBuffersTb is
    
-   constant FORCE_EXT_TRIG_C : boolean := true;
+   constant FORCE_EXT_TRIG_C : boolean := false;
    constant TEST_LOOP_C : boolean := false;
    
    
@@ -246,7 +246,8 @@ begin
          CHANNEL_G         => toSlv(i,8),
          PGP_LANE_G        => "0010",
          PGP_VC_G          => PGP_VC_C,
-         TRIG_ADDR_G       => 8
+         TRIG_ADDR_G       => 8,
+         FSM_DEBUG_G    => true
       )
       port map (
          -- ADC Clock Domain

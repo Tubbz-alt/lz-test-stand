@@ -183,7 +183,8 @@ architecture top_level of SystemCore is
    
    signal muxClk        : slv(2 downto 0);
    
-   signal mbIrq : slv(7 downto 0) := (others => '0');  -- unused 
+   signal mbIrq            : slv(7 downto 0) := (others => '0');  -- unused 
+   signal tempAlertIntEdge : sl;
 
 begin
    
@@ -331,7 +332,15 @@ begin
          clk              => axilClk,
          rst              => axilRst);
    
-   mbIrq(0) <= tempAlertInt;
+   
+   U_SynchEdge : entity work.SynchronizerEdge
+      port map (
+         clk         => axilClk,
+         rst         => axilRst,
+         dataIn      => tempAlertInt,
+         risingEdge  => tempAlertIntEdge);
+   
+   mbIrq(0) <= tempAlertIntEdge;
    
    ---------------------
    -- AXI-Lite: Crossbar

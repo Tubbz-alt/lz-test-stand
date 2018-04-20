@@ -87,7 +87,37 @@ class LztsPowerRegisters(pr.Device):
          bitOffset  = 0,  
          base       = pr.Bool, 
          mode       = 'RW',
-      ))        
+      ))
+      
+      self.add(pr.RemoteVariable(
+         name       = 'FaultTempLoc',     
+         description= 'Local Temperature at Fault Event',     
+         offset     = 0x00000020, 
+         bitSize    = 8, 
+         bitOffset  = 0,  
+         base       = pr.UInt, 
+         mode       = 'RO',
+      ))
+      
+      self.add(pr.RemoteVariable(
+         name       = 'FaultTempRem',     
+         description= 'Remote Temperature at Fault Event',     
+         offset     = 0x00000024, 
+         bitSize    = 8, 
+         bitOffset  = 0,  
+         base       = pr.UInt, 
+         mode       = 'RO',
+      ))
+      
+      self.add(pr.RemoteVariable(
+         name       = 'FaultTempCnt',     
+         description= 'Fault Event Counter',
+         offset     = 0x00000028, 
+         bitSize    = 8, 
+         bitOffset  = 0,  
+         base       = pr.UInt, 
+         mode       = 'RO',
+      ))
       
       self.add((
          pr.RemoteVariable(name='PokDcDcDp6V',     description='PowerOkAll', offset=0x00000004, bitSize=1, bitOffset=0,  base=pr.Bool, mode='RO'),

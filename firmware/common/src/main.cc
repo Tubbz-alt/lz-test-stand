@@ -58,6 +58,7 @@ int main() {
    XIntc_Connect(&intc,1,(XInterruptHandler)tempAlertClrHandler,(void*)&tempAlertClr);
    XIntc_Start(&intc,XIN_REAL_MODE);
    XIntc_Enable(&intc,0);
+   XIntc_Enable(&intc,1);
    
    while (1) {
       

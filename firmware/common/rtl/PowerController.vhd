@@ -50,7 +50,9 @@ entity PowerController is
       fadcPdn          : out slv(3 downto 0);
       fadcReset        : out slv(3 downto 0);
       -- DDR aresetn
-      ddrRstN          : out sl);
+      ddrRstN          : out sl;
+      -- Temp alert interrupt
+      tempAlertInt     : out sl);
 end PowerController;
 
 
@@ -60,6 +62,9 @@ architecture RTL of PowerController is
    type RegType is record
       tempFault       : slv(1 downto 0);
       latchTempFault  : sl;
+      faultTempLoc    : slv(7 downto 0);
+      faultTempRem    : slv(7 downto 0);
+      faultTempInts   : slv(7 downto 0);
       ignTempAlert    : slv(1 downto 0);
       powerEnAll      : slv(7 downto 0);
       powerOkAll      : slv(19 downto 0);
@@ -86,6 +91,9 @@ architecture RTL of PowerController is
    constant REG_INIT_C : RegType := (
       tempFault       => "00",
       latchTempFault  => '0',
+      faultTempLoc    => (others => '0'),
+      faultTempRem    => (others => '0'),
+      faultTempInts   => (others => '0'),
       ignTempAlert    => (others => '0'),
       powerEnAll      => (others => '0'),
       powerOkAll      => (others => '0'),
@@ -167,15 +175,18 @@ begin
       U_Debouncer : entity work.Debouncer
          generic map(
             TPD_G             => TPD_G,
-            INPUT_POLARITY_G  => '0',   -- active LOW
-            OUTPUT_POLARITY_G => '1',   -- active HIGH
-            FILTER_SIZE_G     => 16,
-            SYNCHRONIZE_G     => true)  -- Run input through 2 FFs before filtering
+            INPUT_POLARITY_G  => '0',     -- active LOW
+            OUTPUT_POLARITY_G => '1',     -- active HIGH
+            CLK_PERIOD_G      => 6.4E-9,  -- units of seconds
+            DEBOUNCE_PERIOD_G => 5.0E-3,  -- units of seconds
+            SYNCHRONIZE_G     => true)    -- Run input through 2 FFs before filtering
          port map(
             clk => axilClk,
             i   => pwrCtrlIn.tempAlertL(i),
             o   => tempAlert(i));
    end generate GEN_VEC;
+   
+   tempAlertInt <= tempAlert(0);
 
    --------------------------------------------------
    -- AXI Lite register logic
@@ -216,6 +227,9 @@ begin
       axiSlaveRegisterR(regCon, x"014", 0, r.tempFault);
       axiSlaveRegister (regCon, x"018", 0, v.ignTempAlert);
       axiSlaveRegister (regCon, x"01C", 0, v.latchTempFault);
+      axiSlaveRegister (regCon, x"020", 0, v.faultTempLoc);
+      axiSlaveRegister (regCon, x"024", 0, v.faultTempRem);
+      axiSlaveRegister (regCon, x"028", 0, v.faultTempInts);
 
       -- add FSM to reset slow ADC after power ramp (see doc)
       axiSlaveRegister (regCon, x"200", 0, v.sadcRst);

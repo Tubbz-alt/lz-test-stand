@@ -191,6 +191,8 @@ architecture top_level of digitizer is
    signal ncIn      : slv(1 downto 0);
    signal ncOut     : slv(1 downto 0);
    
+   signal tempAlertInt : sl;
+   
    attribute keep : string;                        -- for chipscope
    attribute keep of adcClk : signal is "true";    -- for chipscope
 
@@ -337,7 +339,8 @@ begin
          sAxilWriteSlaves   => axilWriteSlaves,
          -- SYSMON Ports
          vPIn               => vPIn,
-         vNIn               => vNIn);
+         vNIn               => vNIn,
+         tempAlertInt       => tempAlertInt);
    
    ----------------------
    -- Power Supply Module
@@ -359,7 +362,8 @@ begin
          sadcCtrl1        => sadcCtrl1,
          sadcCtrl2        => sadcCtrl2,
          sampEn           => sampEn,
-         ddrRstN          => ddrRstN);
+         ddrRstN          => ddrRstN,
+         tempAlertInt     => tempAlertInt);
 
    --------------------
    -- 250 MSPS ADCs PHY

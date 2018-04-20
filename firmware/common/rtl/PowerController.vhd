@@ -175,11 +175,11 @@ begin
       U_Debouncer : entity work.Debouncer
          generic map(
             TPD_G             => TPD_G,
-            INPUT_POLARITY_G  => '0',     -- active LOW
-            OUTPUT_POLARITY_G => '1',     -- active HIGH
-            CLK_PERIOD_G      => 6.4E-9,  -- units of seconds
-            DEBOUNCE_PERIOD_G => 5.0E-3,  -- units of seconds
-            SYNCHRONIZE_G     => true)    -- Run input through 2 FFs before filtering
+            INPUT_POLARITY_G  => '0',        -- active LOW
+            OUTPUT_POLARITY_G => '1',        -- active HIGH
+            CLK_FREQ_G        => 156.250E+6, -- units of Hz
+            DEBOUNCE_PERIOD_G => 5.0E-3,     -- units of seconds
+            SYNCHRONIZE_G     => true)       -- Run input through 2 FFs before filtering
          port map(
             clk => axilClk,
             i   => pwrCtrlIn.tempAlertL(i),

@@ -30,34 +30,41 @@ static XIntc intc;
 
 void tempAlertIntHandler(void * data) {
    uint32_t * request = (uint32_t *)data;
-   
-   //clear interrupt in the SA56004
-   Xil_Out32(TEMP_MON_CFGWR_OFFSET, 0x00000000);
  
    (*request) = 1; 
    
    XIntc_Acknowledge(&intc, 0);
 }
 
+void tempAlertClrHandler(void * data) {
+   uint32_t * request = (uint32_t *)data;
+ 
+   (*request) = 1; 
+   
+   XIntc_Acknowledge(&intc, 1);
+}
+
 int main() { 
    
-   volatile uint32_t tempAlert = 0;
+   volatile uint32_t tempAlertInt = 0;
+   volatile uint32_t tempAlertClr = 0;
    uint32_t tempAlertNum = 0;
    uint32_t tempLoc = 0;
    uint32_t tempRem = 0;
    
    XIntc_Initialize(&intc,XPAR_U_CORE_U_CPU_U_MICROBLAZE_AXI_INTC_0_DEVICE_ID);
    microblaze_enable_interrupts();
-   XIntc_Connect(&intc,0,(XInterruptHandler)tempAlertIntHandler,(void*)&tempAlert);
+   XIntc_Connect(&intc,0,(XInterruptHandler)tempAlertIntHandler,(void*)&tempAlertInt);
+   XIntc_Connect(&intc,1,(XInterruptHandler)tempAlertClrHandler,(void*)&tempAlertClr);
    XIntc_Start(&intc,XIN_REAL_MODE);
    XIntc_Enable(&intc,0);
    
    while (1) {
       
-      // poll interrupt flag
-      if (tempAlert) {
+      // poll temp alert interrupt flag
+      if (tempAlertInt) {
          // clear interrupt flag
-         tempAlert = 0;
+         tempAlertInt = 0;
          // count interrupts up to 255
          if (tempAlertNum < 255)
             tempAlertNum++;
@@ -68,6 +75,16 @@ int main() {
          Xil_Out32(PWR_REG_LOC_OFFSET, tempLoc);
          Xil_Out32(PWR_REG_REM_OFFSET, tempRem);
          Xil_Out32(PWR_REG_INTS_OFFSET, tempAlertNum);
+         //clear interrupt in the SA56004
+         Xil_Out32(TEMP_MON_CFGWR_OFFSET, 0x00000000);
+      }
+      
+      // poll temp alert clear interrupt flag
+      if (tempAlertClr) {
+         // clear interrupt flag
+         tempAlertClr = 0;
+         //clear interrupt in the SA56004
+         Xil_Out32(TEMP_MON_CFGWR_OFFSET, 0x00000000);
       }
       
    }

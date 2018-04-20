@@ -75,8 +75,6 @@ int main() {
          Xil_Out32(PWR_REG_LOC_OFFSET, tempLoc);
          Xil_Out32(PWR_REG_REM_OFFSET, tempRem);
          Xil_Out32(PWR_REG_INTS_OFFSET, tempAlertNum);
-         //clear interrupt in the SA56004
-         Xil_Out32(TEMP_MON_CFGWR_OFFSET, 0x00000000);
       }
       
       // poll temp alert clear interrupt flag

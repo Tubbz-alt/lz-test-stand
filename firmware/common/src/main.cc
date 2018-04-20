@@ -13,7 +13,6 @@
 #include "xil_io.h"
 #include "xintc.h"
 #include "xparameters.h"
-#include "regs.h"
 #include "microblaze_sleep.h"
 #include "xil_printf.h"
 #include "ssi_printf.h"
@@ -47,8 +46,7 @@ int main() {
    uint32_t tempLoc = 0;
    uint32_t tempRem = 0;
    
-   Xil_Out32(EPIX_ADC_ALIGN_REG, 0x00000000);
-   XIntc_Initialize(&intc,XPAR_AXI_INTC_0_DEVICE_ID);
+   XIntc_Initialize(&intc,XPAR_U_CORE_U_CPU_U_MICROBLAZE_AXI_INTC_0_DEVICE_ID);
    microblaze_enable_interrupts();
    XIntc_Connect(&intc,0,(XInterruptHandler)tempAlertIntHandler,(void*)&tempAlert);
    XIntc_Start(&intc,XIN_REAL_MODE);
@@ -61,7 +59,7 @@ int main() {
          // clear interrupt flag
          tempAlert = 0;
          // count interrupts up to 255
-         if tempAlertNum < 255
+         if (tempAlertNum < 255)
             tempAlertNum++;
          // read temperatures
          tempLoc = Xil_In32(TEMP_MON_LOC_OFFSET);

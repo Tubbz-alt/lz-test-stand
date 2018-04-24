@@ -125,7 +125,7 @@ architecture top_level of SystemCore is
       2 => (MakeI2cAxiLiteDevType("1101111", 8, 8, '0', '1'))
    );   
 
-   constant NUM_AXI_MASTERS_C : natural := 9;
+   constant NUM_AXI_MASTERS_C : natural := 10;
 
    constant VERSION_INDEX_C  : natural := 0;
    constant SYSMON_INDEX_C   : natural := 1;
@@ -136,6 +136,7 @@ architecture top_level of SystemCore is
    constant TEMP_SNS_INDEX_C : natural := 6;
    constant PRBS_INDEX_C     : natural := 7;
    constant PWR_SNS_INDEX_C  : natural := 8;
+   constant MEMORY_INDEX_C   : natural := 9;
 
    constant AXI_CONFIG_C   : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := genAxiLiteConfig(NUM_AXI_MASTERS_C, x"00000000", 24, 20);
    
@@ -339,6 +340,22 @@ begin
          dataIn      => tempAlertInt,
          risingEdge  => mbIrq(0),
          fallingEdge => mbIrq(1));
+   
+   U_TempMem : entity work.AxiDualPortRam
+      generic map (
+         COMMON_CLK_G   => true,
+         ADDR_WIDTH_G   => 7,
+         DATA_WIDTH_G   => 32)
+      port map (
+         -- Axi Port
+         axiClk         => axilClk,
+         axiRst         => axilRst,
+         axiReadMaster  => axilReadMasters(MEMORY_INDEX_C),
+         axiReadSlave   => axilReadSlaves(MEMORY_INDEX_C),
+         axiWriteMaster => axilWriteMasters(MEMORY_INDEX_C),
+         axiWriteSlave  => axilWriteSlaves(MEMORY_INDEX_C));
+
+end entity AxiDualPortRam;
    
    ---------------------
    -- AXI-Lite: Crossbar

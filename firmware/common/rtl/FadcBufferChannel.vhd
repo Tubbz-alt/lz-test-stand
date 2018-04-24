@@ -109,6 +109,7 @@ architecture rtl of FadcBufferChannel is
       dropIntTrigs   : slv(31 downto 0);
       trigIntDrop    : sl;
       gTime          : slv(63 downto 0);
+      gTimeDly       : slv(63 downto 0);
       txMaster       : AxiStreamMasterType;
       dataState      : DataStateType;
       trigState      : TrigStateType;
@@ -170,6 +171,7 @@ architecture rtl of FadcBufferChannel is
       dropIntTrigs   => (others=>'0'),
       trigIntDrop    => '0',
       gTime          => (others=>'0'),
+      gTimeDly       => (others=>'0'),
       txMaster       => AXI_STREAM_MASTER_INIT_C,
       dataState      => IDLE_S,
       trigState      => IDLE_S,
@@ -550,6 +552,7 @@ begin
       vtrig.buffSwitch  := '0';
       vtrig.addrFifoWr  := '0';
       vtrig.dbgFifoWr   := '0';
+      vtrig.gTimeDly    := gTime;
       
       case trig.trigState is
          
@@ -563,7 +566,7 @@ begin
             if (trig.reset = 0 and trig.enable = '1') then
                
                -- track the time and sample address for all trigger sources
-               vtrig.gTime          := gTime;
+               --vtrig.gTime          := gTime;
                vtrig.addrFifoDin    := vtrig.buffSel & vtrig.preAddress;
                -- both sources share the preDelay setting
                vtrig.trigOffset     := resize(vtrig.actPreDelay, 32);
@@ -572,7 +575,7 @@ begin
                -- external trigger rising edge and size set to greater than 0
                if extTrig = '1' then
                   vtrig.trigType(EXT_IND_C)  := '1';
-                  vtrig.gTime                := trig.gTime;
+                  vtrig.gTime                := trig.gTimeDly;
                   vtrig.trigLength           := resize(vtrig.actPreDelay, TRIG_ADDR_G+2) + postSamples;
                   vtrig.addrFifoWr           := '1';
                   vtrig.trigPending          := '1';
@@ -580,7 +583,7 @@ begin
                -- internal trigger pre threshold and post threshold crossed in the same cycle
                elsif intTrigFast = '1' then
                   vtrig.trigType(INT_IND_C)  := '1';
-                  vtrig.gTime                := trig.gTime;
+                  vtrig.gTime                := trig.gTimeDly;
                   vtrig.trigLength           := resize(vtrig.actPreDelay, TRIG_ADDR_G+2) + postSamples;
                   vtrig.addrFifoWr           := '1';
                   vtrig.trigPending          := '1';
@@ -590,7 +593,7 @@ begin
                -- internal trigger pre threshold crossed
                elsif intTrig = '1' then
                   vtrig.trigType(INT_IND_C)  := '1';
-                  vtrig.gTime                := trig.gTime;
+                  vtrig.gTime                := trig.gTimeDly;
                   vtrig.trigLength           := resize(vtrig.actPreDelay, TRIG_ADDR_G+2);
                   vtrig.trigPending          := '1';
                   vtrig.trigState            := TRIG_ARM_S;

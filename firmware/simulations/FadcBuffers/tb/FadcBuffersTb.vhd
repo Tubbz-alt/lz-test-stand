@@ -36,7 +36,7 @@ entity FadcBuffersTb is end FadcBuffersTb;
 
 architecture testbed of FadcBuffersTb is
    
-   constant FORCE_EXT_TRIG_C : boolean := false;
+   constant FORCE_EXT_TRIG_C : boolean := true;
    constant TEST_LOOP_C : boolean := false;
    
    

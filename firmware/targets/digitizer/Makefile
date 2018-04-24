@@ -1,5 +1,5 @@
 # Define Firmware Version Number
-export PRJ_VERSION = 0x1C000053
+export PRJ_VERSION = 0x1C000054
 
 # Define the Microblaze source path
 export SDK_SRC_PATH = $(PROJ_DIR)/../../common/src

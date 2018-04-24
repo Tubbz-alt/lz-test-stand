@@ -354,8 +354,6 @@ begin
          axiReadSlave   => axilReadSlaves(MEMORY_INDEX_C),
          axiWriteMaster => axilWriteMasters(MEMORY_INDEX_C),
          axiWriteSlave  => axilWriteSlaves(MEMORY_INDEX_C));
-
-end entity AxiDualPortRam;
    
    ---------------------
    -- AXI-Lite: Crossbar

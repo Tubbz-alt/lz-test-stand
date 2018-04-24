@@ -31,6 +31,7 @@ from lztsFpga.SadcBufferWriter          import *
 from lztsFpga.SadcPatternTester         import *
 from lztsFpga.FadcBufferChannel         import *
 from lztsFpga.FadcDebug                 import *
+from lztsFpga.TempDebug                 import *
 
 from surf.axi._AxiMemTester             import *
 from surf.axi._AxiVersion               import *
@@ -69,6 +70,8 @@ class Lzts(pr.Device):
         self.add(LztsTemperature(    name='Temp2',      offset=0x00600800, expand=False, hidden=False,))
         self.add(LztsTemperature(    name='Temp3',      offset=0x00600C00, expand=False, hidden=False,))
         self.add(Sa56004x(           name='TempMon',    offset=0x00800000, expand=False, hidden=False,))
+        self.add(TempDebug(          name='TempLocMem', offset=0x00900000, expand=False, hidden=True,))
+        self.add(TempDebug(          name='TempRemMem', offset=0x00900100, expand=False, hidden=True,))
         self.add(Ltc2945(            name='PwrMonDig',  offset=0x00800400, expand=False, hidden=False,))
         self.add(Ltc2945(            name='PwrMonAna',  offset=0x00800800, expand=False, hidden=False,))
         self.add(LztsPowerRegisters( name='PwrReg',     offset=0x01000000, expand=False, hidden=False,))

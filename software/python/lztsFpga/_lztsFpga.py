@@ -335,6 +335,9 @@ class Lzts(pr.Device):
         self.SadcInit()
         
         self.TempMon.writeBlocks(  force=force, recurse=recurse, variable=variable)
+        self.PwrMonAna.writeBlocks(  force=force, recurse=recurse, variable=variable)
+        self.PwrMonDig.writeBlocks(  force=force, recurse=recurse, variable=variable)
+        
         # set alarm thresholds
         self.SetMonAlarms()
         # clear fault in case it occured before

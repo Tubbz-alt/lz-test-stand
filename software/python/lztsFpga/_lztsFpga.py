@@ -163,6 +163,8 @@ class Lzts(pr.Device):
             self.PwrMonDig.MinAdinThresholdLsb.set(0x80)
             self._root.checkBlocks(recurse=True)
             
+            #ignore low setpoint alarms by setting to -128*C
+            self.TempMon.RemoteHighSetpointLowByteWrite.set(0x80)
             #set temp monitor in comparator mode (clears itself when temp drops)
             self.TempMon.AlertMode.set(1)
             #set alert threshold to 90C

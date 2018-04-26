@@ -182,7 +182,7 @@ LztsBoard.Lzts.TempRemMem.enable.set(True)
 
 #locTemp = 256*[0]
 #remTemp = 256*[0]
-memPtr = LztsBoard.Lzts.PwrReg.FaultTempCnt.get()
+memPtr = LztsBoard.Lzts.PwrReg.FaultTempPtr.get()
 memPtr = memPtr + 1
 
 remFile = 'remTemp.csv'

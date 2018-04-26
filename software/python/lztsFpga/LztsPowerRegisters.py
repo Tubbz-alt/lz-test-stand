@@ -110,8 +110,8 @@ class LztsPowerRegisters(pr.Device):
       ))
       
       self.add(pr.RemoteVariable(
-         name       = 'FaultTempCnt',     
-         description= 'Fault Event Counter',
+         name       = 'FaultTempPtr',     
+         description= 'Fault Buffer Pointer',
          offset     = 0x00000028, 
          bitSize    = 8, 
          bitOffset  = 0,  

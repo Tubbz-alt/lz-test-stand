@@ -302,6 +302,12 @@ class Lzts(pr.Device):
         # Retire any in-flight transactions before starting next sequence
         self._root.checkBlocks(recurse=True)
         
+        # set alarm thresholds
+        self.SetMonAlarms()
+        # clear fault in case it occured before
+        self.TempFaultClear()
+        
+        
         # Load all the register expect for JESD which have to be loaded after LMK init()
         self.AxiVersion.writeBlocks( force=force, recurse=recurse, variable=variable)
         self.SysMon.writeBlocks(     force=force, recurse=recurse, variable=variable)
@@ -309,6 +315,9 @@ class Lzts(pr.Device):
         self.MemTester.writeBlocks(  force=force, recurse=recurse, variable=variable)
         self.PwrReg.writeBlocks(     force=force, recurse=recurse, variable=variable)
         self.Pgp2bAxi.writeBlocks(   force=force, recurse=recurse, variable=variable)
+        self.TempMon.writeBlocks(    force=force, recurse=recurse, variable=variable)
+        self.PwrMonAna.writeBlocks(  force=force, recurse=recurse, variable=variable)
+        self.PwrMonDig.writeBlocks(  force=force, recurse=recurse, variable=variable)
         self._root.checkBlocks(recurse=True)           
         time.sleep(0.1); # wait for power supplies to boot up
         
@@ -338,12 +347,5 @@ class Lzts(pr.Device):
         self.SadcReset()
         self.SadcInit()
         
-        self.TempMon.writeBlocks(  force=force, recurse=recurse, variable=variable)
-        self.PwrMonAna.writeBlocks(  force=force, recurse=recurse, variable=variable)
-        self.PwrMonDig.writeBlocks(  force=force, recurse=recurse, variable=variable)
         
-        # set alarm thresholds
-        self.SetMonAlarms()
-        # clear fault in case it occured before
-        self.TempFaultClear()
         

@@ -615,7 +615,7 @@ begin
    generic map (
       DEVICE_MAP_G     => I2C_TEMP_CONFIG_C,
       AXI_CLK_FREQ_G   => 156.25E+6,
-      I2C_SCL_FREQ_G   => 100.0E+3
+      I2C_SCL_FREQ_G   => 50.0E+3
    )
    port map (
       i2cInOut.scl   => tmpScl,
@@ -635,7 +635,7 @@ begin
    generic map (
       DEVICE_MAP_G     => I2C_PWR_CONFIG_C,
       AXI_CLK_FREQ_G   => 156.25E+6,
-      I2C_SCL_FREQ_G   => 100.0E+3
+      I2C_SCL_FREQ_G   => 50.0E+3
    )
    port map (
       i2cInOut.scl   => pwrScl,

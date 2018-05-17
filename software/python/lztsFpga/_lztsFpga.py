@@ -84,7 +84,7 @@ class Lzts(pr.Device):
                 offset  = (0x03000000 + i*0x100000), 
                 expand  = False, 
                 enabled = False,
-                hidden  = True,
+                hidden  = False,
             ))
         for i in range(4):
             self.add(Ads42Lbx9Config(
@@ -92,7 +92,7 @@ class Lzts(pr.Device):
                 offset  = (0x03400000 + i*0x200), 
                 expand  = False, 
                 enabled = False,
-                hidden  = True,
+                hidden  = False,
             ))  
         for i in range(8):
             self.add(SadcBufferWriter(

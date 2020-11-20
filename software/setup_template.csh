@@ -2,7 +2,8 @@
 # source /afs/slac/g/reseng/rogue/master/setup_env.csh
 # source /afs/slac/g/reseng/rogue/v2.2.0/setup_env.csh
 # source /afs/slac/g/reseng/rogue/master/setup_env.csh
-source rogue/setup_template.csh
+# source rogue/setup_template.csh
+source /afs/slac/g/reseng/rogue/v3.0.2/setup_rogue.csh
 
 # Package directories
 setenv SURF_DIR   ${PWD}/../firmware/submodules/surf/python

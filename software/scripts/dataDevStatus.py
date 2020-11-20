@@ -38,7 +38,8 @@ import lztsViewer as vi
 from AdmPcieKu3Pgp2b import *
 
 
-memBase = rogue.hardware.data.DataMap('/dev/datadev_0')
+#memBase = rogue.hardware.data.DataMap('/dev/datadev_0')
+memBase = rogue.hardware.axi.AxiMemMap('/dev/datadev_0')
 
 
 ##############################

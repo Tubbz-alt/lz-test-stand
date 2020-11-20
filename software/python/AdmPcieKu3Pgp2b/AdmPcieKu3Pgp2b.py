@@ -10,9 +10,10 @@
 ##############################################################################
 
 import pyrogue as pr
-import rogue.hardware.data
+#import rogue.hardware.data
+import rogue.hardware.axi
 
-from DataLib.DataDev import *
+#from DataLib.DataDev import *
 from surf.xilinx import *
 from surf.protocols.pgp import *
 
@@ -23,11 +24,11 @@ class AdmPcieKu3Pgp2b(pr.Device):
             **kwargs):
         super().__init__(name=name, description=description, **kwargs)
         
-        # Add axi-pcie-core 
-        self.add(DataDev(            
-            offset       = 0x00000000, 
-            expand       = False,
-        ))  
+        ## Add axi-pcie-core 
+        #self.add(DataDev(            
+        #    offset       = 0x00000000, 
+        #    expand       = False,
+        #))  
 
         # Add PGP Core 
         for i in range(7):
